@@ -68,7 +68,9 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
           ? "none"
           : (config.ring?.meter ?? DEFAULTS.ring.meter)
             ? "none"
-            : DEFAULTS.ring.facts)
+            : (config.sections?.ring ?? DEFAULTS.sections.ring)
+              ? "plain"
+              : DEFAULTS.ring.facts)
     },
     chart: { ...DEFAULTS.chart, ...config.chart },
     battery: { ...DEFAULTS.battery, ...config.battery },

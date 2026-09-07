@@ -77,6 +77,7 @@ export const cardStyles = css`
     display: flex;
     align-items: center;
     gap: 10px;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
@@ -310,8 +311,16 @@ export const cardStyles = css`
     flex: 0 0 auto;
   }
 
+  .fact > .fact-value {
+    flex: 0 0 auto;
+  }
+
   .fact-label {
     color: var(--sst-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .fact-value {
@@ -330,32 +339,40 @@ export const cardStyles = css`
 
   .ring-block.beside {
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: 24px;
+    gap: 18px 24px;
   }
 
   .ring-block.beside .ring {
     max-width: 178px;
+    min-width: 132px;
   }
 
   .ring-block.beside .facts {
+    flex: 1 1 190px;
     max-width: 240px;
+    min-width: 0;
   }
 
   /* Only the automatic layout waits for room; the explicit ones do not. */
   @container (min-width: 380px) {
     .ring-block.auto {
       flex-direction: row;
+      flex-wrap: wrap;
       justify-content: center;
-      gap: 24px;
+      gap: 18px 24px;
     }
 
     .ring-block.auto .ring {
       max-width: 178px;
+      min-width: 132px;
     }
 
     .ring-block.auto .facts {
+      flex: 1 1 190px;
       max-width: 240px;
+      min-width: 0;
     }
   }
 
