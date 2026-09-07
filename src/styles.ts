@@ -149,6 +149,28 @@ export const cardStyles = css`
     opacity: 0.3;
   }
 
+  .meter-track {
+    fill: none;
+    stroke: var(--sst-track);
+    stroke-width: 1.5;
+    opacity: 0.55;
+  }
+
+  .meter-band {
+    transition: y 0.5s ease, height 0.5s ease;
+  }
+
+  .meter-band.grid {
+    fill: var(--sst-sun);
+  }
+  .meter-band.battery,
+  .meter-band.discharge {
+    fill: var(--sst-leaf);
+  }
+  .meter-band.import {
+    fill: var(--sst-grid);
+  }
+
   .meter-on {
     transition: height 0.5s ease, y 0.5s ease;
   }
@@ -171,7 +193,8 @@ export const cardStyles = css`
 
   /* Not a warning colour — the same hue, simply held back until the surplus is
      worth acting on. A second meaning on one scale cannot be read. */
-  .meter-on.held {
+  .meter-on.held,
+  .meter-band.held {
     opacity: 0.42;
   }
 

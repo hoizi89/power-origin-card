@@ -18,6 +18,7 @@ export interface HomeAssistant {
 export type RingCenter = "power" | "production" | "surplus" | "autarky";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
+export type MeterStyle = "bar" | "blocks";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
 export type TodayStat =
@@ -76,6 +77,8 @@ export interface RingOptions {
   meter_scale_draw?: number;
   /** Blocks per direction. */
   meter_steps?: number;
+  /** A continuous band or stepped blocks. */
+  meter_style?: MeterStyle;
 }
 
 /** Configurations written before the facts option existed. */

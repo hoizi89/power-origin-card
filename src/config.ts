@@ -25,7 +25,8 @@ export const DEFAULTS = {
     meter_scale: 0,
     meter_scale_draw: 0,
     meter_target: 0,
-    meter_steps: 6
+    meter_steps: 6,
+    meter_style: "bar" as const
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
@@ -266,6 +267,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         },
         { name: "meter", selector: { boolean: {} } },
         ...only((resolved) => resolved.ring.meter, {
+          name: "meter_style",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "bar", label: t("editor.meter_bar") },
+                { value: "blocks", label: t("editor.meter_blocks") }
+              ]
+            }
+          }
+        }),
+        ...only((resolved) => resolved.ring.meter, {
           type: "grid",
           schema: [
             {
@@ -439,6 +452,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
     meter_steps: t("editor.meter_steps"),
+    meter_style: t("editor.meter_style"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     height: t("editor.chart_height"),

@@ -143,7 +143,10 @@ describe("fallbacks", () => {
       const { root, text } = await render(baseConfig({ ring: { center: mode } }), mixed);
       expect(text, `import in ${mode}`).toContain("1,90");
       // The discharge is carried by the column's green rather than a figure.
-      expect(root.querySelectorAll(".meter-on.discharge").length, mode).toBeGreaterThan(0);
+      expect(
+        root.querySelectorAll(".meter-on.discharge, .meter-band.discharge").length,
+        mode
+      ).toBeGreaterThan(0);
     }
   });
 

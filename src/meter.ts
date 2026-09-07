@@ -26,7 +26,18 @@ export interface MeterInput {
   fromBattery: number;
 }
 
+export interface MeterBand {
+  key: MeterKey;
+  y: number;
+  height: number;
+}
+
 export interface MeterGeometry {
+  /** The same reading without steps: one band per flow, growing from the middle. */
+  bands: MeterBand[];
+  /** Top and bottom of the whole scale, for the outline. */
+  trackY: number;
+  trackHeight: number;
   segments: MeterSegment[];
   /** Full deflection upwards, in kW. */
   scale: number;
@@ -152,8 +163,34 @@ export function meterGeometry(
       ? MIDDLE - CENTRE_GAP - (target / span) * COLUMN
       : undefined;
 
+  // Continuous bands: a fourteen-per-cent reading is a small bar rather than one
+  // lit block among eleven empty ones, which reads as a fault, not as "little".
+  const bands: MeterBand[] = [];
+
+  const grow = (from: number, to: number, cap: number, key: MeterKey, up: boolean) => {
+    const start = Math.min(from, cap) / cap;
+    const end = Math.min(to, cap) / cap;
+    const height = (end - start) * COLUMN;
+    if (height <= 0.2) return;
+    bands.push({
+      key,
+      y: up
+        ? MIDDLE - CENTRE_GAP - end * COLUMN
+        : MIDDLE + CENTRE_GAP + start * COLUMN,
+      height
+    });
+  };
+
+  grow(0, toBattery, span, "battery", true);
+  grow(toBattery, surplus, span, "grid", true);
+  grow(0, fromBattery, spanDown, "discharge", false);
+  grow(fromBattery, deficit, spanDown, "import", false);
+
   return {
     segments,
+    bands,
+    trackY: MIDDLE - CENTRE_GAP - COLUMN,
+    trackHeight: COLUMN * 2 + CENTRE_GAP * 2,
     scale: span,
     scaleDown: spanDown,
     surplus,

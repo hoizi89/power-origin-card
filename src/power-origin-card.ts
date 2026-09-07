@@ -339,6 +339,8 @@ export class PowerOriginCard extends LitElement {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
 
+    if (flow.toGrid + flow.toBattery <= 0.05 && flow.fromGrid <= 0.05) return nothing;
+
     const meter = meterGeometry(
       {
         toBattery: flow.toBattery,
@@ -389,27 +391,41 @@ export class PowerOriginCard extends LitElement {
       <div class="meter-block">
       <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${label}">
         <line class="meter-zero" x1="0" y1="${METER_HEIGHT / 2}" x2="88" y2="${METER_HEIGHT / 2}"></line>
-        ${meter.segments.map(
-          (segment) => svg`
-            <rect class="meter-off" x="4" y="${segment.y}" width="80"
-                  height="${segment.height}" rx="3"></rect>
-            ${segment.fills.map(
-              (fill) => svg`<rect
-                class="meter-on ${fill.key} ${
-                  meter.belowTarget && segment.direction === "up" ? "held" : ""
-                }"
-                x="4"
-                y="${
-                  segment.direction === "up"
-                    ? segment.y + segment.height * (1 - fill.offset - fill.size)
-                    : segment.y + segment.height * fill.offset
-                }"
-                width="80"
-                height="${segment.height * fill.size}"
-                rx="3"
-              ></rect>`
-            )}`
-        )}
+        ${
+          config.ring.meter_style === "blocks"
+            ? meter.segments.map(
+                (segment) => svg`
+                  <rect class="meter-off" x="4" y="${segment.y}" width="80"
+                        height="${segment.height}" rx="3"></rect>
+                  ${segment.fills.map(
+                    (fill) => svg`<rect
+                      class="meter-on ${fill.key} ${
+                        meter.belowTarget && segment.direction === "up" ? "held" : ""
+                      }"
+                      x="4"
+                      y="${
+                        segment.direction === "up"
+                          ? segment.y + segment.height * (1 - fill.offset - fill.size)
+                          : segment.y + segment.height * fill.offset
+                      }"
+                      width="80"
+                      height="${segment.height * fill.size}"
+                      rx="3"
+                    ></rect>`
+                  )}`
+              )
+            : svg`
+                <rect class="meter-track" x="4" y="${meter.trackY}" width="80"
+                      height="${meter.trackHeight}" rx="9"></rect>
+                ${meter.bands.map(
+                  (band) => svg`<rect
+                    class="meter-band ${band.key} ${
+                      meter.belowTarget && band.y < 100 ? "held" : ""
+                    }"
+                    x="4" y="${band.y}" width="80" height="${band.height}" rx="6"
+                  ></rect>`
+                )}`
+        }
       </svg>
       <div class="meter-label ${tone}">
         <span class="meter-value">${formatPower(amount, locale)} <small>kW</small></span>
