@@ -2,7 +2,7 @@
 
 A Lovelace card that answers the two questions a solar house actually raises: **where is my electricity coming from right now**, and **how much is spare**.
 
-<img src="docs/card.png" alt="Midday: seven kilowatts spare, the day so far, the battery charging, and what the day earned" width="430">
+<img src="docs/surplus.png" alt="Midday: seven kilowatts spare, the day so far, the battery charging, and what the day earned" width="430">
 
 Four blocks, each optional and each switched on by the entities you give it:
 

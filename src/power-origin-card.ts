@@ -947,9 +947,13 @@ export class PowerOriginCard extends LitElement {
     const fromSun = Math.max(0, used - imported - fromBattery);
 
     const parts = [
-      { key: battery === undefined ? "flow.own" : "flow.from_solar", colour: "var(--sst-sun)", value: fromSun },
-      { key: "flow.from_battery", colour: "var(--sst-leaf)", value: fromBattery },
-      { key: "flow.from_grid", colour: "var(--sst-grid)", value: imported }
+      {
+        key: battery === undefined ? "flow.own" : "ring.source_solar",
+        colour: "var(--sst-sun)",
+        value: fromSun
+      },
+      { key: "ring.source_battery", colour: "var(--sst-leaf)", value: fromBattery },
+      { key: "ring.source_grid", colour: "var(--sst-grid)", value: imported }
     ].filter((part) => part.value >= 0.2 || part.value / used >= 0.05);
 
     if (parts.length === 0) return nothing;
