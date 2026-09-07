@@ -2,6 +2,8 @@
 
 A Lovelace card that answers the two questions a solar house actually raises: **where is my electricity coming from right now**, and **how much is spare**.
 
+<img src="docs/card.png" alt="A sunny afternoon: seven kilowatts spare, the day so far, the battery charging, and what the day earned" width="420">
+
 Four blocks, each optional:
 
 - **Ring and meter** — the ring splits a total into its parts; the column beside it shows direction, surplus climbing and grid draw sinking. Set a threshold and the column stays held back until there is enough spare to be worth acting on.
@@ -103,6 +105,13 @@ today:
 
 `production` and `surplus` fall back to `power` before sunrise: a ring about production has nothing to say when nothing is produced.
 
+<p>
+  <img src="docs/night.png" alt="After sunset: the ring turns to the house, the column steps aside, the battery reckons to sunrise" width="330">
+  <img src="docs/no-battery.png" alt="A system without a battery: the battery block is absent and the ring knows two sources" width="330">
+</p>
+
+Left, the same card after sunset — the column has stepped aside because nothing is spare and nothing is bought, and the battery reckons to sunrise rather than quoting a number of hours the sun will make nonsense of. Right, a system without a battery: the block is simply absent.
+
 The value list beside the ring never repeats the number in the middle, and it defaults to hidden while the meter is on, because the meter already names the grid flow and the battery block names the battery.
 
 ## Options
@@ -175,6 +184,10 @@ npm run build
 ```
 
 The suite covers the arithmetic and, in jsdom, the rendering: every ring mode against nine system states, including an offline inverter, an empty battery and a system at a standstill.
+
+## Where the money figures come from
+
+The balance, the export revenue, the import cost and the amortisation are read from sensors, not calculated here — the card has no idea what you pay. On Home Assistant those come from an integration that tracks tariffs; **PV Management** provides all four and pairs well with this card. Without such sensors the money line simply does not appear, and everything else works unchanged.
 
 ## Licence
 
