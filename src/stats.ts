@@ -34,6 +34,37 @@ export function startOfToday(now = new Date()): Date {
   return start;
 }
 
+interface CacheEntry {
+  at: number;
+  inFlight: Promise<Record<string, StatisticPoint[]>>;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+/**
+ * Several cards on one dashboard ask for the same day of the same sensors. On a
+ * recorder of a few gigabytes that is the difference between one slow query and
+ * six, so the answer is shared for as long as it is fresh.
+ */
+export function cachedStatistics(
+  ids: string[],
+  ttlMs: number,
+  loader: () => Promise<Record<string, StatisticPoint[]>>,
+  key: string,
+  now = Date.now()
+): Promise<Record<string, StatisticPoint[]>> {
+  const id = key + "|" + ids.join(",");
+  const hit = cache.get(id);
+  if (hit && now - hit.at < ttlMs) return hit.inFlight;
+
+  const inFlight = loader().catch((error) => {
+    cache.delete(id);
+    throw error;
+  });
+  cache.set(id, { at: now, inFlight });
+  return inFlight;
+}
+
 export async function fetchStatistics(
   hass: HomeAssistant,
   ids: string[],

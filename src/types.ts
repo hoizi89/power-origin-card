@@ -58,6 +58,8 @@ export interface SectionToggles {
 
 export interface RingOptions {
   center?: RingCenter;
+  /** The mode to use while nothing is being produced. */
+  center_dark?: RingCenter;
   layout?: RingLayout;
   caption?: boolean;
   facts?: FactsStyle;

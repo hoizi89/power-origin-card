@@ -17,6 +17,7 @@ export const DEFAULTS = {
   sections: { ring: true, chart: true, battery: true, today: true },
   ring: {
     center: "power" as const,
+    center_dark: "power" as const,
     layout: "auto" as const,
     caption: true,
     facts: "bars" as const,
@@ -215,6 +216,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
+        // Only the production views need a stand-in for the night.
+        ...only(
+          (resolved) =>
+            resolved.ring.center === "production" || resolved.ring.center === "surplus",
+          {
+            name: "center_dark",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "power", label: t("editor.center_power") },
+                  { value: "autarky", label: t("editor.center_autarky") }
+                ]
+              }
+            }
+          }
+        ),
         ...only((resolved) => resolved.ring.facts !== "none", {
           name: "layout",
           selector: {
@@ -408,6 +426,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     battery: t("editor.section_battery"),
     today: t("editor.section_today"),
     center: t("editor.center"),
+    center_dark: t("editor.center_dark"),
     facts: t("editor.facts"),
     layout: t("editor.layout"),
     caption: t("editor.caption"),
@@ -437,6 +456,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),
     caption: t("editor.help_caption"),
+    center_dark: t("editor.help_center_dark"),
     meter: t("editor.help_meter"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),

@@ -13,7 +13,7 @@ import {
 } from "./flow";
 import { localize } from "./localize";
 import { METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, fetchStatistics } from "./stats";
+import { buildDaySeries, cachedStatistics, fetchStatistics } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -103,7 +103,7 @@ export class PowerOriginCard extends LitElement {
   private async _maybeFetch(): Promise<void> {
     const hass = this._hass;
     const config = this._config;
-    if (!hass || !config || this._pending) return;
+    if (!hass || !config || this._pending || !this.isConnected) return;
     const meterNeedsScale = config.ring.meter && config.ring.meter_scale === 0;
     if (
       !config.sections.chart &&
@@ -121,7 +121,13 @@ export class PowerOriginCard extends LitElement {
     try {
       const solarId = config.entities.solar;
       const houseId = config.entities.house;
-      const stats = await fetchStatistics(hass, [solarId, houseId].filter(Boolean) as string[]);
+      const ids = [solarId, houseId].filter(Boolean) as string[];
+      const stats = await cachedStatistics(
+        ids,
+        REFRESH_MS,
+        () => fetchStatistics(hass, ids),
+        "day"
+      );
       const divisor = unitOf(stateOf(hass, houseId)).toLowerCase() === "kw" ? 1 : 1000;
       this._series = buildDaySeries(
         (solarId && stats[solarId]) || [],
@@ -156,14 +162,20 @@ export class PowerOriginCard extends LitElement {
     const ids = [solarId, houseId].filter(Boolean) as string[];
     if (ids.length === 0) return;
 
-    const response = await hass.callWS<Record<string, Array<Record<string, unknown>>>>({
-      type: "recorder/statistics_during_period",
-      start_time: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-      end_time: new Date().toISOString(),
-      statistic_ids: ids,
-      period: "month",
-      types: ["max"]
-    });
+    const response = (await cachedStatistics(
+      ids,
+      12 * 60 * 60 * 1000,
+      () =>
+        hass.callWS({
+          type: "recorder/statistics_during_period",
+          start_time: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+          end_time: new Date().toISOString(),
+          statistic_ids: ids,
+          period: "month",
+          types: ["max"]
+        }),
+      "year"
+    )) as unknown as Record<string, Array<Record<string, unknown>>>;
 
     const monthlyPeaks = (id: string | undefined) =>
       (id ? (response?.[id] ?? []) : [])
@@ -238,7 +250,8 @@ export class PowerOriginCard extends LitElement {
     // A ring about production says nothing before sunrise, so both production
     // views fall back to the source ring rather than showing an empty circle.
     const producing = flow.production > 0.05;
-    const showAutarky = mode === "autarky";
+    const dark = !producing && (mode === "surplus" || mode === "production");
+    const showAutarky = dark ? config.ring.center_dark === "autarky" : mode === "autarky";
     const showSurplus = mode === "surplus" && producing;
     const showProduction = mode === "production" && producing;
 
