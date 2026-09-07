@@ -39,6 +39,14 @@ import {
 
 let gradientSeq = 0;
 
+/** Which side of the meter the reading is about, so the column needs no legend. */
+const PYLON = html`<svg class="meter-glyph" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M12 3 6.5 21M12 3l5.5 18M8.7 14h6.6M7.6 19h8.8M5 6l7-2 7 2" />
+</svg>`;
+const CELL = html`<svg class="meter-glyph" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M4.5 8.5h13a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 14v-4a1.5 1.5 0 0 1 1.5-1.5zM21 10.8v2.4" />
+</svg>`;
+
 const REFRESH_MS = 2 * 60 * 1000;
 
 export class PowerOriginCard extends LitElement {
@@ -294,18 +302,18 @@ export class PowerOriginCard extends LitElement {
         : showProduction
           ? "ring.caption_production"
           : soleSource === "battery"
-            ? "flow.from_battery"
+            ? "ring.source_battery"
             : soleSource === "grid"
-              ? "flow.from_grid"
+              ? "ring.source_grid"
               : soleSource === "solar"
-                ? "flow.from_solar"
+                ? "ring.source_solar"
                 : "ring.caption_house";
 
     const caption = config.ring.caption ? localize(captionKey, locale) : undefined;
 
     return html`
       <div class="ring-block ${config.ring.layout}">
-        <div class="ring-group">
+        <div class="ring-group ${config.ring.facts === "none" ? "solo" : ""}">
         ${this._renderMeter(flow, locale)}
         <svg class="ring ${showSurplus ? "surplus" : ""}" viewBox="0 0 200 200" role="img" aria-label="${value} ${unit}">
           <circle class="ring-track" cx="100" cy="100" r="76" pathLength="100"></circle>
@@ -361,14 +369,16 @@ export class PowerOriginCard extends LitElement {
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.
     if (!config.entities.solar) return nothing;
-    if (flow.toGrid + flow.toBattery <= 0.05 && flow.fromGrid <= 0.05) return nothing;
 
+    // Grid scope keeps the column on the meter itself, so the ring can name the
+    // battery without the two saying the same thing twice.
+    const withBattery = config.ring.meter_scope === "all";
     const meter = meterGeometry(
       {
-        toBattery: flow.toBattery,
+        toBattery: withBattery ? flow.toBattery : 0,
         toGrid: flow.toGrid,
         fromGrid: flow.fromGrid,
-        fromBattery: flow.fromBattery
+        fromBattery: withBattery ? flow.fromBattery : 0
       },
       config.ring.meter_scale,
       this._yearPeak ?? this._series?.solarPeak ?? 0,
@@ -381,33 +391,36 @@ export class PowerOriginCard extends LitElement {
     const label = `${localize("flow.to_grid", locale)} ${formatPower(flow.toGrid, locale)} kW, ` +
       `${localize("flow.from_grid", locale)} ${formatPower(flow.fromGrid, locale)} kW`;
 
-    const exporting = flow.toGrid > 0.01;
-    const charging = flow.toBattery > 0.01;
+    // A hundredth of a kilowatt is the meter breathing, not a flow. Naming it
+    // invites a decision about nothing.
+    const REAL = 0.05;
+    const exporting = flow.toGrid > REAL;
+    const charging = withBattery && flow.toBattery > REAL;
+    const drawing = meter.deficit > REAL;
+    const quiet = !drawing && !exporting && !charging;
 
-    // Whichever side is bigger gets named, so the figure agrees with the block
-    // the eye lands on. Naming the smaller flow made the column contradict its
-    // own caption.
-    const gridLeads = flow.fromGrid >= flow.fromBattery;
+    const gridDraw = flow.fromGrid > REAL;
+    const cellDraw = withBattery && flow.fromBattery > REAL;
 
-    const key = meter.deficit > 0.01
-      ? gridLeads
-        ? "meter.import"
-        : "meter.discharging"
+    const key = drawing
+      ? gridDraw && cellDraw
+        ? "meter.draw"
+        : cellDraw
+          ? "flow.from_battery"
+          : "meter.import"
       : exporting && charging
         ? "meter.surplus"
         : exporting
           ? "meter.export"
           : charging
             ? "meter.charging"
-            : "meter.balanced";
+            : withBattery
+              ? "meter.balanced"
+              : "meter.quiet";
 
     const word = localize(key, locale);
-    const amount = meter.deficit > 0.01
-      ? gridLeads
-        ? flow.fromGrid
-        : flow.fromBattery
-      : meter.surplus;
-    const tone = meter.deficit > 0.01 ? "down" : meter.surplus > 0.01 ? "up" : "idle";
+    const amount = drawing ? meter.deficit : meter.surplus;
+    const tone = drawing ? "down" : exporting || charging ? "up" : "idle";
 
     return html`
       <div class="meter-block">
@@ -472,8 +485,10 @@ export class PowerOriginCard extends LitElement {
         }
       </svg>
       <div class="meter-label ${tone}">
-        <span class="meter-value">${formatPower(amount, locale)} <small>kW</small></span>
-        <span class="meter-word">${word}</span>
+        ${quiet
+          ? nothing
+          : html`<span class="meter-value">${formatPower(amount, locale)} <small>kW</small></span>`}
+        <span class="meter-word">${(charging && !exporting) || (cellDraw && !gridDraw) ? CELL : PYLON}${word}</span>
       </div>
       </div>
     `;

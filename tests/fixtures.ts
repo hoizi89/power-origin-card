@@ -71,6 +71,12 @@ export const SCENARIOS: Scenario[] = [
     forecast: 41.2, cost: 1.35
   },
   {
+    name: "covered, ten watts spare",
+    house: 1190, pv: 1200, battery: 0, grid: -10, soc: 100,
+    solarToday: 9.4, houseToday: 7.1, exportToday: 1.2, importToday: 0.2,
+    forecast: 2.1, cost: -0.11
+  },
+  {
     name: "little sun, battery helping",
     house: 3100, pv: 400, battery: 800, grid: 1900, soc: 34,
     solarToday: 6.2, houseToday: 12.4, exportToday: 0.3, importToday: 4.1,

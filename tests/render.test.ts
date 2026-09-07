@@ -135,18 +135,23 @@ describe("fallbacks", () => {
     expect(root.querySelectorAll(".seg").length).toBeGreaterThan(0);
   });
 
-  it("never hides an import or a discharge, whatever the mode", async () => {
-    // Asserted as numbers, not labels: which element carries them is a design
-    // decision, that they are on screen at all is not.
+  it("never hides an import, whatever the mode", async () => {
+    // Asserted as a number, not a label: which element carries it is a design
+    // decision, that it is on screen at all is not.
     const mixed = SCENARIOS.find((s) => s.name === "little sun, battery helping")!;
     for (const mode of MODES) {
-      const { root, text } = await render(baseConfig({ ring: { center: mode } }), mixed);
+      const { text } = await render(baseConfig({ ring: { center: mode } }), mixed);
       expect(text, `import in ${mode}`).toContain("1,90");
-      // The discharge is carried by the column's green rather than a figure.
-      expect(
-        root.querySelectorAll(".meter-on.discharge, .meter-band.discharge").length,
-        mode
-      ).toBeGreaterThan(0);
+    }
+  });
+
+  it("shows the battery carrying the house wherever the ring describes supply", async () => {
+    // The production views describe the roof instead, and say so; the supply
+    // views must never leave a working battery unmentioned.
+    const mixed = SCENARIOS.find((s) => s.name === "little sun, battery helping")!;
+    for (const mode of ["power", "autarky"] as const) {
+      const { root } = await render(baseConfig({ ring: { center: mode } }), mixed);
+      expect(root.querySelectorAll(".seg.battery").length, mode).toBeGreaterThan(0);
     }
   });
 
@@ -154,7 +159,7 @@ describe("fallbacks", () => {
     const mixed = SCENARIOS.find((s) => s.name === "little sun, battery helping")!;
     const { text } = await render(baseConfig({ ring: { facts: "bars" } }), mixed);
     expect(text).toContain("Aus dem Netz");
-    expect(text).toContain("Aus dem Speicher");
+    expect(text).toContain("Speicher");
   });
 
   it("keeps the meter scale off the weather", async () => {
@@ -254,12 +259,33 @@ describe("the ring caption", () => {
   it("names the source when one carries the whole house", async () => {
     const evening = SCENARIOS.find((s) => s.name === "evening on battery")!;
     const { text } = await render(baseConfig({ ring: { center: "power" } }), evening);
-    expect(text).toContain("Aus dem Speicher");
+    expect(text).toContain("Speicher");
   });
 
   it("says house when several sources share the load", async () => {
     const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
     const { text } = await render(baseConfig({ ring: { center: "power" } }), foggy);
     expect(text).toContain("HAUS");
+  });
+});
+
+describe("the column", () => {
+  it("says nothing rather than name a hundredth of a kilowatt", async () => {
+    const trickle = SCENARIOS.find((s) => s.name === "covered, ten watts spare")!;
+    const { root, text } = await render(baseConfig(), trickle);
+    expect(root.querySelectorAll(".meter-value").length).toBe(0);
+    expect(text).toContain("kein Netzaustausch");
+    expect(text).not.toContain("0,01");
+  });
+
+  it("keeps the battery off the scale unless asked for it", async () => {
+    const night = SCENARIOS.find((s) => s.name === "evening on battery")!;
+
+    const grid = await render(baseConfig({ ring: { meter_scope: "grid" } }), night);
+    expect(grid.root.querySelectorAll(".meter-on.discharge").length).toBe(0);
+
+    const all = await render(baseConfig({ ring: { meter_scope: "all" } }), night);
+    expect(all.root.querySelectorAll(".meter-on.discharge").length).toBeGreaterThan(0);
+    expect(all.text).toContain("Aus dem Speicher");
   });
 });

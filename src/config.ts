@@ -26,7 +26,8 @@ export const DEFAULTS = {
     meter_scale_draw: 0,
     meter_target: 0,
     meter_steps: 6,
-    meter_style: "blocks" as const
+    meter_style: "blocks" as const,
+    meter_scope: "grid" as const
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
@@ -267,39 +268,62 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
-        { name: "meter", selector: { boolean: {} } },
-        ...only((resolved) => resolved.ring.meter, {
-          name: "meter_style",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "bar", label: t("editor.meter_bar") },
-                { value: "blocks", label: t("editor.meter_blocks") }
-              ]
-            }
-          }
-        }),
-        ...only((resolved) => resolved.ring.meter, {
-          type: "grid",
-          schema: [
-            {
-              name: "meter_scale",
-              selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-            },
-            {
-              name: "meter_scale_draw",
-              selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-            },
-            {
-              name: "meter_target",
-              selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
-            },
-            { name: "meter_steps", selector: { number: { min: 3, max: 14, mode: "box" } } }
-          ]
-        })
       ]
     }
+    ),
+    ...only(
+      (resolved) => resolved.sections.ring,
+      {
+        type: "expandable",
+        name: "ring",
+        title: t("editor.meter_settings"),
+        icon: "mdi:gauge",
+        schema: [
+          { name: "meter", selector: { boolean: {} } },
+          ...only((resolved) => resolved.ring.meter, {
+            name: "meter_scope",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "grid", label: t("editor.meter_scope_grid") },
+                  { value: "all", label: t("editor.meter_scope_all") }
+                ]
+              }
+            }
+          }),
+          ...only((resolved) => resolved.ring.meter, {
+            name: "meter_style",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "bar", label: t("editor.meter_bar") },
+                  { value: "blocks", label: t("editor.meter_blocks") }
+                ]
+              }
+            }
+          }),
+          ...only((resolved) => resolved.ring.meter, {
+            type: "grid",
+            schema: [
+              {
+                name: "meter_scale",
+                selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+              },
+              {
+                name: "meter_scale_draw",
+                selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+              },
+              {
+                name: "meter_target",
+                selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
+              },
+              { name: "meter_steps", selector: { number: { min: 3, max: 14, mode: "box" } } }
+            ]
+          })
+        ]
+      }
     ),
     ...only(
       (resolved) => resolved.sections.chart,
@@ -456,6 +480,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_target: t("editor.meter_target"),
     meter_steps: t("editor.meter_steps"),
     meter_style: t("editor.meter_style"),
+    meter_scope: t("editor.meter_scope"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     height: t("editor.chart_height"),
@@ -485,6 +510,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     center: t("editor.help_center"),
     center_dark: t("editor.help_center_dark"),
     meter: t("editor.help_meter"),
+    meter_scope: t("editor.help_meter_scope"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),

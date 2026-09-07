@@ -119,11 +119,25 @@ export const cardStyles = css`
   }
 
   .meter-word {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-family: var(--sst-mono);
     font-size: calc(9.5px * var(--sst-scale));
     letter-spacing: 0.08em;
     color: var(--sst-muted);
     white-space: nowrap;
+  }
+
+  .meter-glyph {
+    width: calc(12px * var(--sst-scale));
+    height: calc(12px * var(--sst-scale));
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.85;
   }
 
   .meter-label.up .meter-value {
@@ -699,6 +713,23 @@ export const cardStyles = css`
     .seg,
     .bat-fill {
       transition: none;
+    }
+  }
+
+  /* With no list beside it the pair has the whole card to itself; on a tablet
+     across the room the extra size is the whole point. */
+  @container (min-width: 360px) {
+    .ring-group.solo {
+      gap: 26px;
+    }
+
+    .ring-group.solo .ring {
+      max-width: 248px;
+    }
+
+    .ring-group.solo .meter {
+      height: 186px;
+      width: 82px;
     }
   }
 `;
