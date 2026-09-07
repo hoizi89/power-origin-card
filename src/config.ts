@@ -24,7 +24,8 @@ export const DEFAULTS = {
     meter: true,
     meter_scale: 0,
     meter_scale_draw: 0,
-    meter_target: 0
+    meter_target: 0,
+    meter_steps: 6
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
@@ -278,7 +279,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             {
               name: "meter_target",
               selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
-            }
+            },
+            { name: "meter_steps", selector: { number: { min: 3, max: 14, mode: "box" } } }
           ]
         })
       ]
@@ -436,6 +438,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_scale: t("editor.meter_scale"),
     meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
+    meter_steps: t("editor.meter_steps"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     height: t("editor.chart_height"),

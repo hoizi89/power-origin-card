@@ -54,10 +54,13 @@ export const METER_STEPS = 6;
  */
 export const DEFAULT_DRAW_KW = 3;
 
-const BLOCK = 12;
 const GAP = 2.6;
 const MIDDLE = METER_HEIGHT / 2;
 const CENTRE_GAP = 3;
+/** The column keeps its height whatever it is divided into. */
+const COLUMN = 82;
+
+const blockHeight = (steps: number) => (COLUMN - GAP * (steps - 1)) / steps;
 
 const overlap = (aFrom: number, aTo: number, bFrom: number, bTo: number) =>
   Math.max(0, Math.min(aTo, bTo) - Math.max(aFrom, bFrom));
@@ -85,8 +88,11 @@ export function meterGeometry(
   fallbackPeak = 0,
   target = 0,
   scaleDown = 0,
-  fallbackDraw = 0
+  fallbackDraw = 0,
+  steps = METER_STEPS
 ): MeterGeometry {
+  const count = Math.min(14, Math.max(3, Math.round(steps)));
+  const block = blockHeight(count);
   const toBattery = Math.max(0, input.toBattery);
   const toGrid = Math.max(0, input.toGrid);
   const fromGrid = Math.max(0, input.fromGrid);
@@ -99,12 +105,12 @@ export function meterGeometry(
     scaleDown > 0
       ? scaleDown
       : Math.max(fallbackDraw > 0 ? Math.ceil(fallbackDraw) : DEFAULT_DRAW_KW, deficit, 1);
-  const step = span / METER_STEPS;
-  const stepDown = spanDown / METER_STEPS;
+  const step = span / count;
+  const stepDown = spanDown / count;
 
   const segments: MeterSegment[] = [];
 
-  for (let index = 0; index < METER_STEPS; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const from = index * step;
     const to = from + step;
 
@@ -117,8 +123,8 @@ export function meterGeometry(
 
     segments.push({
       direction: "up",
-      y: MIDDLE - CENTRE_GAP - (index + 1) * BLOCK - index * GAP,
-      height: BLOCK,
+      y: MIDDLE - CENTRE_GAP - (index + 1) * block - index * GAP,
+      height: block,
       fills
     });
 
@@ -135,16 +141,15 @@ export function meterGeometry(
 
     segments.push({
       direction: "down",
-      y: MIDDLE + CENTRE_GAP + index * (BLOCK + GAP),
-      height: BLOCK,
+      y: MIDDLE + CENTRE_GAP + index * (block + GAP),
+      height: block,
       fills: downFills
     });
   }
 
-  const column = METER_STEPS * BLOCK + (METER_STEPS - 1) * GAP;
   const targetY =
     target > 0 && target <= span
-      ? MIDDLE - CENTRE_GAP - (target / span) * column
+      ? MIDDLE - CENTRE_GAP - (target / span) * COLUMN
       : undefined;
 
   return {

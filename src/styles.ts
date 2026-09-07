@@ -92,7 +92,7 @@ export const cardStyles = css`
   .meter {
     display: block;
     height: 150px;
-    width: 42px;
+    width: 66px;
     flex: 0 0 auto;
   }
 
@@ -143,9 +143,10 @@ export const cardStyles = css`
     stroke-width: 1;
   }
 
+  /* The instrument shows its value, not its empty scale. */
   .meter-off {
     fill: var(--sst-track);
-    opacity: 0.55;
+    opacity: 0.3;
   }
 
   .meter-on {
