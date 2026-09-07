@@ -22,6 +22,7 @@ export const DEFAULTS = {
     facts: "bars" as const,
     meter: true,
     meter_scale: 0,
+    meter_scale_draw: 0,
     meter_target: 0
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
@@ -246,6 +247,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
             },
             {
+              name: "meter_scale_draw",
+              selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+            },
+            {
               name: "meter_target",
               selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
             }
@@ -402,6 +407,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     caption: t("editor.caption"),
     meter: t("editor.meter"),
     meter_scale: t("editor.meter_scale"),
+    meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
@@ -425,6 +431,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     caption: t("editor.help_caption"),
     meter: t("editor.help_meter"),
     meter_scale: t("editor.help_meter_scale"),
+    meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),
     house: t("editor.help_house"),
     battery_capacity: t("editor.help_capacity"),

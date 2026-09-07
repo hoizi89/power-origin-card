@@ -65,6 +65,8 @@ export interface RingOptions {
   meter_scale?: number;
   /** Surplus worth acting on, in kW. Below it the column is held back. */
   meter_target?: number;
+  /** Full deflection downwards in kW. 0 derives it from the house's yearly peak. */
+  meter_scale_draw?: number;
 }
 
 /** Configurations written before the facts option existed. */

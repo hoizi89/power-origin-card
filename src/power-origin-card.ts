@@ -57,6 +57,7 @@ export class PowerOriginCard extends LitElement {
   private _lastFetch = 0;
   private _pending = false;
   private _yearPeak?: number;
+  private _yearDraw?: number;
   private _peakFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
 
@@ -130,7 +131,7 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
-      await this._fetchYearPeak(hass, solarId, divisor);
+      await this._fetchYearPeak(hass, solarId, houseId, divisor);
       this._error = undefined;
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
@@ -146,25 +147,34 @@ export class PowerOriginCard extends LitElement {
   private async _fetchYearPeak(
     hass: HomeAssistant,
     solarId: string | undefined,
+    houseId: string,
     divisor: number
   ): Promise<void> {
-    if (!solarId || !this._config?.ring.meter || this._config.ring.meter_scale > 0) return;
+    if (!this._config?.ring.meter) return;
     if (Date.now() - this._peakFetched < 12 * 60 * 60 * 1000) return;
     this._peakFetched = Date.now();
+
+    const ids = [solarId, houseId].filter(Boolean) as string[];
+    if (ids.length === 0) return;
 
     const response = await hass.callWS<Record<string, Array<Record<string, unknown>>>>({
       type: "recorder/statistics_during_period",
       start_time: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
       end_time: new Date().toISOString(),
-      statistic_ids: [solarId],
+      statistic_ids: ids,
       period: "month",
       types: ["max"]
     });
 
-    const peaks = (response?.[solarId] ?? [])
-      .map((row) => Number(row.max))
-      .filter((value) => Number.isFinite(value));
-    if (peaks.length > 0) this._yearPeak = Math.max(...peaks) / divisor;
+    const peakOf = (id: string | undefined) => {
+      const peaks = (id ? (response?.[id] ?? []) : [])
+        .map((row) => Number(row.max))
+        .filter((value) => Number.isFinite(value));
+      return peaks.length > 0 ? Math.max(...peaks) / divisor : undefined;
+    };
+
+    this._yearPeak = peakOf(solarId) ?? this._yearPeak;
+    this._yearDraw = peakOf(houseId) ?? this._yearDraw;
   }
 
   private _needsPeak(): boolean {
@@ -326,7 +336,9 @@ export class PowerOriginCard extends LitElement {
       },
       config.ring.meter_scale,
       this._yearPeak ?? this._series?.solarPeak ?? 0,
-      config.ring.meter_target
+      config.ring.meter_target,
+      config.ring.meter_scale_draw,
+      this._yearDraw ?? 0
     );
 
     const label = `${localize("flow.to_grid", locale)} ${formatPower(flow.toGrid, locale)} kW, ` +

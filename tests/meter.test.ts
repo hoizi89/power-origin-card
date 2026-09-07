@@ -25,7 +25,7 @@ describe("meterGeometry", () => {
   });
 
   it("sinks for grid draw and stays flat above", () => {
-    const geometry = meterGeometry(flow(0, 0, 4), 8);
+    const geometry = meterGeometry(flow(0, 0, 4), 8, 0, 0, 8);
     expect(lit(geometry, "up")).toBe(0);
     expect(lit(geometry, "down")).toBe(METER_STEPS / 2);
   });
@@ -93,14 +93,14 @@ describe("meterGeometry", () => {
   });
 
   it("sinks for a discharging battery, not only for the grid", () => {
-    const geometry = meterGeometry(flow(0, 0, 0, 3), 8);
+    const geometry = meterGeometry(flow(0, 0, 0, 3), 8, 0, 0, 6);
     expect(geometry.deficit).toBe(3);
     expect(lit(geometry, "down")).toBe(3);
     expect(keys(geometry)).toEqual(["discharge"]);
   });
 
   it("stacks the battery under the grid on the way down as well", () => {
-    const geometry = meterGeometry(flow(0, 0, 6, 2), 8);
+    const geometry = meterGeometry(flow(0, 0, 6, 2), 8, 0, 0, 8);
     const down = geometry.segments.filter((segment) => segment.direction === "down");
     expect(down[0].fills[0].key).toBe("discharge");
     expect(down[METER_STEPS - 1].fills.at(-1)?.key).toBe("import");
@@ -159,5 +159,38 @@ describe("the threshold", () => {
 
   it("draws no line for a threshold beyond full deflection", () => {
     expect(meterGeometry(flow(0, 0, 0), 8, 0, 20).targetY).toBeUndefined();
+  });
+});
+
+describe("the two scales", () => {
+  it("keeps them apart, so a house is not measured against a roof", () => {
+    // Half a kilowatt of draw on a 14 kW roof scale would be a hairline.
+    const shared = meterGeometry(flow(0, 0, 0, 0.6), 14, 0, 0, 14);
+    const apart = meterGeometry(flow(0, 0, 0, 0.6), 14, 0, 0, 3);
+
+    const litOf = (geometry: ReturnType<typeof meterGeometry>) =>
+      geometry.segments
+        .filter((segment) => segment.direction === "down")
+        .reduce((sum, segment) => sum + segment.fills.reduce((f, fill) => f + fill.size, 0), 0);
+
+    expect(litOf(apart)).toBeGreaterThan(litOf(shared) * 4);
+  });
+
+  it("reports both scales", () => {
+    const geometry = meterGeometry(flow(0, 1, 0), 14, 0, 0, 3);
+    expect(geometry.scale).toBe(14);
+    expect(geometry.scaleDown).toBe(3);
+  });
+
+  it("derives each side from its own peak", () => {
+    const geometry = meterGeometry(flow(0, 1, 0, 1), 0, 13.4, 0, 0, 2.6);
+    expect(geometry.scale).toBe(14);
+    expect(geometry.scaleDown).toBe(3);
+  });
+
+  it("still never divides by zero on either side", () => {
+    const geometry = meterGeometry(flow(0, 0, 0, 0), 0, 0, 0, 0, 0);
+    expect(geometry.scale).toBe(1);
+    expect(geometry.scaleDown).toBe(1);
   });
 });

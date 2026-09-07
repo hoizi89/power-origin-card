@@ -28,7 +28,10 @@ export interface MeterInput {
 
 export interface MeterGeometry {
   segments: MeterSegment[];
+  /** Full deflection upwards, in kW. */
   scale: number;
+  /** Full deflection downwards, in kW. */
+  scaleDown: number;
   /** Everything the house is not using: battery charge plus export. */
   surplus: number;
   /** Everything the house is drawing on: battery plus grid. */
@@ -60,7 +63,11 @@ const overlap = (aFrom: number, aTo: number, bFrom: number, bTo: number) =>
  * the battery simply charges more slowly. It sits nearest the middle so the
  * column reads as one surplus with a green foot and a gold top.
  *
- * `scale` of 0 derives full deflection from the system's own peak over the past
+ * The two directions carry different quantities and so keep different scales:
+ * a ten-kilowatt roof against a house that rarely pulls three. Forcing both onto
+ * the roof's scale makes an evening's draw a hairline — true, and useless.
+ *
+ * A scale of 0 derives full deflection from the system's own peak over the past
  * year, rounded up to a whole kilowatt. It must not follow the weather: a meter
  * scaled to a dull day would show 900 W as nearly full, and 900 W does not run
  * a dishwasher. Two kilowatts have to look the same in December as in June.
@@ -69,7 +76,9 @@ export function meterGeometry(
   input: MeterInput,
   scale: number,
   fallbackPeak = 0,
-  target = 0
+  target = 0,
+  scaleDown = 0,
+  fallbackDraw = 0
 ): MeterGeometry {
   const toBattery = Math.max(0, input.toBattery);
   const toGrid = Math.max(0, input.toGrid);
@@ -78,8 +87,11 @@ export function meterGeometry(
   const surplus = toBattery + toGrid;
   const deficit = fromBattery + fromGrid;
 
-  const span = scale > 0 ? scale : Math.max(Math.ceil(fallbackPeak), surplus, deficit, 1);
+  const span = scale > 0 ? scale : Math.max(Math.ceil(fallbackPeak), surplus, 1);
+  const spanDown =
+    scaleDown > 0 ? scaleDown : Math.max(Math.ceil(fallbackDraw), deficit, 1);
   const step = span / METER_STEPS;
+  const stepDown = spanDown / METER_STEPS;
 
   const segments: MeterSegment[] = [];
 
@@ -103,8 +115,10 @@ export function meterGeometry(
 
     // Mirrored: the battery sits nearest the middle going down as it does
     // going up, so the same store reads the same way in both directions.
-    const discharge = overlap(from, to, 0, fromBattery) / step;
-    const imported = overlap(from, to, fromBattery, deficit) / step;
+    const fromDown = index * stepDown;
+    const toDown = fromDown + stepDown;
+    const discharge = overlap(fromDown, toDown, 0, fromBattery) / stepDown;
+    const imported = overlap(fromDown, toDown, fromBattery, deficit) / stepDown;
 
     const downFills: MeterFill[] = [];
     if (discharge > 0) downFills.push({ key: "discharge", offset: 0, size: discharge });
@@ -127,10 +141,11 @@ export function meterGeometry(
   return {
     segments,
     scale: span,
+    scaleDown: spanDown,
     surplus,
     deficit,
     overUp: surplus > span * 1.001,
-    overDown: deficit > span * 1.001,
+    overDown: deficit > spanDown * 1.001,
     targetY,
     belowTarget: target > 0 && surplus < target
   };
