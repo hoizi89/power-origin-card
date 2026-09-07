@@ -27,7 +27,8 @@ export type TodayStat =
   | "import"
   | "solar"
   | "house"
-  | "forecast";
+  | "forecast"
+  | "amortisation";
 
 export interface PowerOriginEntities {
   house: string;
@@ -47,6 +48,8 @@ export interface PowerOriginEntities {
   price_export?: string;
   /** Energy taken out of the battery today, in kWh. Splits the day bar in three. */
   battery_out_today?: string;
+  /** How far the system has paid for itself, in percent. */
+  amortisation?: string;
 }
 
 export interface SectionToggles {

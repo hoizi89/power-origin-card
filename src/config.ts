@@ -107,7 +107,8 @@ const STAT_OPTIONS: TodayStat[] = [
   "import",
   "solar",
   "house",
-  "forecast"
+  "forecast",
+  "amortisation"
 ];
 
 const entityField = (name: string, deviceClass?: string) => ({
@@ -174,7 +175,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           ]
         },
         { type: "grid", schema: [entityField("price_import"), entityField("price_export")] },
-        entityField("battery_out_today", "energy")
+        entityField("battery_out_today", "energy"),
+        entityField("amortisation")
       ]
     },
     {
@@ -445,6 +447,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     breakdown: t("editor.breakdown"),
     origin_bar: t("editor.origin_bar"),
     battery_out_today: t("editor.battery_out_today"),
+    amortisation: t("editor.amortisation"),
     stats: t("editor.stats"),
     battery_capacity: t("editor.capacity"),
     battery_reserve: t("editor.reserve"),
@@ -456,6 +459,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),
     caption: t("editor.help_caption"),
+    center: t("editor.help_center"),
     center_dark: t("editor.help_center_dark"),
     meter: t("editor.help_meter"),
     meter_scale: t("editor.help_meter_scale"),

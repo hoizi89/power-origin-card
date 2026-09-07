@@ -287,7 +287,7 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="ring-block ${config.ring.layout}">
         <div class="ring-group">
-        ${this._renderMeter(flow, locale, showSurplus)}
+        ${this._renderMeter(flow, locale)}
         <svg class="ring ${showSurplus ? "surplus" : ""}" viewBox="0 0 200 200" role="img" aria-label="${value} ${unit}">
           <circle class="ring-track" cx="100" cy="100" r="76" pathLength="100"></circle>
           ${parts.map(
@@ -335,7 +335,7 @@ export class PowerOriginCard extends LitElement {
    * Surplus climbs, grid draw sinks. A ring can show proportions but never a
    * direction, and the direction is what tells you whether to switch something on.
    */
-  private _renderMeter(flow: Flow, locale: string, ringNamesSurplus = false) {
+  private _renderMeter(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
 
@@ -358,7 +358,6 @@ export class PowerOriginCard extends LitElement {
 
     const exporting = flow.toGrid > 0.01;
     const charging = flow.toBattery > 0.01;
-    const importing = flow.fromGrid > 0.01;
 
     // Whichever side is bigger gets named, so the figure agrees with the block
     // the eye lands on. Naming the smaller flow made the column contradict its
@@ -411,15 +410,10 @@ export class PowerOriginCard extends LitElement {
             )}`
         )}
       </svg>
-      ${
-        // The surplus ring prints this very figure in its middle.
-        ringNamesSurplus && !importing
-          ? nothing
-          : html`<div class="meter-label ${tone}">
-              <span class="meter-value">${formatPower(amount, locale)} <small>kW</small></span>
-              <span class="meter-word">${word}</span>
-            </div>`
-      }
+      <div class="meter-label ${tone}">
+        <span class="meter-value">${formatPower(amount, locale)} <small>kW</small></span>
+        <span class="meter-word">${word}</span>
+      </div>
       </div>
     `;
   }
@@ -965,6 +959,14 @@ export class PowerOriginCard extends LitElement {
       case "forecast": {
         const expected = energyKwh(stateOf(hass, config.entities.forecast));
         if (expected !== undefined) value = formatEnergy(expected, locale);
+        break;
+      }
+      case "amortisation": {
+        const paid = numberOf(stateOf(hass, config.entities.amortisation));
+        if (paid !== undefined) {
+          value = formatNumber(paid, locale, 0);
+          unit = "%";
+        }
         break;
       }
     }
