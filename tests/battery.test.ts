@@ -23,6 +23,16 @@ describe("batteryView", () => {
     expect(view.availableKwh).toBeCloseTo(5.24, 2);
   });
 
+  it("gives no runtime once the reserve is all that is left", () => {
+    const view = batteryView(
+      { soc: 80, power: 0.6, capacity: 13100, reserve: 80, averageLoad: 0.6, loadSpread: 0 },
+      NOW
+    );
+    expect(view.availableKwh).toBe(0);
+    expect(view.hours).toBeUndefined();
+    expect(view.at).toBeUndefined();
+  });
+
   it("says nothing when the load is still jumping", () => {
     const view = batteryView(
       { soc: 80, power: 2, capacity: 13100, averageLoad: 2, loadSpread: 1.4 },

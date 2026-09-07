@@ -3,6 +3,8 @@ import type { HassEntity } from "./types";
 export interface SunTimes {
   rising?: Date;
   setting?: Date;
+  /** The one still to come, which in the evening is not todays. */
+  nextRising?: Date;
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -30,10 +32,16 @@ function eventToday(iso: unknown, now: Date): Date | undefined {
   return sameDay(previous, now) ? previous : next;
 }
 
+function parse(iso: unknown): Date | undefined {
+  const time = Date.parse(String(iso ?? ""));
+  return Number.isFinite(time) ? new Date(time) : undefined;
+}
+
 export function sunTimes(entity: HassEntity | undefined, now = new Date()): SunTimes {
   if (!entity) return {};
   return {
     rising: eventToday(entity.attributes?.next_rising, now),
-    setting: eventToday(entity.attributes?.next_setting, now)
+    setting: eventToday(entity.attributes?.next_setting, now),
+    nextRising: parse(entity.attributes?.next_rising)
   };
 }

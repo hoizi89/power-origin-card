@@ -321,3 +321,15 @@ describe("the column", () => {
     expect(all.text).toContain("Aus dem Speicher");
   });
 });
+
+describe("the battery caption", () => {
+  it("names the reserve instead of promising a night that is already over", async () => {
+    const night = SCENARIOS.find((s) => s.name === "evening on battery")!;
+    const { text } = await render(
+      baseConfig({ battery_capacity: 13100, battery_reserve: night.soc }),
+      night
+    );
+    expect(text).toContain("Reserve erreicht");
+    expect(text).not.toContain("Reicht bis");
+  });
+});

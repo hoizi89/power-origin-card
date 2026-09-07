@@ -62,7 +62,7 @@ export function batteryView(input: BatteryInput, now = new Date()): BatteryView 
     if (rate > IDLE_KW) view.hours = headroomKwh / rate;
   }
 
-  if (mode === "discharging" && usableKwh !== undefined) {
+  if (mode === "discharging" && usableKwh !== undefined && usableKwh > 0) {
     const load = input.averageLoad;
     const spread = input.loadSpread ?? 0;
     if (load !== undefined && load > IDLE_KW && spread <= SPREAD_LIMIT) {
