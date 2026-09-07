@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, svg } from "lit";
-import { batteryView, segments, type BatteryView } from "./battery";
+import { batteryView, segmentCount, segments, type BatteryView } from "./battery";
 import { chartBars } from "./bars";
 import { CHART_BOX, chartGeometry } from "./chart";
 import { CARD_TYPE, resolveConfig, stubConfig } from "./config";
@@ -714,7 +714,8 @@ export class PowerOriginCard extends LitElement {
         ? svg`<rect class="bat-fill ${tone}" x="${innerStart - 1}" y="${top}" rx="8"
                     width="${((innerWidth + 2) * Math.min(100, Math.max(0, soc))) / 100}"
                     height="${tall}"></rect>`
-        : segments(soc, config.battery.segments).map((segment, index, all) => {
+        : segments(soc, segmentCount(config.battery.segments, config.battery_capacity)).map(
+            (segment, index, all) => {
             const pitch = innerWidth / all.length;
             const width = pitch - (bare ? 4 : 3.1);
             const x = innerStart + index * pitch;
@@ -724,11 +725,12 @@ export class PowerOriginCard extends LitElement {
               ${
                 segment.fill > 0
                   ? svg`<rect class="bat-fill ${tone}" x="${x}" y="${top}"
-                              width="${width * segment.fill}" height="${tall}"
+                              width="${Math.max(3, width * segment.fill)}" height="${tall}"
                               rx="${radius}"></rect>`
                   : nothing
               }`;
-          });
+            }
+          );
 
     return html`
       <svg class="full" viewBox="0 0 340 54" role="img"

@@ -85,6 +85,17 @@ export interface Segment {
   fill: number;
 }
 
+/**
+ * How many blocks to draw. Zero means one per kilowatt-hour, which turns the
+ * row into something countable: nine lit blocks are nine kilowatt-hours, where
+ * ten blocks on a 13.1 kWh store would each be a fraction nobody can add up.
+ */
+export function segmentCount(configured: number, capacityWh: number): number {
+  if (configured > 0) return Math.round(configured);
+  const perKwh = Math.round(capacityWh / 1000);
+  return Math.min(20, Math.max(6, perKwh || 10));
+}
+
 /** Splits a charge level into equal blocks, the last one partly filled. */
 export function segments(soc: number, count: number): Segment[] {
   const safeCount = Math.max(1, Math.round(count));

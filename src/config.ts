@@ -28,7 +28,7 @@ export const DEFAULTS = {
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
     style: "segments" as const,
-    segments: 10,
+    segments: 0,
     runtime: true,
     runtime_window: 30
   },
@@ -319,7 +319,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           schema: [
             ...only((resolved) => resolved.battery.style !== "solid", {
               name: "segments",
-              selector: { number: { min: 4, max: 20, mode: "box" } }
+              selector: { number: { min: 0, max: 20, mode: "box" } }
             }),
             { name: "runtime", selector: { boolean: {} } }
           ]
@@ -435,6 +435,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_target: t("editor.help_meter_target"),
     house: t("editor.help_house"),
     battery_capacity: t("editor.help_capacity"),
+    segments: t("editor.help_segments"),
     runtime_window: t("editor.help_runtime")
   };
 

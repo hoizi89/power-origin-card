@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { averageLoad, batteryView, segments } from "../src/battery";
+import { averageLoad, batteryView, segmentCount, segments } from "../src/battery";
 
 const NOW = new Date("2026-09-07T21:15:00+02:00");
 
@@ -105,5 +105,25 @@ describe("averageLoad", () => {
 
   it("survives an empty window", () => {
     expect(averageLoad([]).mean).toBeUndefined();
+  });
+});
+
+describe("segmentCount", () => {
+  it("draws one block per kilowatt-hour when left to itself", () => {
+    expect(segmentCount(0, 13100)).toBe(13);
+    expect(segmentCount(0, 9600)).toBe(10);
+  });
+
+  it("obeys a configured count", () => {
+    expect(segmentCount(6, 13100)).toBe(6);
+  });
+
+  it("stays readable for very small and very large stores", () => {
+    expect(segmentCount(0, 2000)).toBe(6);
+    expect(segmentCount(0, 60000)).toBe(20);
+  });
+
+  it("falls back to ten without a capacity", () => {
+    expect(segmentCount(0, 0)).toBe(10);
   });
 });

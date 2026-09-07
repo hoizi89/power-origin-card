@@ -20,7 +20,7 @@ describe("resolveConfig", () => {
   it("fills in every default", () => {
     const resolved = resolveConfig(base);
     expect(resolved.sections).toEqual(DEFAULTS.sections);
-    expect(resolved.battery.segments).toBe(10);
+    expect(resolved.battery.segments).toBe(0);
     expect(resolved.battery.runtime_window).toBe(30);
     expect(resolved.today.stats).toEqual(DEFAULTS.today.stats);
   });
