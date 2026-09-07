@@ -32,9 +32,18 @@ export interface MeterBand {
   height: number;
 }
 
+export interface MeterStack {
+  y: number;
+  height: number;
+}
+
 export interface MeterGeometry {
   /** The same reading without steps: one band per flow, growing from the middle. */
   bands: MeterBand[];
+  /** The whole upward body, for rounding it as one shape. */
+  up?: MeterStack;
+  /** The whole downward body. */
+  down?: MeterStack;
   /** Top and bottom of the whole scale, for the outline. */
   trackY: number;
   trackHeight: number;
@@ -188,9 +197,20 @@ export function meterGeometry(
   grow(0, fromBattery, spanDown, "discharge", false);
   grow(fromBattery, deficit, spanDown, "import", false);
 
+  const body = (value: number, cap: number, up: boolean): MeterStack | undefined => {
+    if (value <= 0) return undefined;
+    const height = Math.max(3, (Math.min(value, cap) / cap) * COLUMN);
+    return {
+      y: up ? MIDDLE - CENTRE_GAP - height : MIDDLE + CENTRE_GAP,
+      height
+    };
+  };
+
   return {
     segments,
     bands,
+    up: body(surplus, span, true),
+    down: body(deficit, spanDown, false),
     trackY: MIDDLE - CENTRE_GAP - COLUMN,
     trackHeight: COLUMN * 2 + CENTRE_GAP * 2,
     scale: span,

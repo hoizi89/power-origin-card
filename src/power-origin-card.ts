@@ -59,6 +59,7 @@ export class PowerOriginCard extends LitElement {
   private _yearPeak?: number;
   private _peakFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
+  private readonly _clipId = `po-clip-${gradientSeq}`;
 
   static async getConfigElement(): Promise<HTMLElement> {
     const { ensureHaFormLoaded } = await import("./editor");
@@ -425,13 +426,37 @@ export class PowerOriginCard extends LitElement {
                   )}`
               )
             : svg`
-                ${meter.bands.map(
-                  (band) => svg`<rect
-                    class="meter-band ${band.key} ${
-                      meter.belowTarget && band.y < 100 ? "held" : ""
-                    }"
-                    x="4" y="${band.y}" width="80" height="${band.height}" rx="6"
-                  ></rect>`
+                <defs>
+                  ${
+                    meter.up
+                      ? svg`<clipPath id="${this._clipId}-up">
+                          <rect x="4" y="${meter.up.y}" width="80"
+                                height="${meter.up.height}" rx="8"></rect>
+                        </clipPath>`
+                      : nothing
+                  }
+                  ${
+                    meter.down
+                      ? svg`<clipPath id="${this._clipId}-down">
+                          <rect x="4" y="${meter.down.y}" width="80"
+                                height="${meter.down.height}" rx="8"></rect>
+                        </clipPath>`
+                      : nothing
+                  }
+                </defs>
+                ${["up", "down"].map((side) =>
+                  svg`<g clip-path="url(#${this._clipId}-${side})">
+                    ${meter.bands
+                      .filter((band) => (side === "up") === band.y < 100)
+                      .map(
+                        (band) => svg`<rect
+                          class="meter-band ${band.key} ${
+                            meter.belowTarget && side === "up" ? "held" : ""
+                          }"
+                          x="4" y="${band.y}" width="80" height="${band.height}"
+                        ></rect>`
+                      )}
+                  </g>`
                 )}`
         }
       </svg>
