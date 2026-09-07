@@ -46,6 +46,11 @@ export const cardStyles = css`
       right: 16px;
       z-index: 1;
     }
+
+    /* and the pair steps aside far enough not to sit under it */
+    .head.bare.float + .ring-block {
+      padding-right: 26px;
+    }
   }
 
   .title {
@@ -165,8 +170,9 @@ export const cardStyles = css`
   }
 
   .meter-zero {
-    stroke: var(--sst-hairline);
+    stroke: var(--sst-muted);
     stroke-width: 1;
+    opacity: 0.45;
   }
 
   /* The instrument shows its value, not its empty scale. */

@@ -10,6 +10,7 @@ export const CARD_TYPE = "power-origin-card";
 
 export const DEFAULTS = {
   text_scale: 1,
+  chip: "always" as const,
   battery_capacity: 0,
   battery_reserve: 0,
   battery_invert: false,
@@ -58,6 +59,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     title: config.title,
     entities: { ...config.entities },
     text_scale: config.text_scale ?? DEFAULTS.text_scale,
+    chip: config.chip ?? DEFAULTS.chip,
     battery_capacity: config.battery_capacity ?? DEFAULTS.battery_capacity,
     battery_reserve: config.battery_reserve ?? DEFAULTS.battery_reserve,
     battery_invert: config.battery_invert ?? DEFAULTS.battery_invert,
@@ -145,6 +147,19 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         {
           name: "text_scale",
           selector: { number: { min: 0.8, max: 2, step: 0.05, mode: "box" } }
+        },
+        {
+          name: "chip",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "always", label: t("editor.chip_always") },
+                { value: "gridfree", label: t("editor.chip_gridfree") },
+                { value: "never", label: t("editor.chip_never") }
+              ]
+            }
+          }
         }
       ]
     },
@@ -463,6 +478,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   const labels: Record<string, string> = {
     title: t("editor.title"),
     text_scale: t("editor.text_scale"),
+    chip: t("editor.chip"),
     entities: t("editor.entities"),
     house: t("editor.house"),
     solar: t("editor.solar"),
@@ -522,6 +538,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   const helpers: Record<string, string> = {
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),
+    chip: t("editor.help_chip"),
     caption: t("editor.help_caption"),
     center: t("editor.help_center"),
     center_dark: t("editor.help_center_dark"),

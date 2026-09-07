@@ -19,6 +19,7 @@ export type RingCenter = "power" | "production" | "surplus" | "autarky";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
+export type ChipMode = "always" | "gridfree" | "never";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type MeterStyle = "bar" | "blocks";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
@@ -121,6 +122,7 @@ export interface PowerOriginCardConfig {
   title?: string;
   /** Multiplies every type size. 1.2 suits a tablet on a wall. */
   text_scale?: number;
+  chip?: ChipMode;
   battery_capacity?: number;
   battery_reserve?: number;
   battery_invert?: boolean;

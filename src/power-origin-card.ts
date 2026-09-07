@@ -243,17 +243,22 @@ export class PowerOriginCard extends LitElement {
     }
 
     const gridfree = !worthNaming(flow.fromGrid, flow.house);
+    const showChip = config.chip === "always" || (config.chip === "gridfree" && gridfree);
 
     return html`
       <ha-card style="--sst-scale: ${config.text_scale}">
-        <div class="head ${config.title ? "" : "bare"} ${
-          !config.title && config.ring.facts === "none" && config.sections.ring ? "float" : ""
-        }">
-          ${config.title ? html`<p class="title">${config.title}</p>` : nothing}
-          <span class="chip ${gridfree ? "gridfree" : "importing"}">
-            ${localize(gridfree ? "state.gridfree" : "state.importing", locale)}
-          </span>
-        </div>
+        ${config.title || showChip
+          ? html`<div class="head ${config.title ? "" : "bare"} ${
+              !config.title && config.ring.facts === "none" && config.sections.ring ? "float" : ""
+            }">
+              ${config.title ? html`<p class="title">${config.title}</p>` : nothing}
+              ${showChip
+                ? html`<span class="chip ${gridfree ? "gridfree" : "importing"}">
+                    ${localize(gridfree ? "state.gridfree" : "state.importing", locale)}
+                  </span>`
+                : nothing}
+            </div>`
+          : nothing}
         ${config.sections.ring ? this._renderRing(flow, locale) : nothing}
         ${config.sections.chart ? this._renderChart(locale) : nothing}
         ${config.sections.battery ? this._renderBattery(locale) : nothing}
@@ -427,7 +432,6 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="meter-block">
       <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${label}">
-        <line class="meter-zero" x1="0" y1="${METER_HEIGHT / 2}" x2="88" y2="${METER_HEIGHT / 2}"></line>
         ${
           config.ring.meter_style === "blocks"
             ? meter.segments.map(
@@ -485,6 +489,8 @@ export class PowerOriginCard extends LitElement {
                   </g>`
                 )}`
         }
+        <line class="meter-zero" x1="1" y1="${METER_HEIGHT / 2}" x2="87"
+              y2="${METER_HEIGHT / 2}"></line>
       </svg>
       <div class="meter-label ${tone}">
         ${quiet
