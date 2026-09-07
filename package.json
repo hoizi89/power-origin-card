@@ -1,0 +1,40 @@
+{
+  "name": "power-origin-card",
+  "version": "0.1.0",
+  "description": "An energy card for Home Assistant that shows where the house's power comes from right now, how the day went, and what it earned.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/power-origin-card.js",
+  "files": [
+    "dist/power-origin-card.js",
+    "README.md",
+    "hacs.json"
+  ],
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "check": "npm run test && npm run build"
+  },
+  "dependencies": {
+    "lit": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoizi89/power-origin-card.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hoizi89/power-origin-card/issues"
+  },
+  "homepage": "https://github.com/hoizi89/power-origin-card#readme"
+}

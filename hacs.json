@@ -1,0 +1,6 @@
+{
+  "name": "Power Origin",
+  "render_readme": true,
+  "filename": "power-origin-card.js",
+  "homeassistant": "2024.8.0"
+}

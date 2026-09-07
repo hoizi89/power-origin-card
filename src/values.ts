@@ -1,0 +1,82 @@
+import type { HassEntity, HomeAssistant } from "./types";
+
+const UNAVAILABLE = new Set(["unavailable", "unknown", "none", ""]);
+
+export function isUsable(entity: HassEntity | undefined): entity is HassEntity {
+  return !!entity && !UNAVAILABLE.has(String(entity.state).toLowerCase());
+}
+
+export function numberOf(entity: HassEntity | undefined): number | undefined {
+  if (!isUsable(entity)) return undefined;
+  const value = Number(entity.state);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+export function unitOf(entity: HassEntity | undefined): string {
+  return String(entity?.attributes?.unit_of_measurement ?? "");
+}
+
+/** Power in kW, whatever the sensor reports it in. */
+export function powerKw(entity: HassEntity | undefined): number | undefined {
+  const value = numberOf(entity);
+  if (value === undefined) return undefined;
+  const unit = unitOf(entity).toLowerCase();
+  if (unit === "kw") return value;
+  if (unit === "mw") return value * 1000;
+  return value / 1000;
+}
+
+/** Energy in kWh, whatever the sensor reports it in. */
+export function energyKwh(entity: HassEntity | undefined): number | undefined {
+  const value = numberOf(entity);
+  if (value === undefined) return undefined;
+  const unit = unitOf(entity).toLowerCase();
+  if (unit === "wh") return value / 1000;
+  if (unit === "mwh") return value * 1000;
+  return value;
+}
+
+export function stateOf(hass: HomeAssistant | undefined, entityId: string | undefined) {
+  if (!hass || !entityId) return undefined;
+  return hass.states[entityId];
+}
+
+export function localeOf(hass: HomeAssistant | undefined): string {
+  return hass?.locale?.language ?? hass?.language ?? "en";
+}
+
+export function formatNumber(value: number, locale: string, digits: number): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  }).format(value);
+}
+
+/** One decimal below 10, none above — the way a person would say it. */
+export function formatPower(value: number, locale: string): string {
+  return formatNumber(value, locale, Math.abs(value) < 10 ? 2 : 1);
+}
+
+export function formatEnergy(value: number, locale: string): string {
+  return formatNumber(value, locale, Math.abs(value) < 100 ? 1 : 0);
+}
+
+export function formatMoney(value: number, locale: string): string {
+  return formatNumber(value, locale, 2);
+}
+
+export function formatDuration(hours: number, locale: string): string {
+  const total = Math.max(0, Math.round(hours * 60));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${formatNumber(h, locale, 0)} h`;
+  return `${formatNumber(h, locale, 0)} h ${String(m).padStart(2, "0")}`;
+}
+
+export function formatClock(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
