@@ -266,6 +266,7 @@ export const cardStyles = css`
     font-family: var(--sst-mono);
     font-size: calc(10.5px * var(--sst-scale));
     letter-spacing: 0.12em;
+    text-transform: uppercase;
     fill: var(--sst-muted);
   }
 

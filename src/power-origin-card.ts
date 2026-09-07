@@ -280,6 +280,11 @@ export class PowerOriginCard extends LitElement {
       : formatPower(centreValue, locale);
     const unit = showAutarky ? "%" : "kW";
 
+    const soleSource =
+      parts.length === 1 && !showSurplus && !showProduction && !showAutarky
+        ? parts[0].key
+        : undefined;
+
     const captionKey = showAutarky
       ? "ring.caption_autarky"
       : showSurplus
@@ -288,7 +293,13 @@ export class PowerOriginCard extends LitElement {
           : "ring.no_surplus"
         : showProduction
           ? "ring.caption_production"
-          : "ring.caption_house";
+          : soleSource === "battery"
+            ? "flow.from_battery"
+            : soleSource === "grid"
+              ? "flow.from_grid"
+              : soleSource === "solar"
+                ? "flow.from_solar"
+                : "ring.caption_house";
 
     const caption = config.ring.caption ? localize(captionKey, locale) : undefined;
 

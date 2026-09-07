@@ -249,3 +249,17 @@ describe("the minimal configuration", () => {
     expect(() => element.setConfig({ type: "x", entities: {} })).toThrow();
   });
 });
+
+describe("the ring caption", () => {
+  it("names the source when one carries the whole house", async () => {
+    const evening = SCENARIOS.find((s) => s.name === "evening on battery")!;
+    const { text } = await render(baseConfig({ ring: { center: "power" } }), evening);
+    expect(text).toContain("Aus dem Speicher");
+  });
+
+  it("says house when several sources share the load", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { text } = await render(baseConfig({ ring: { center: "power" } }), foggy);
+    expect(text).toContain("HAUS");
+  });
+});
