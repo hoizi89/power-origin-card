@@ -8,6 +8,7 @@ import {
   productionSegments,
   ringSegments,
   surplusSegments,
+  worthNaming,
   type Flow
 } from "./flow";
 import { localize } from "./localize";
@@ -39,7 +40,6 @@ import {
 let gradientSeq = 0;
 
 const REFRESH_MS = 2 * 60 * 1000;
-const GRID_IDLE_KW = 0.02;
 
 export class PowerOriginCard extends LitElement {
   static properties = {
@@ -221,7 +221,7 @@ export class PowerOriginCard extends LitElement {
       </ha-card>`;
     }
 
-    const gridfree = flow.fromGrid <= GRID_IDLE_KW;
+    const gridfree = !worthNaming(flow.fromGrid, flow.house);
 
     return html`
       <ha-card style="--sst-scale: ${config.text_scale}">
@@ -424,6 +424,12 @@ export class PowerOriginCard extends LitElement {
     const style = config.ring.facts;
     if (style === "none") return nothing;
 
+    // Everything in motion right now. Inflow and outflow are the same total,
+    // so this reduces to the production on a sunny day and to the house load
+    // at night — one denominator that never leaves a bar unanchored.
+    const whole =
+      flow.fromSolar + flow.fromBattery + flow.fromGrid + flow.toBattery + flow.toGrid;
+
     const rows: Array<{
       colour: string;
       label: string;
@@ -432,7 +438,7 @@ export class PowerOriginCard extends LitElement {
       share?: number;
     }> = [];
     const add = (colour: string, key: string, value: number, unit: string) => {
-      if (value > 0.001) {
+      if (worthNaming(value, whole)) {
         rows.push({
           colour,
           label: localize(key, locale),
@@ -442,12 +448,6 @@ export class PowerOriginCard extends LitElement {
         });
       }
     };
-
-    // Everything in motion right now. Inflow and outflow are the same total,
-    // so this reduces to the production on a sunny day and to the house load
-    // at night — one denominator that never leaves a bar unanchored.
-    const whole =
-      flow.fromSolar + flow.fromBattery + flow.fromGrid + flow.toBattery + flow.toGrid;
 
     const mode = config.ring.center;
     const producing = flow.production > 0.05;
@@ -840,7 +840,7 @@ export class PowerOriginCard extends LitElement {
       { key: battery === undefined ? "flow.own" : "flow.from_solar", colour: "var(--sst-sun)", value: fromSun },
       { key: "flow.from_battery", colour: "var(--sst-leaf)", value: fromBattery },
       { key: "flow.from_grid", colour: "var(--sst-grid)", value: imported }
-    ].filter((part) => part.value > 0.005);
+    ].filter((part) => part.value >= 0.2 || part.value / used >= 0.05);
 
     if (parts.length === 0) return nothing;
 

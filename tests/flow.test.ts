@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { computeFlow, productionSegments, ringSegments, surplusSegments } from "../src/flow";
+import {
+  computeFlow,
+  productionSegments,
+  ringSegments,
+  surplusSegments,
+  worthNaming
+} from "../src/flow";
 
 describe("computeFlow", () => {
   it("covers the house from the sun and sends the rest to the grid", () => {
@@ -101,5 +107,31 @@ describe("surplusSegments", () => {
     const flow = computeFlow({ house: 3.1, solar: 0.38, battery: 0.8, grid: 1.92 });
     expect(surplusSegments(flow).some((part) => part.key === "free")).toBe(false);
     expect(flow.toGrid).toBe(0);
+  });
+});
+
+describe("worthNaming", () => {
+  it("drops a trickle beside a battery carrying the house", () => {
+    // 30 W of grid against 600 W from the store: neither large nor a share.
+    expect(worthNaming(0.03, 0.63)).toBe(false);
+  });
+
+  it("keeps a small flow that is still a real share", () => {
+    // 110 W of 650 W is a sixth of the house — that is worth a line.
+    expect(worthNaming(0.11, 0.65)).toBe(true);
+  });
+
+  it("keeps a large flow however small its share", () => {
+    expect(worthNaming(0.4, 40)).toBe(true);
+  });
+
+  it("drops nothing and negatives", () => {
+    expect(worthNaming(0, 5)).toBe(false);
+    expect(worthNaming(-1, 5)).toBe(false);
+    expect(worthNaming(Number.NaN, 5)).toBe(false);
+  });
+
+  it("names anything when there is no total to compare with", () => {
+    expect(worthNaming(0.01, 0)).toBe(true);
   });
 });

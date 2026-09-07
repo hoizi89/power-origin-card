@@ -66,6 +66,21 @@ export function computeFlow(input: FlowInput): Flow {
   };
 }
 
+/**
+ * Worth a line of its own? A trickle from the grid beside a battery carrying
+ * the house is neither large enough nor a large enough share to name. It has
+ * to fail both tests to be dropped, so a small but real share still shows.
+ */
+export function worthNaming(value: number, total: number): boolean {
+  if (!Number.isFinite(value) || value <= 0) return false;
+  const share = total > 0 ? value / total : 1;
+  return value >= NAMEABLE_KW || share >= NAMEABLE_SHARE;
+}
+
+/** Below this in kW and below the share, a flow is a rounding error. */
+export const NAMEABLE_KW = 0.05;
+export const NAMEABLE_SHARE = 0.08;
+
 export type SegmentKey = "solar" | "battery" | "grid" | "house" | "free";
 
 export interface RingSegment {
