@@ -19,6 +19,7 @@ export type RingCenter = "power" | "production" | "surplus" | "autarky";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
+export type RingSize = "auto" | "s" | "m" | "l";
 export type MeterStyle = "bar" | "blocks";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
@@ -81,6 +82,7 @@ export interface RingOptions {
   /** A continuous band or stepped blocks. */
   meter_style?: MeterStyle;
   meter_scope?: MeterScope;
+  size?: RingSize;
 }
 
 /** Configurations written before the facts option existed. */

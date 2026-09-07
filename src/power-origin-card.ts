@@ -313,7 +313,7 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="ring-block ${config.ring.layout}">
-        <div class="ring-group ${config.ring.facts === "none" ? "solo" : ""}">
+        <div class="ring-group size-${config.ring.size} ${config.ring.facts === "none" ? "solo" : ""}">
         ${this._renderMeter(flow, locale)}
         <svg class="ring ${showSurplus ? "surplus" : ""}" viewBox="0 0 200 200" role="img" aria-label="${value} ${unit}">
           <circle class="ring-track" cx="100" cy="100" r="76" pathLength="100"></circle>

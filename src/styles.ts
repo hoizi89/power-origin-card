@@ -732,4 +732,32 @@ export const cardStyles = css`
       width: 82px;
     }
   }
+
+  /* A chosen size beats the automatic one, whatever the room. */
+  .ring-group.size-s .ring {
+    max-width: 168px;
+  }
+
+  .ring-group.size-s .meter {
+    height: 128px;
+    width: 60px;
+  }
+
+  .ring-group.size-m .ring {
+    max-width: 200px;
+  }
+
+  .ring-group.size-m .meter {
+    height: 150px;
+    width: 66px;
+  }
+
+  .ring-group.size-l .ring {
+    max-width: 252px;
+  }
+
+  .ring-group.size-l .meter {
+    height: 190px;
+    width: 82px;
+  }
 `;
