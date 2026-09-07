@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { averageLoad, batteryView, segmentCount, segments } from "../src/battery";
+import {
+  averageLoad,
+  batteryView,
+  segmentCount,
+  segments,
+  sunriseReach
+} from "../src/battery";
 
 const NOW = new Date("2026-09-07T21:15:00+02:00");
 
@@ -135,5 +141,23 @@ describe("segmentCount", () => {
 
   it("falls back to ten without a capacity", () => {
     expect(segmentCount(0, 0)).toBe(10);
+  });
+});
+
+describe("sunriseReach", () => {
+  it("says nothing when the night is not covered", () => {
+    expect(sunriseReach(5, 8)).toBeUndefined();
+  });
+
+  it("separates only just from comfortably", () => {
+    expect(sunriseReach(8.2, 8)).toBe("tight");
+    expect(sunriseReach(10, 8)).toBe("ok");
+    expect(sunriseReach(14, 8)).toBe("easy");
+  });
+
+  it("refuses to guess without both numbers", () => {
+    expect(sunriseReach(undefined, 8)).toBeUndefined();
+    expect(sunriseReach(9, undefined)).toBeUndefined();
+    expect(sunriseReach(9, 0)).toBeUndefined();
   });
 });

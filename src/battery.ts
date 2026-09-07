@@ -90,6 +90,26 @@ export interface Segment {
  * row into something countable: nine lit blocks are nine kilowatt-hours, where
  * ten blocks on a 13.1 kWh store would each be a fraction nobody can add up.
  */
+export type SunriseReach = "tight" | "ok" | "easy";
+
+/**
+ * Reaching sunrise is not one state. A tenth of an hour to spare and half a
+ * night to spare call for opposite behaviour, and the word is the only place
+ * that difference can show.
+ */
+export function sunriseReach(
+  hours: number | undefined,
+  hoursToSunrise: number | undefined
+): SunriseReach | undefined {
+  if (hours === undefined || hoursToSunrise === undefined) return undefined;
+  if (!Number.isFinite(hours) || !Number.isFinite(hoursToSunrise)) return undefined;
+  if (hoursToSunrise <= 0 || hours < hoursToSunrise) return undefined;
+
+  const ratio = hours / hoursToSunrise;
+  if (ratio < 1.15) return "tight";
+  return ratio < 1.6 ? "ok" : "easy";
+}
+
 export function segmentCount(configured: number, capacityWh: number): number {
   if (configured > 0) return Math.round(configured);
   const perKwh = Math.round(capacityWh / 1000);

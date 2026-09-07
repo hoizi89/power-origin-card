@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, svg } from "lit";
-import { batteryView, segmentCount, segments, type BatteryView } from "./battery";
+import { batteryView, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
 import { chartBars } from "./bars";
 import { CHART_BOX, chartGeometry } from "./chart";
 import { CARD_TYPE, resolveConfig, stubConfig } from "./config";
@@ -876,15 +876,18 @@ export class PowerOriginCard extends LitElement {
       // A clock time and a duration are the same fact twice, and past the next
       // sunrise neither is the answer — the sun takes over long before.
       const sunrise = sunTimes(stateOf(this._hass, "sun.sun")).nextRising;
-      const pastSunrise = view.at !== undefined && sunrise !== undefined && view.at > sunrise;
+      const reach = sunriseReach(
+        view.hours,
+        sunrise === undefined ? undefined : (sunrise.getTime() - Date.now()) / 3600000
+      );
 
       const spent = view.availableKwh !== undefined && view.availableKwh <= 0;
 
       if (spent) {
         parts.push(localize("battery.at_reserve", locale));
       } else {
-        if (pastSunrise) {
-          parts.push(localize("battery.until_sunrise", locale));
+        if (reach) {
+          parts.push(localize(`battery.sunrise_${reach}`, locale));
         } else if (view.at) {
           parts.push(`${localize("battery.lasts_until", locale)} ${formatClock(view.at, locale)}`);
         }
