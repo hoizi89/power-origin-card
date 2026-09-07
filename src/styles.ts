@@ -91,7 +91,7 @@ export const cardStyles = css`
   .meter {
     display: block;
     height: 150px;
-    width: 24px;
+    width: 42px;
     flex: 0 0 auto;
   }
 
