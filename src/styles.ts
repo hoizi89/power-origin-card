@@ -163,17 +163,14 @@ export const cardStyles = css`
     fill: var(--sst-grid);
   }
 
+  .meter-on.discharge {
+    fill: var(--sst-leaf);
+  }
+
   /* Not a warning colour — the same hue, simply held back until the surplus is
      worth acting on. A second meaning on one scale cannot be read. */
   .meter-on.held {
     opacity: 0.42;
-  }
-
-  .meter-target {
-    stroke: var(--sst-muted);
-    stroke-width: 1;
-    stroke-dasharray: 2 2;
-    opacity: 0.7;
   }
 
   .ring-block {

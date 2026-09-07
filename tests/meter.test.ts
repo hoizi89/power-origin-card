@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { METER_STEPS, meterGeometry, type MeterKey } from "../src/meter";
 
-const flow = (toBattery: number, toGrid: number, fromGrid: number) => ({
+const flow = (toBattery: number, toGrid: number, fromGrid: number, fromBattery = 0) => ({
   toBattery,
   toGrid,
-  fromGrid
+  fromGrid,
+  fromBattery
 });
 
 const lit = (geometry: ReturnType<typeof meterGeometry>, direction: "up" | "down") =>
@@ -89,6 +90,20 @@ describe("meterGeometry", () => {
     const dull = meterGeometry(flow(0, 0.9, 0), 0, 13.4);
     expect(dull.scale).toBe(bright.scale);
     expect(lit(dull, "up")).toBeLessThanOrEqual(1);
+  });
+
+  it("sinks for a discharging battery, not only for the grid", () => {
+    const geometry = meterGeometry(flow(0, 0, 0, 3), 8);
+    expect(geometry.deficit).toBe(3);
+    expect(lit(geometry, "down")).toBe(3);
+    expect(keys(geometry)).toEqual(["discharge"]);
+  });
+
+  it("stacks the battery under the grid on the way down as well", () => {
+    const geometry = meterGeometry(flow(0, 0, 6, 2), 8);
+    const down = geometry.segments.filter((segment) => segment.direction === "down");
+    expect(down[0].fills[0].key).toBe("discharge");
+    expect(down[METER_STEPS - 1].fills.at(-1)?.key).toBe("import");
   });
 
   it("never divides by zero on a dead system", () => {

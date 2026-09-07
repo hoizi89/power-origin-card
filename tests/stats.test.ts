@@ -5,20 +5,24 @@ import { sunTimes } from "../src/sun";
 
 const NOW = new Date("2026-09-07T13:45:00+02:00");
 const MIDNIGHT = startOfToday(NOW).getTime();
+/** Minutes before now, so the fixtures hold in any timezone. */
+const ago = (minutes: number) => NOW.getTime() - minutes * 60 * 1000;
 const bucket = (minutes: number) => MIDNIGHT + minutes * 60 * 1000;
 
 describe("buildDaySeries", () => {
+  // An hour apart, because buildDaySeries takes its resampling step from the
+  // gap between the first two rows.
   const solar = [
-    { start: bucket(0), mean: 0, max: 0 },
-    { start: bucket(300), mean: 1200, max: 1500 },
-    { start: bucket(600), mean: 8000, max: 9931 },
-    { start: bucket(800), mean: 5141, max: 6000 }
+    { start: ago(190), mean: 0, max: 0 },
+    { start: ago(130), mean: 1200, max: 1500 },
+    { start: ago(70), mean: 8000, max: 9931 },
+    { start: ago(10), mean: 5141, max: 6000 }
   ];
   const house = [
-    { start: bucket(0), mean: 400, max: 600 },
-    { start: bucket(300), mean: 900, max: 1200 },
-    { start: bucket(600), mean: 2000, max: 2500 },
-    { start: bucket(800), mean: 2723, max: 3000 }
+    { start: ago(190), mean: 400, max: 600 },
+    { start: ago(130), mean: 900, max: 1200 },
+    { start: ago(70), mean: 2000, max: 2500 },
+    { start: ago(10), mean: 2723, max: 3000 }
   ];
 
   it("converts watts to kilowatts", () => {
@@ -28,9 +32,16 @@ describe("buildDaySeries", () => {
   });
 
   it("averages only the requested window", () => {
-    const series = buildDaySeries(solar, house, 1000, NOW, 120);
+    // Thirty minutes back reaches the newest row and no further.
+    const series = buildDaySeries(solar, house, 1000, NOW, 30);
     expect(series.houseAverage).toBeCloseTo(2.723, 3);
     expect(series.houseSpread).toBeCloseTo(0, 5);
+  });
+
+  it("widens the average as the window grows", () => {
+    const series = buildDaySeries(solar, house, 1000, NOW, 90);
+    expect(series.houseAverage).toBeCloseTo((2.0 + 2.723) / 2, 3);
+    expect(series.houseSpread).toBeGreaterThan(0);
   });
 
   it("starts at midnight and ends now", () => {

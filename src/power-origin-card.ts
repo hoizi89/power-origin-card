@@ -25,7 +25,6 @@ import type {
 import {
   energyKwh,
   formatClock,
-  formatDuration,
   formatEnergy,
   formatMoney,
   formatNumber,
@@ -319,7 +318,12 @@ export class PowerOriginCard extends LitElement {
     if (!config.ring.meter) return nothing;
 
     const meter = meterGeometry(
-      { toBattery: flow.toBattery, toGrid: flow.toGrid, fromGrid: flow.fromGrid },
+      {
+        toBattery: flow.toBattery,
+        toGrid: flow.toGrid,
+        fromGrid: flow.fromGrid,
+        fromBattery: flow.fromBattery
+      },
       config.ring.meter_scale,
       this._yearPeak ?? this._series?.solarPeak ?? 0,
       config.ring.meter_target
@@ -332,19 +336,29 @@ export class PowerOriginCard extends LitElement {
     const charging = flow.toBattery > 0.01;
     const importing = flow.fromGrid > 0.01;
 
+    const discharging = flow.fromBattery > 0.01;
+
+    // With both flowing, the grid is the half worth naming — it is the half
+    // that costs. The battery's share stays visible as green in the column.
     const key = importing
       ? "meter.import"
-      : exporting && charging
-        ? "meter.surplus"
-        : exporting
-          ? "meter.export"
-          : charging
-            ? "meter.charging"
-            : "meter.balanced";
+      : discharging
+        ? "meter.discharging"
+        : exporting && charging
+          ? "meter.surplus"
+          : exporting
+            ? "meter.export"
+            : charging
+              ? "meter.charging"
+              : "meter.balanced";
 
     const word = localize(key, locale);
-    const amount = importing ? flow.fromGrid : meter.surplus;
-    const tone = importing ? "down" : meter.surplus > 0.01 ? "up" : "idle";
+    const amount = importing
+      ? flow.fromGrid
+      : discharging
+        ? flow.fromBattery
+        : meter.surplus;
+    const tone = meter.deficit > 0.01 ? "down" : meter.surplus > 0.01 ? "up" : "idle";
 
     return html`
       <div class="meter-block">
@@ -371,12 +385,6 @@ export class PowerOriginCard extends LitElement {
               ></rect>`
             )}`
         )}
-        ${
-          meter.targetY !== undefined
-            ? svg`<line class="meter-target" x1="0" y1="${meter.targetY}"
-                        x2="26" y2="${meter.targetY}"></line>`
-            : nothing
-        }
       </svg>
       ${
         // The surplus ring prints this very figure in its middle.
@@ -528,9 +536,11 @@ export class PowerOriginCard extends LitElement {
         : undefined;
     const produced = energyKwh(stateOf(hass, config.entities.solar_today));
     const used = energyKwh(stateOf(hass, config.entities.house_today));
-    const forecast = config.chart.show_forecast
+    // After sunset "0.0 expected" states the obvious and costs a line.
+    const forecastValue = config.chart.show_forecast
       ? energyKwh(stateOf(hass, config.entities.forecast))
       : undefined;
+    const forecast = forecastValue !== undefined && forecastValue >= 0.05 ? forecastValue : undefined;
 
     const note = [
       produced !== undefined
@@ -735,22 +745,23 @@ export class PowerOriginCard extends LitElement {
 
     if (view.mode === "charging") {
       if (view.at) parts.push(`${localize("battery.full_at", locale)} ${formatClock(view.at, locale)}`);
-      if (view.hours) parts.push(formatDuration(view.hours, locale));
       if (view.power !== undefined) {
         parts.push(
           `${localize("battery.charging", locale)} ${formatPower(Math.abs(view.power), locale)} kW`
         );
       }
     } else if (view.mode === "discharging") {
-      if (view.at) {
+      // A clock time and a duration are the same fact twice, and past the next
+      // sunrise neither is the answer — the sun takes over long before.
+      const sunrise = sunTimes(stateOf(this._hass, "sun.sun")).rising;
+      const pastSunrise = view.at !== undefined && sunrise !== undefined && view.at > sunrise;
+
+      if (pastSunrise) {
+        parts.push(localize("battery.until_sunrise", locale));
+      } else if (view.at) {
         parts.push(`${localize("battery.lasts_until", locale)} ${formatClock(view.at, locale)}`);
       }
-      if (view.hours) parts.push(formatDuration(view.hours, locale));
-      if (view.power !== undefined) {
-        parts.push(
-          `${localize("battery.delivering", locale)} ${formatPower(view.power, locale)} kW`
-        );
-      }
+
       if (view.availableKwh !== undefined) {
         parts.push(
           `${formatNumber(view.availableKwh, locale, 1)} kWh ${localize("battery.remaining", locale)}`

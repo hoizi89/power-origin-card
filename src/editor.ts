@@ -45,7 +45,7 @@ export class PowerOriginCardEditor extends LitElement {
   }
 
   private form() {
-    return getConfigForm(localeOf(this.hass));
+    return getConfigForm(localeOf(this.hass), this._config);
   }
 
   protected render() {

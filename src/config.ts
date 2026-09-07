@@ -113,8 +113,16 @@ const entityField = (name: string, deviceClass?: string) => ({
   }
 });
 
-export function getConfigForm(locale?: string) {
+export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) {
   const t = (key: string) => localize(key, locale);
+  const config = current ? resolveConfig(current) : undefined;
+
+  // A switch that cannot take effect is worse than a missing one: it invites a
+  // change and then does nothing. Anything the current setup cannot act on is
+  // left out rather than shown dead.
+  const on = (able: (resolved: ResolvedConfig) => boolean) => !config || able(config);
+  const only = <T>(able: (resolved: ResolvedConfig) => boolean, ...items: T[]): T[] =>
+    on(able) ? items : [];
 
   const schema = [
     {
@@ -179,7 +187,9 @@ export function getConfigForm(locale?: string) {
         }
       ]
     },
-    {
+    ...only(
+      (resolved) => resolved.sections.ring,
+      {
       type: "expandable",
       name: "ring",
       title: t("editor.ring_settings"),
@@ -199,7 +209,7 @@ export function getConfigForm(locale?: string) {
             }
           }
         },
-        {
+        ...only((resolved) => resolved.ring.facts !== "none", {
           name: "layout",
           selector: {
             select: {
@@ -211,7 +221,7 @@ export function getConfigForm(locale?: string) {
               ]
             }
           }
-        },
+        }),
         { name: "caption", selector: { boolean: {} } },
         {
           name: "facts",
@@ -228,7 +238,7 @@ export function getConfigForm(locale?: string) {
           }
         },
         { name: "meter", selector: { boolean: {} } },
-        {
+        ...only((resolved) => resolved.ring.meter, {
           type: "grid",
           schema: [
             {
@@ -240,10 +250,13 @@ export function getConfigForm(locale?: string) {
               selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
             }
           ]
-        }
+        })
       ]
-    },
-    {
+    }
+    ),
+    ...only(
+      (resolved) => resolved.sections.chart,
+      {
       type: "expandable",
       name: "chart",
       title: t("editor.chart_settings"),
@@ -273,8 +286,11 @@ export function getConfigForm(locale?: string) {
           selector: { number: { min: 50, max: 200, step: 5, mode: "slider" } }
         }
       ]
-    },
-    {
+    }
+    ),
+    ...only(
+      (resolved) => resolved.sections.battery,
+      {
       type: "expandable",
       name: "battery",
       title: t("editor.battery_settings"),
@@ -296,17 +312,23 @@ export function getConfigForm(locale?: string) {
         {
           type: "grid",
           schema: [
-            { name: "segments", selector: { number: { min: 4, max: 20, mode: "box" } } },
+            ...only((resolved) => resolved.battery.style !== "solid", {
+              name: "segments",
+              selector: { number: { min: 4, max: 20, mode: "box" } }
+            }),
             { name: "runtime", selector: { boolean: {} } }
           ]
         },
-        {
+        ...only((resolved) => resolved.battery.runtime, {
           name: "runtime_window",
           selector: { number: { min: 5, max: 120, step: 5, unit_of_measurement: "min" } }
-        }
+        })
       ]
-    },
-    {
+    }
+    ),
+    ...only(
+      (resolved) => resolved.sections.today,
+      {
       type: "expandable",
       name: "today",
       title: t("editor.today_settings"),
@@ -329,7 +351,8 @@ export function getConfigForm(locale?: string) {
           }
         }
       ]
-    },
+    }
+    ),
     {
       type: "grid",
       schema: [

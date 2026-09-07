@@ -12,7 +12,7 @@ describe("batteryView", () => {
     expect(view.mode).toBe("discharging");
     expect(view.availableKwh).toBeCloseTo(13.1, 2);
     expect(view.hours).toBeCloseTo(11.1, 1);
-    expect(view.at?.getHours()).toBe(8);
+    expect(view.at!.getTime() - NOW.getTime()).toBeCloseTo(view.hours! * 3600 * 1000, -2);
   });
 
   it("keeps the reserve out of the usable energy", () => {

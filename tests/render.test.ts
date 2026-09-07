@@ -140,9 +140,10 @@ describe("fallbacks", () => {
     // decision, that they are on screen at all is not.
     const mixed = SCENARIOS.find((s) => s.name === "little sun, battery helping")!;
     for (const mode of MODES) {
-      const { text } = await render(baseConfig({ ring: { center: mode } }), mixed);
+      const { root, text } = await render(baseConfig({ ring: { center: mode } }), mixed);
       expect(text, `import in ${mode}`).toContain("1,90");
-      expect(text, `discharge in ${mode}`).toContain("0,80");
+      // The discharge is carried by the column's green rather than a figure.
+      expect(root.querySelectorAll(".meter-on.discharge").length, mode).toBeGreaterThan(0);
     }
   });
 

@@ -1,4 +1,4 @@
-export type MeterKey = "battery" | "grid" | "import";
+export type MeterKey = "battery" | "grid" | "import" | "discharge";
 
 export interface MeterFill {
   key: MeterKey;
@@ -22,6 +22,8 @@ export interface MeterInput {
   toGrid: number;
   /** Power drawn from the grid, in kW. */
   fromGrid: number;
+  /** Power taken out of the battery, in kW. */
+  fromBattery: number;
 }
 
 export interface MeterGeometry {
@@ -29,6 +31,8 @@ export interface MeterGeometry {
   scale: number;
   /** Everything the house is not using: battery charge plus export. */
   surplus: number;
+  /** Everything the house is drawing on: battery plus grid. */
+  deficit: number;
   overUp: boolean;
   overDown: boolean;
   /** Where to draw the threshold line, if one is set. */
@@ -70,9 +74,11 @@ export function meterGeometry(
   const toBattery = Math.max(0, input.toBattery);
   const toGrid = Math.max(0, input.toGrid);
   const fromGrid = Math.max(0, input.fromGrid);
+  const fromBattery = Math.max(0, input.fromBattery);
   const surplus = toBattery + toGrid;
+  const deficit = fromBattery + fromGrid;
 
-  const span = scale > 0 ? scale : Math.max(Math.ceil(fallbackPeak), surplus, fromGrid, 1);
+  const span = scale > 0 ? scale : Math.max(Math.ceil(fallbackPeak), surplus, deficit, 1);
   const step = span / METER_STEPS;
 
   const segments: MeterSegment[] = [];
@@ -95,12 +101,20 @@ export function meterGeometry(
       fills
     });
 
-    const drawn = overlap(from, to, 0, fromGrid) / step;
+    // Mirrored: the battery sits nearest the middle going down as it does
+    // going up, so the same store reads the same way in both directions.
+    const discharge = overlap(from, to, 0, fromBattery) / step;
+    const imported = overlap(from, to, fromBattery, deficit) / step;
+
+    const downFills: MeterFill[] = [];
+    if (discharge > 0) downFills.push({ key: "discharge", offset: 0, size: discharge });
+    if (imported > 0) downFills.push({ key: "import", offset: discharge, size: imported });
+
     segments.push({
       direction: "down",
       y: MIDDLE + CENTRE_GAP + index * (BLOCK + GAP),
       height: BLOCK,
-      fills: drawn > 0 ? [{ key: "import", offset: 0, size: drawn }] : []
+      fills: downFills
     });
   }
 
@@ -114,8 +128,9 @@ export function meterGeometry(
     segments,
     scale: span,
     surplus,
+    deficit,
     overUp: surplus > span * 1.001,
-    overDown: fromGrid > span * 1.001,
+    overDown: deficit > span * 1.001,
     targetY,
     belowTarget: target > 0 && surplus < target
   };
