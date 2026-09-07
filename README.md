@@ -187,7 +187,13 @@ The suite covers the arithmetic and, in jsdom, the rendering: every ring mode ag
 
 ## Where the money figures come from
 
-The balance, the export revenue, the import cost and the amortisation are read from sensors, not calculated here — the card has no idea what you pay. On Home Assistant those come from an integration that tracks tariffs; **PV Management** provides all four and pairs well with this card. Without such sensors the money line simply does not appear, and everything else works unchanged.
+The card has no idea what you pay, so the money comes from sensors. There are two ways to give it to them.
+
+**From an integration that tracks the tariff.** Point `cost_today`, `cost_export_today`, `cost_import_today` and `amortisation` at its sensors and the card just reads them. [PV Management](https://github.com/Rowdyweb/pv_management) provides all four and pairs well with this card. This is the way to do it **on a spot tariff**: the price moves through the day, so only something that accumulates as it goes can be right.
+
+**From a fixed price.** On a fixed tariff you can skip three of those pickers. Give the card `price_import` and `price_export` — a number helper each, in euros per kilowatt hour — and it works the two sides out from the energy it already reads, and the balance out of those. Any sensor you do configure wins over the arithmetic, so you can mix the two.
+
+Without either, the money line simply does not appear and everything else works unchanged.
 
 ## Licence
 

@@ -157,7 +157,9 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     [IDS.forecast]: entity(IDS.forecast, scenario.forecast, "kWh", "energy"),
     [IDS.cost_today]: entity(IDS.cost_today, v(scenario.cost), "€", "monetary"),
     [IDS.cost_export_today]: entity(IDS.cost_export_today, v(1.2), "€", "monetary"),
-    [IDS.cost_import_today]: entity(IDS.cost_import_today, v(0.02), "€", "monetary")
+    [IDS.cost_import_today]: entity(IDS.cost_import_today, v(0.02), "€", "monetary"),
+    "sensor.price_import": entity("sensor.price_import", v(0.29), "€/kWh", "monetary"),
+    "sensor.price_export": entity("sensor.price_export", v(0.08), "€/kWh", "monetary")
   };
 
   return {

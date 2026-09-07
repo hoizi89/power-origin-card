@@ -229,11 +229,43 @@ describe("money", () => {
     expect(text).toContain("gezahlt");
   });
 
-  it("leaves the line out when no balance entity is configured", async () => {
+  it("leaves the line out with nothing to work from", async () => {
+    const config = baseConfig();
+    delete config.entities.cost_today;
+    delete config.entities.cost_export_today;
+    delete config.entities.cost_import_today;
+    const { text } = await render(config, SCENARIOS[0]);
+    expect(text).not.toContain("verdient");
+  });
+
+  it("works the balance out from the two sides when no sensor gives it", async () => {
     const config = baseConfig();
     delete config.entities.cost_today;
     const { text } = await render(config, SCENARIOS[0]);
-    expect(text).not.toContain("verdient");
+    // 1.20 earned less 0.02 paid, without a balance sensor anywhere.
+    expect(text).toContain("verdient");
+    expect(text).toContain("1,18");
+  });
+
+  it("works both sides out from the prices when no money sensor gives them", async () => {
+    const config = baseConfig({
+      entities: {
+        house: IDS.house,
+        solar: IDS.solar,
+        grid_power: IDS.grid_power,
+        solar_today: IDS.solar_today,
+        house_today: IDS.house_today,
+        export_today: IDS.export_today,
+        import_today: IDS.import_today,
+        price_import: "sensor.price_import",
+        price_export: "sensor.price_export"
+      },
+      today: { breakdown: true }
+    });
+    const { text } = await render(config, SCENARIOS[0]);
+    // 29.4 kWh exported at 0.08, 0.1 kWh drawn at 0.29.
+    expect(text).toContain("2,35");
+    expect(text).toContain("verdient");
   });
 });
 

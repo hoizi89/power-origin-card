@@ -12,6 +12,7 @@ import {
   type Flow
 } from "./flow";
 import { localize } from "./localize";
+import { moneyView } from "./money";
 import { METER_HEIGHT, meterGeometry } from "./meter";
 import { buildDaySeries, cachedStatistics, fetchStatistics } from "./stats";
 import { cardStyles } from "./styles";
@@ -968,12 +969,21 @@ export class PowerOriginCard extends LitElement {
   private _renderMoney(locale: string) {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
-    const balance = numberOf(stateOf(hass, config.entities.cost_today));
+    const money = moneyView({
+      balance: numberOf(stateOf(hass, config.entities.cost_today)),
+      exported: numberOf(stateOf(hass, config.entities.cost_export_today)),
+      imported: numberOf(stateOf(hass, config.entities.cost_import_today)),
+      exportKwh: energyKwh(stateOf(hass, config.entities.export_today)),
+      importKwh: energyKwh(stateOf(hass, config.entities.import_today)),
+      priceImport: numberOf(stateOf(hass, config.entities.price_import)),
+      priceExport: numberOf(stateOf(hass, config.entities.price_export))
+    });
+
+    const balance = money.balance;
     if (balance === undefined) return nothing;
 
     const earned = balance < 0;
-    const exported = numberOf(stateOf(hass, config.entities.cost_export_today));
-    const imported = numberOf(stateOf(hass, config.entities.cost_import_today));
+    const { exported, imported } = money;
 
     const paidOff = config.today.amortisation
       ? numberOf(stateOf(hass, config.entities.amortisation))
