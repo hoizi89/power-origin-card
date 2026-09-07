@@ -246,7 +246,9 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <ha-card style="--sst-scale: ${config.text_scale}">
-        <div class="head ${config.title ? "" : "bare"}">
+        <div class="head ${config.title ? "" : "bare"} ${
+          !config.title && config.ring.facts === "none" && config.sections.ring ? "float" : ""
+        }">
           ${config.title ? html`<p class="title">${config.title}</p>` : nothing}
           <span class="chip ${gridfree ? "gridfree" : "importing"}">
             ${localize(gridfree ? "state.gridfree" : "state.importing", locale)}

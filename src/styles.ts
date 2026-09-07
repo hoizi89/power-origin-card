@@ -17,6 +17,7 @@ export const cardStyles = css`
   }
 
   ha-card {
+    position: relative;
     container-type: inline-size;
     padding: 16px 16px 0;
     display: flex;
@@ -34,6 +35,17 @@ export const cardStyles = css`
 
   .head.bare {
     justify-content: flex-end;
+  }
+
+  /* With nothing to the right of the ring the chip has a whole row to itself,
+     which is a row of height for one word. It floats into the corner instead. */
+  @container (min-width: 340px) {
+    .head.bare.float {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      z-index: 1;
+    }
   }
 
   .title {
