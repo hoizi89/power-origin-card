@@ -172,12 +172,14 @@ export function meterGeometry(
     const end = Math.min(to, cap) / cap;
     const height = (end - start) * COLUMN;
     if (height <= 0.2) return;
+    // Below this a real flow would be a hairline and read as an artefact.
+    const drawn = Math.max(3, height);
     bands.push({
       key,
       y: up
-        ? MIDDLE - CENTRE_GAP - end * COLUMN
+        ? MIDDLE - CENTRE_GAP - start * COLUMN - drawn
         : MIDDLE + CENTRE_GAP + start * COLUMN,
-      height
+      height: drawn
     });
   };
 

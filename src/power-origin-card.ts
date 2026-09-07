@@ -425,8 +425,6 @@ export class PowerOriginCard extends LitElement {
                   )}`
               )
             : svg`
-                <rect class="meter-track" x="4" y="${meter.trackY}" width="80"
-                      height="${meter.trackHeight}" rx="9"></rect>
                 ${meter.bands.map(
                   (band) => svg`<rect
                     class="meter-band ${band.key} ${
@@ -627,7 +625,11 @@ export class PowerOriginCard extends LitElement {
                           y2="${(geometry?.tick ?? barGeometry?.tick)!.y}"></line>
                     <text class="gridlabel" x="0"
                           y="${(geometry?.tick ?? barGeometry?.tick)!.y - 3}"
-                      >${formatPower((geometry?.tick ?? barGeometry?.tick)!.value, locale)} kW</text>`
+                      >${formatNumber(
+                        (geometry?.tick ?? barGeometry?.tick)!.value,
+                        locale,
+                        (geometry?.tick ?? barGeometry?.tick)!.value % 1 === 0 ? 0 : 1
+                      )} kW</text>`
                   : nothing
               }
               <defs>

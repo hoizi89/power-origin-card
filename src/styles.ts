@@ -149,13 +149,6 @@ export const cardStyles = css`
     opacity: 0.3;
   }
 
-  .meter-track {
-    fill: none;
-    stroke: var(--sst-track);
-    stroke-width: 1.5;
-    opacity: 0.55;
-  }
-
   .meter-band {
     transition: y 0.5s ease, height 0.5s ease;
   }
