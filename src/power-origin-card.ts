@@ -57,7 +57,6 @@ export class PowerOriginCard extends LitElement {
   private _lastFetch = 0;
   private _pending = false;
   private _yearPeak?: number;
-  private _yearDraw?: number;
   private _peakFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
 
@@ -174,13 +173,7 @@ export class PowerOriginCard extends LitElement {
     const roofPeaks = monthlyPeaks(solarId);
     if (roofPeaks.length > 0) this._yearPeak = Math.max(...roofPeaks) / divisor;
 
-    // For the house the mean of the monthly peaks, not the largest: one car
-    // charging in July would otherwise set the scale for every quiet evening.
-    const drawPeaks = monthlyPeaks(houseId);
-    if (drawPeaks.length > 0) {
-      this._yearDraw =
-        drawPeaks.reduce((sum, value) => sum + value, 0) / drawPeaks.length / divisor;
-    }
+    void houseId;
   }
 
   private _needsPeak(): boolean {
@@ -344,7 +337,7 @@ export class PowerOriginCard extends LitElement {
       this._yearPeak ?? this._series?.solarPeak ?? 0,
       config.ring.meter_target,
       config.ring.meter_scale_draw,
-      this._yearDraw ?? 0
+      0
     );
 
     const label = `${localize("flow.to_grid", locale)} ${formatPower(flow.toGrid, locale)} kW, ` +

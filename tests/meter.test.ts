@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { METER_STEPS, meterGeometry, type MeterKey } from "../src/meter";
+import { DEFAULT_DRAW_KW, METER_STEPS, meterGeometry, type MeterKey } from "../src/meter";
 
 const flow = (toBattery: number, toGrid: number, fromGrid: number, fromBattery = 0) => ({
   toBattery,
@@ -191,6 +191,7 @@ describe("the two scales", () => {
   it("still never divides by zero on either side", () => {
     const geometry = meterGeometry(flow(0, 0, 0, 0), 0, 0, 0, 0, 0);
     expect(geometry.scale).toBe(1);
-    expect(geometry.scaleDown).toBe(1);
+    // The draw side falls back to a household band rather than to nothing.
+    expect(geometry.scaleDown).toBe(DEFAULT_DRAW_KW);
   });
 });

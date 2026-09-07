@@ -47,6 +47,13 @@ export interface MeterGeometry {
 export const METER_HEIGHT = 200;
 export const METER_STEPS = 6;
 
+/**
+ * The band a house lives in. Its peaks belong to a heat pump or a car and would
+ * make every ordinary evening a hairline, so the draw side starts from the
+ * working range instead and is raised by hand where that is wrong.
+ */
+export const DEFAULT_DRAW_KW = 3;
+
 const BLOCK = 12;
 const GAP = 2.6;
 const MIDDLE = METER_HEIGHT / 2;
@@ -89,7 +96,9 @@ export function meterGeometry(
 
   const span = scale > 0 ? scale : Math.max(Math.ceil(fallbackPeak), surplus, 1);
   const spanDown =
-    scaleDown > 0 ? scaleDown : Math.max(Math.ceil(fallbackDraw), deficit, 1);
+    scaleDown > 0
+      ? scaleDown
+      : Math.max(fallbackDraw > 0 ? Math.ceil(fallbackDraw) : DEFAULT_DRAW_KW, deficit, 1);
   const step = span / METER_STEPS;
   const stepDown = spanDown / METER_STEPS;
 
