@@ -107,6 +107,8 @@ export interface TodayOptions {
   origin_bar?: boolean;
   /** The small "exported / imported" note beside the balance. */
   breakdown?: boolean;
+  /** How far the system has paid for itself, in the corner beside the balance. */
+  amortisation?: boolean;
   stats?: TodayStat[];
 }
 

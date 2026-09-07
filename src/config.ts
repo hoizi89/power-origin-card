@@ -39,6 +39,7 @@ export const DEFAULTS = {
     money: true,
     origin_bar: false,
     breakdown: false,
+    amortisation: false,
     stats: ["peak", "autarky", "export", "import"] as TodayStat[]
   }
 };
@@ -81,6 +82,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       money: config.today?.money ?? DEFAULTS.today.money,
       origin_bar: config.today?.origin_bar ?? DEFAULTS.today.origin_bar,
       breakdown: config.today?.breakdown ?? DEFAULTS.today.breakdown,
+      amortisation: config.today?.amortisation ?? DEFAULTS.today.amortisation,
       stats: config.today?.stats?.length ? config.today.stats : DEFAULTS.today.stats
     }
   };
@@ -384,7 +386,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           schema: [
             { name: "money", selector: { boolean: {} } },
             { name: "origin_bar", selector: { boolean: {} } },
-            { name: "breakdown", selector: { boolean: {} } }
+            { name: "breakdown", selector: { boolean: {} } },
+            { name: "amortisation", selector: { boolean: {} } }
           ]
         },
         {
@@ -465,6 +468,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     origin_bar: t("editor.origin_bar"),
     battery_out_today: t("editor.battery_out_today"),
     amortisation: t("editor.amortisation"),
+    // The entity picker and the today switch share a name; the switch is the
+    // one that needs the longer wording, so it wins where both could apply.
+    ...(current?.today ? { amortisation: t("editor.amortisation_corner") } : {}),
     stats: t("editor.stats"),
     battery_capacity: t("editor.capacity"),
     battery_reserve: t("editor.reserve"),

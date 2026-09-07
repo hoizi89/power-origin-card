@@ -594,6 +594,17 @@ export const cardStyles = css`
     color: var(--sst-muted);
   }
 
+  .corner {
+    margin-left: auto;
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sst-ink);
+    white-space: nowrap;
+    align-self: flex-start;
+  }
+
   .money-k {
     font-family: var(--sst-mono);
     font-size: calc(9.5px * var(--sst-scale));

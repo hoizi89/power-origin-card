@@ -914,6 +914,10 @@ export class PowerOriginCard extends LitElement {
     const exported = numberOf(stateOf(hass, config.entities.cost_export_today));
     const imported = numberOf(stateOf(hass, config.entities.cost_import_today));
 
+    const paidOff = config.today.amortisation
+      ? numberOf(stateOf(hass, config.entities.amortisation))
+      : undefined;
+
     const breakdown =
       config.today.breakdown && (exported !== undefined || imported !== undefined)
         ? html`<span class="money-k">
@@ -933,6 +937,14 @@ export class PowerOriginCard extends LitElement {
           <small>${localize(earned ? "today.earned" : "today.paid", locale)}</small>
         </span>
         ${breakdown}
+        ${
+          paidOff === undefined
+            ? nothing
+            : html`<span class="corner"
+                >${formatNumber(paidOff, locale, 0)} %
+                <span class="dim">${localize("stat.amortisation", locale)}</span></span
+              >`
+        }
       </div>
     `;
   }
