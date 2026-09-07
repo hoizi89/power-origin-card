@@ -9,12 +9,32 @@ export interface ChartDomain {
   end: number;
 }
 
+export interface ChartTick {
+  /** The round value the line stands for, in kW. */
+  value: number;
+  y: number;
+}
+
 export interface ChartGeometry {
   area: string;
   solar: string;
   house: string;
   nowX?: number;
   nowY?: number;
+  tick?: ChartTick;
+}
+
+const NICE = [0.5, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 75, 100];
+
+/**
+ * A round value comfortably under the tallest thing drawn. Without one a bar
+ * has a shape but no size, and the eye has nothing to measure against.
+ */
+export function niceTick(max: number): number | undefined {
+  const room = max * 0.9;
+  let best: number | undefined;
+  for (const candidate of NICE) if (candidate <= room) best = candidate;
+  return best;
 }
 
 const DEFAULT_BOX: ChartBox = { width: 340, height: 84, padding: 12 };
@@ -73,12 +93,15 @@ export function chartGeometry(
       ? `${toPath(solarPoints)} L${last[0].toFixed(1)},${box.height} L${first[0].toFixed(1)},${box.height} Z`
       : "";
 
+  const tickValue = niceTick(max);
+
   return {
     area,
     solar: toPath(solarPoints),
     house: housePoints.length > 1 ? toPath(housePoints) : "",
     nowX: last?.[0],
-    nowY: last?.[1]
+    nowY: last?.[1],
+    tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue, max, box) }
   };
 }
 

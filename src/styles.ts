@@ -467,6 +467,17 @@ export const cardStyles = css`
     stroke-dasharray: 2 3;
   }
 
+  .gridline {
+    stroke: var(--sst-hairline);
+    stroke-width: 1;
+  }
+
+  .gridlabel {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    fill: var(--sst-muted);
+  }
+
   .axis {
     font-family: var(--sst-mono);
     font-size: calc(10px * var(--sst-scale));

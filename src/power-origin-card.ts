@@ -597,6 +597,18 @@ export class PowerOriginCard extends LitElement {
           ? html`
             <svg class="full" viewBox="0 0 ${box.width} ${box.height + 20}"
                  role="img" aria-label="${localize("chart.title", locale)}">
+              ${
+                (geometry?.tick ?? barGeometry?.tick)
+                  ? svg`
+                    <line class="gridline" x1="${box.padding}"
+                          y1="${(geometry?.tick ?? barGeometry?.tick)!.y}"
+                          x2="${box.width - box.padding}"
+                          y2="${(geometry?.tick ?? barGeometry?.tick)!.y}"></line>
+                    <text class="gridlabel" x="0"
+                          y="${(geometry?.tick ?? barGeometry?.tick)!.y - 3}"
+                      >${formatPower((geometry?.tick ?? barGeometry?.tick)!.value, locale)} kW</text>`
+                  : nothing
+              }
               <defs>
                 <linearGradient id="${this._fillId}" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="var(--sst-sun)" stop-opacity="0.28"></stop>

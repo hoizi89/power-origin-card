@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chartGeometry } from "../src/chart";
+import { CHART_BOX, chartGeometry, niceTick } from "../src/chart";
 import { buildDaySeries, integrate, startOfToday } from "../src/stats";
 import { sunTimes } from "../src/sun";
 
@@ -111,5 +111,32 @@ describe("sunTimes", () => {
 
   it("copes with a missing entity", () => {
     expect(sunTimes(undefined, NOW)).toEqual({});
+  });
+});
+
+describe("the reference line", () => {
+  it("picks a round value under the tallest thing drawn", () => {
+    expect(niceTick(9.4)).toBe(8);
+    expect(niceTick(12)).toBe(10);
+    expect(niceTick(2.6)).toBe(2);
+  });
+
+  it("keeps clear of the top so the line is not the ceiling", () => {
+    const tick = niceTick(10)!;
+    expect(tick).toBeLessThan(10);
+  });
+
+  it("gives none when nothing is tall enough to measure", () => {
+    expect(niceTick(0.4)).toBeUndefined();
+    expect(niceTick(0)).toBeUndefined();
+  });
+
+  it("comes back with the geometry so the card can draw it", () => {
+    const stamps = [bucket(6 * 60), bucket(12 * 60), bucket(19 * 60)];
+    const domain = { start: bucket(6 * 60), end: bucket(19 * 60) };
+    const geometry = chartGeometry(stamps, [0, 9.4, 2], [], domain);
+    expect(geometry.tick?.value).toBe(8);
+    expect(geometry.tick!.y).toBeGreaterThan(0);
+    expect(geometry.tick!.y).toBeLessThan(CHART_BOX.height);
   });
 });

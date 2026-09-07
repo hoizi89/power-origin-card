@@ -1,4 +1,4 @@
-import type { ChartBox, ChartDomain } from "./chart";
+import { niceTick, type ChartBox, type ChartDomain, type ChartTick } from "./chart";
 
 export interface Bar {
   x: number;
@@ -12,6 +12,7 @@ export interface BarGeometry {
   /** Consumption across the bar centres, on the same scale. */
   house: string;
   nowX?: number;
+  tick?: ChartTick;
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -57,6 +58,7 @@ export function chartBars(
   const width = domain.end - domain.start;
   if (width <= 0) return { bars: [], house: "" };
 
+
   const scaleX = (time: number) =>
     box.padding + Math.min(1, Math.max(0, (time - domain.start) / width)) * span;
 
@@ -100,5 +102,12 @@ export function chartBars(
           .join(" ")
       : "";
 
-  return { bars, house: path, nowX: scaleX(timestamps.at(-1) ?? domain.start) };
+  const tickValue = niceTick(max);
+
+  return {
+    bars,
+    house: path,
+    nowX: scaleX(timestamps.at(-1) ?? domain.start),
+    tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue) }
+  };
 }
