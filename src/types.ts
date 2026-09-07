@@ -45,6 +45,8 @@ export interface PowerOriginEntities {
   cost_import_today?: string;
   price_import?: string;
   price_export?: string;
+  /** Energy taken out of the battery today, in kWh. Splits the day bar in three. */
+  battery_out_today?: string;
 }
 
 export interface SectionToggles {
@@ -91,6 +93,8 @@ export interface BatteryOptions {
 
 export interface TodayOptions {
   money?: boolean;
+  /** A slim bar splitting the day's consumption by where it came from. */
+  origin_bar?: boolean;
   /** The small "exported / imported" note beside the balance. */
   breakdown?: boolean;
   stats?: TodayStat[];

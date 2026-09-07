@@ -557,6 +557,50 @@ export const cardStyles = css`
     gap: 12px;
   }
 
+  .origin {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .origin-bar {
+    display: flex;
+    height: 7px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--sst-track);
+  }
+
+  .origin-bar span {
+    transition: width 0.6s ease;
+  }
+
+  .origin-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-family: var(--sst-mono);
+    font-size: calc(10.5px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+
+  .origin-keys span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .origin-keys i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .origin-keys b {
+    color: var(--sst-ink);
+    font-weight: 500;
+  }
+
   .stat {
     display: flex;
     flex-direction: column;

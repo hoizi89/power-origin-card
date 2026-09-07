@@ -34,6 +34,7 @@ export const DEFAULTS = {
   },
   today: {
     money: true,
+    origin_bar: false,
     breakdown: false,
     stats: ["peak", "autarky", "export", "import"] as TodayStat[]
   }
@@ -73,6 +74,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     battery: { ...DEFAULTS.battery, ...config.battery },
     today: {
       money: config.today?.money ?? DEFAULTS.today.money,
+      origin_bar: config.today?.origin_bar ?? DEFAULTS.today.origin_bar,
       breakdown: config.today?.breakdown ?? DEFAULTS.today.breakdown,
       stats: config.today?.stats?.length ? config.today.stats : DEFAULTS.today.stats
     }
@@ -168,7 +170,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             entityField("cost_import_today", "monetary")
           ]
         },
-        { type: "grid", schema: [entityField("price_import"), entityField("price_export")] }
+        { type: "grid", schema: [entityField("price_import"), entityField("price_export")] },
+        entityField("battery_out_today", "energy")
       ]
     },
     {
@@ -343,6 +346,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [
             { name: "money", selector: { boolean: {} } },
+            { name: "origin_bar", selector: { boolean: {} } },
             { name: "breakdown", selector: { boolean: {} } }
           ]
         },
@@ -418,6 +422,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     runtime_window: t("editor.runtime_window"),
     money: t("editor.money"),
     breakdown: t("editor.breakdown"),
+    origin_bar: t("editor.origin_bar"),
+    battery_out_today: t("editor.battery_out_today"),
     stats: t("editor.stats"),
     battery_capacity: t("editor.capacity"),
     battery_reserve: t("editor.reserve"),
@@ -436,6 +442,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     house: t("editor.help_house"),
     battery_capacity: t("editor.help_capacity"),
     segments: t("editor.help_segments"),
+    origin_bar: t("editor.help_origin_bar"),
     runtime_window: t("editor.help_runtime")
   };
 

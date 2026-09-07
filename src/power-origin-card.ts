@@ -166,15 +166,21 @@ export class PowerOriginCard extends LitElement {
       types: ["max"]
     });
 
-    const peakOf = (id: string | undefined) => {
-      const peaks = (id ? (response?.[id] ?? []) : [])
+    const monthlyPeaks = (id: string | undefined) =>
+      (id ? (response?.[id] ?? []) : [])
         .map((row) => Number(row.max))
-        .filter((value) => Number.isFinite(value));
-      return peaks.length > 0 ? Math.max(...peaks) / divisor : undefined;
-    };
+        .filter((value) => Number.isFinite(value) && value > 0);
 
-    this._yearPeak = peakOf(solarId) ?? this._yearPeak;
-    this._yearDraw = peakOf(houseId) ?? this._yearDraw;
+    const roofPeaks = monthlyPeaks(solarId);
+    if (roofPeaks.length > 0) this._yearPeak = Math.max(...roofPeaks) / divisor;
+
+    // For the house the mean of the monthly peaks, not the largest: one car
+    // charging in July would otherwise set the scale for every quiet evening.
+    const drawPeaks = monthlyPeaks(houseId);
+    if (drawPeaks.length > 0) {
+      this._yearDraw =
+        drawPeaks.reduce((sum, value) => sum + value, 0) / drawPeaks.length / divisor;
+    }
   }
 
   private _needsPeak(): boolean {
@@ -348,28 +354,29 @@ export class PowerOriginCard extends LitElement {
     const charging = flow.toBattery > 0.01;
     const importing = flow.fromGrid > 0.01;
 
-    const discharging = flow.fromBattery > 0.01;
+    // Whichever side is bigger gets named, so the figure agrees with the block
+    // the eye lands on. Naming the smaller flow made the column contradict its
+    // own caption.
+    const gridLeads = flow.fromGrid >= flow.fromBattery;
 
-    // With both flowing, the grid is the half worth naming — it is the half
-    // that costs. The battery's share stays visible as green in the column.
-    const key = importing
-      ? "meter.import"
-      : discharging
-        ? "meter.discharging"
-        : exporting && charging
-          ? "meter.surplus"
-          : exporting
-            ? "meter.export"
-            : charging
-              ? "meter.charging"
-              : "meter.balanced";
+    const key = meter.deficit > 0.01
+      ? gridLeads
+        ? "meter.import"
+        : "meter.discharging"
+      : exporting && charging
+        ? "meter.surplus"
+        : exporting
+          ? "meter.export"
+          : charging
+            ? "meter.charging"
+            : "meter.balanced";
 
     const word = localize(key, locale);
-    const amount = importing
-      ? flow.fromGrid
-      : discharging
-        ? flow.fromBattery
-        : meter.surplus;
+    const amount = meter.deficit > 0.01
+      ? gridLeads
+        ? flow.fromGrid
+        : flow.fromBattery
+      : meter.surplus;
     const tone = meter.deficit > 0.01 ? "down" : meter.surplus > 0.01 ? "up" : "idle";
 
     return html`
@@ -806,7 +813,54 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="today ${earning ? "earning" : ""}">
         ${money}
+        ${config.today.origin_bar ? this._renderOriginBar(locale) : nothing}
         ${stats.length ? html`<div class="stats">${stats}</div>` : nothing}
+      </div>
+    `;
+  }
+
+  /**
+   * Where the day's consumption came from. Built from the daily counters that
+   * are already configured, so it costs no new sensor unless the battery's own
+   * output is wanted as a third share.
+   */
+  private _renderOriginBar(locale: string) {
+    const hass = this._hass as HomeAssistant;
+    const config = this._config as ResolvedConfig;
+
+    const used = energyKwh(stateOf(hass, config.entities.house_today));
+    const imported = energyKwh(stateOf(hass, config.entities.import_today)) ?? 0;
+    if (used === undefined || used <= 0) return nothing;
+
+    const battery = energyKwh(stateOf(hass, config.entities.battery_out_today));
+    const fromBattery = Math.min(Math.max(0, battery ?? 0), Math.max(0, used - imported));
+    const fromSun = Math.max(0, used - imported - fromBattery);
+
+    const parts = [
+      { key: battery === undefined ? "flow.own" : "flow.from_solar", colour: "var(--sst-sun)", value: fromSun },
+      { key: "flow.from_battery", colour: "var(--sst-leaf)", value: fromBattery },
+      { key: "flow.from_grid", colour: "var(--sst-grid)", value: imported }
+    ].filter((part) => part.value > 0.005);
+
+    if (parts.length === 0) return nothing;
+
+    return html`
+      <div class="origin">
+        <div class="origin-bar">
+          ${parts.map(
+            (part) => html`<span
+              style="width: ${((part.value / used) * 100).toFixed(2)}%; background: ${part.colour}"
+            ></span>`
+          )}
+        </div>
+        <div class="origin-keys">
+          ${parts.map(
+            (part) => html`<span
+              ><i style="background: ${part.colour}"></i>${localize(part.key, locale)}
+              <b>${formatEnergy(part.value, locale)} kWh</b></span
+            >`
+          )}
+        </div>
       </div>
     `;
   }
