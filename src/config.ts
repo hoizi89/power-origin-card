@@ -26,7 +26,7 @@ export const DEFAULTS = {
     meter_scale_draw: 0,
     meter_target: 0,
     meter_steps: 6,
-    meter_style: "bar" as const
+    meter_style: "blocks" as const
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
