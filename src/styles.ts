@@ -208,10 +208,11 @@ export const cardStyles = css`
   .seg.grid {
     stroke: var(--sst-grid);
   }
-  /* Surplus ring: sun already claimed recedes, sun still free leads. */
+  /* Surplus ring: sun already claimed recedes, sun still free leads. Not so
+     far that gold turns to brown — it still has to read as the same sun. */
   .seg.house {
     stroke: var(--sst-sun);
-    stroke-opacity: 0.3;
+    stroke-opacity: 0.45;
   }
 
   .seg.free {
