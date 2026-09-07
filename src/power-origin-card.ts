@@ -88,6 +88,13 @@ export class PowerOriginCard extends LitElement {
     return this._hass;
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // hass may have arrived before the element was in the document, and the
+    // fetch declines to run while it is not — so it is picked up here.
+    void this._maybeFetch();
+  }
+
   getCardSize(): number {
     const sections = this._config?.sections;
     if (!sections) return 8;
@@ -339,6 +346,9 @@ export class PowerOriginCard extends LitElement {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
 
+    // Without a solar sensor there can never be a surplus, and the draw is the
+    // house load the ring already prints. Nothing of its own to say.
+    if (!config.entities.solar) return nothing;
     if (flow.toGrid + flow.toBattery <= 0.05 && flow.fromGrid <= 0.05) return nothing;
 
     const meter = meterGeometry(
