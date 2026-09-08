@@ -118,13 +118,13 @@ today:
 | `ring.facts` | `bars` | The value list: `bars`, `plain`, `inline` or `none`. Defaults to `none` while the column is on. |
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
-| `ring.meter` | `true` | The direction column beside the ring. |
+| `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, or `two` — one on each side. |
+| `ring.meter_style` | `blocks` | What the left column is: `blocks`, `bar`, `day` or `balance`. |
+| `ring.meter_second` | | What the right column is, when there are two. Defaults to `day`, the type that says what a needle cannot. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |
 | `ring.rings` | `single` | One ring, two rings, or the clock. |
 | `ring.inner` | `icon` | Behind the centre figure: `icon`, `load` for the day's consumption curve, or `none`. |
-| `ring.meter_style` | `blocks` | `blocks`, `bar`, `day` or `balance`. |
 | `ring.meter_today` | `false` | A faint band for how far the needle swung today, in both directions. |
-| `ring.meter_second` | `none` | A second column on the other side of the ring, with a type of its own. |
 | `ring.meter_second_scope` | `all` | Which boundary the second column watches, when it is a needle. Set it to the other one, or both needles draw the same picture. |
 | `ring.clock_marks` | `true` | Sun and moon on the clock dial, so it is clear which way round it reads. |
 | `today.origin_style` | `bar` | The day bar as shares, or as a `band` with one cell per hour. |

@@ -21,6 +21,7 @@ export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 export type ChipMode = "always" | "gridfree" | "never";
 export type RingStyle = "single" | "double" | "clock";
+export type ColumnCount = "none" | "one" | "two";
 export type RingInner = "icon" | "load" | "none";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type OriginStyle = "bar" | "band";
@@ -75,6 +76,7 @@ export interface RingOptions {
   facts?: FactsStyle;
   /** A vertical meter beside the ring: surplus upwards, import downwards. */
   meter?: boolean;
+  columns?: ColumnCount;
   /** Full deflection in kW. 0 derives it from the system's yearly peak. */
   meter_scale?: number;
   /** Surplus worth acting on, in kW. Below it the column is held back. */

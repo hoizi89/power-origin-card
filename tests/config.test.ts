@@ -108,13 +108,54 @@ describe("editor coverage", () => {
     }
   });
 
+  /**
+   * Storage rather than a control: the editor offers the column count, and
+   * writes these two from it. Both stay so a card configured before the count
+   * existed still reads.
+   */
+  const DERIVED = new Set(["meter"]);
+
   it("offers every option inside every group", () => {
     const found = names();
     for (const group of ["sections", "ring", "chart", "battery", "today"] as const) {
       for (const key of Object.keys((DEFAULTS as unknown as Record<string, Record<string, unknown>>)[group])) {
+        if (DERIVED.has(key)) continue;
         expect(found, group + "." + key).toContain(key);
       }
     }
+  });
+
+  it("keeps a card written before the column count worked", () => {
+    const off = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter: false }
+    });
+    expect(off.ring.columns).toBe("none");
+
+    const two = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_second: "day" }
+    });
+    expect(two.ring.columns).toBe("two");
+    expect(two.ring.meter).toBe(true);
+
+    const chosen = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { columns: "two" }
+    });
+    // Asking for two without saying what the second one is gets the day.
+    expect(chosen.ring.meter_second).toBe("day");
+
+    const none = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { columns: "none", meter_second: "day" }
+    });
+    expect(none.ring.meter).toBe(false);
+    expect(none.ring.meter_second).toBe("none");
   });
 
   it("offers every entity the card reads", () => {

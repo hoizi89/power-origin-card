@@ -23,6 +23,7 @@ export const DEFAULTS = {
     caption: true,
     facts: "bars" as const,
     meter: true,
+    columns: "one" as const,
     meter_scale: 0,
     meter_scale_draw: 0,
     meter_target: 0,
@@ -60,6 +61,29 @@ export function assertConfig(config: PowerOriginCardConfig | undefined, locale?:
   }
 }
 
+/**
+ * The count and the two types, kept consistent whichever of them was written.
+ * `columns` is the field the editor offers; `meter` and `meter_second` remain
+ * the storage, so a card configured before the count existed still reads.
+ */
+function resolveColumns(config: PowerOriginCardConfig) {
+  const ring = config.ring ?? {};
+  const second = ring.meter_second ?? DEFAULTS.ring.meter_second;
+  const on = ring.meter ?? DEFAULTS.ring.meter;
+
+  const columns =
+    ring.columns ?? (!on ? "none" : second !== "none" ? "two" : "one");
+
+  return {
+    columns,
+    meter: columns !== "none",
+    // Asking for two and leaving the right one unset gets the day, which is
+    // the one type that says something a needle cannot.
+    meter_second:
+      columns === "two" ? (second === "none" ? "day" : second) : ("none" as const)
+  };
+}
+
 export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
   return {
     type: config.type,
@@ -75,6 +99,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     ring: {
       ...DEFAULTS.ring,
       ...config.ring,
+      ...resolveColumns(config),
       // A labelled column already names the grid flow and the battery block
       // names the battery, so the list would repeat both. It stays one switch away.
       facts:
@@ -370,7 +395,19 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         title: t("editor.meter_settings"),
         icon: "mdi:gauge",
         schema: [
-          { name: "meter", selector: { boolean: {} } },
+          {
+            name: "columns",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: t("editor.columns_none") },
+                  { value: "one", label: t("editor.columns_one") },
+                  { value: "two", label: t("editor.columns_two") }
+                ]
+              }
+            }
+          },
           ...only((resolved) => resolved.ring.meter, {
             name: "meter_style",
             selector: {
@@ -385,6 +422,21 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
+          ...only((resolved) => resolved.ring.columns === "two", {
+            name: "meter_second",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "blocks", label: t("editor.meter_blocks") },
+                  { value: "bar", label: t("editor.meter_bar") },
+                  { value: "day", label: t("editor.meter_day") },
+                  { value: "balance", label: t("editor.meter_balance") }
+                ]
+              }
+            }
+          }),
+
           ...only(gauge, {
             name: "meter_scope",
             selector: {
@@ -398,6 +450,22 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }),
           ...only(
+            (resolved) =>
+              resolved.ring.meter &&
+              (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
+            {
+              name: "meter_second_scope",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "grid", label: t("editor.meter_scope_grid") },
+                    { value: "all", label: t("editor.meter_scope_all") }
+                  ]
+                }
+              }
+            }
+          ),          ...only(
             (resolved) =>
               resolved.ring.meter &&
               (gauge(resolved) || resolved.ring.meter_style === "balance"),
@@ -427,39 +495,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             name: "meter_steps",
             selector: { number: { min: 3, max: 14, mode: "box" } }
           }),
-          ...only(gauge, { name: "meter_today", selector: { boolean: {} } }),
-          ...only((resolved) => resolved.ring.meter, {
-            name: "meter_second",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "none", label: t("editor.second_none") },
-                  { value: "blocks", label: t("editor.meter_blocks") },
-                  { value: "bar", label: t("editor.meter_bar") },
-                  { value: "day", label: t("editor.meter_day") },
-                  { value: "balance", label: t("editor.meter_balance") }
-                ]
-              }
-            }
-          }),
-          ...only(
-            (resolved) =>
-              resolved.ring.meter &&
-              (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
-            {
-              name: "meter_second_scope",
-              selector: {
-                select: {
-                  mode: "dropdown",
-                  options: [
-                    { value: "grid", label: t("editor.meter_scope_grid") },
-                    { value: "all", label: t("editor.meter_scope_all") }
-                  ]
-                }
-              }
-            }
-          )
+          ...only(gauge, { name: "meter_today", selector: { boolean: {} } })
         ]
       }
     ),
@@ -640,6 +676,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     layout: t("editor.layout"),
     caption: t("editor.caption"),
     meter: t("editor.meter"),
+    columns: t("editor.columns"),
     meter_scale: t("editor.meter_scale"),
     meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
@@ -689,6 +726,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     center: t("editor.help_center"),
     center_dark: t("editor.help_center_dark"),
     meter: t("editor.help_meter"),
+    columns: t("editor.help_columns"),
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
     meter_second: t("editor.help_meter_second"),
@@ -707,6 +745,14 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     origin_style: t("editor.help_origin_style"),
     runtime_window: t("editor.help_runtime")
   };
+
+  const paired = config?.ring.columns === "two";
+  if (paired) {
+    labels.meter_style = t("editor.column_left");
+    labels.meter_second = t("editor.column_right");
+    labels.meter_scope = t("editor.scope_left");
+    labels.meter_second_scope = t("editor.scope_right");
+  }
 
   return {
     schema,
