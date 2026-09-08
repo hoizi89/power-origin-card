@@ -127,6 +127,7 @@ function place(target, config, stateName, weak) {
   el.setConfig({
     type: "custom:power-origin-card",
     battery_capacity: 13100,
+    battery_reserve: 15,
     entities: { ...ids },
     ...config
   });
@@ -210,6 +211,7 @@ const shots = {
     body: `place(stage, {
       title: "Solar",
       ring: { center: "power", rings: "double", meter: true, meter_style: "day", facts: "none" },
+      battery: { extra: "given" },
       today: ${JSON.stringify(full)}
     }, "EVENING", false);`
   },

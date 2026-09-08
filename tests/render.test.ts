@@ -692,17 +692,21 @@ describe("which end of the column is which", () => {
 });
 
 describe("the battery block", () => {
-  it("marks where the reserve begins", async () => {
+  it("draws the reserve as power that does not come out", async () => {
     const { root } = await render(
       baseConfig({ battery_capacity: 13100, battery_reserve: 20 }),
       SCENARIOS[0]
     );
-    expect(root.querySelector(".bat-reserve")).toBeTruthy();
+    // The blocks inside the reserve are filled but held back, not missing.
+    expect(root.querySelectorAll(".bat-fill.held").length).toBeGreaterThan(0);
+    expect(root.querySelectorAll(".bat-fill").length).toBeGreaterThan(
+      root.querySelectorAll(".bat-fill.held").length
+    );
   });
 
-  it("marks nothing when no reserve is set", async () => {
+  it("holds nothing back when no reserve is set", async () => {
     const { root } = await render(baseConfig({ battery_capacity: 13100 }), SCENARIOS[0]);
-    expect(root.querySelector(".bat-reserve")).toBeNull();
+    expect(root.querySelector(".bat-fill.held")).toBeNull();
   });
 
   it("keeps the full width until a second figure is asked for", async () => {

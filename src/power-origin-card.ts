@@ -1271,6 +1271,11 @@ export class PowerOriginCard extends LitElement {
     const tall = bare ? 28 : 32;
     const radius = bare ? 4 : 6;
 
+    const reserve =
+      config.battery.reserve_line && config.battery_reserve > 0 && config.battery_reserve < 100
+        ? config.battery_reserve
+        : 0;
+
     const body =
       config.battery.style === "solid"
         ? svg`<rect class="bat-fill ${tone}" x="${innerStart - 1}" y="${top}" rx="8"
@@ -1281,12 +1286,14 @@ export class PowerOriginCard extends LitElement {
             const pitch = innerWidth / all.length;
             const width = pitch - (bare ? 4 : 3.1);
             const x = innerStart + index * pitch;
+            // Held back: full of power, none of it available.
+            const held = reserve > 0 && ((index + 1) / all.length) * 100 <= reserve;
             return svg`
               <rect class="fill-off" x="${x}" y="${top}" width="${width}"
                     height="${tall}" rx="${radius}"></rect>
               ${
                 segment.fill > 0
-                  ? svg`<rect class="bat-fill ${tone}" x="${x}" y="${top}"
+                  ? svg`<rect class="bat-fill ${tone} ${held ? "held" : ""}" x="${x}" y="${top}"
                               width="${Math.max(3, width * segment.fill)}" height="${tall}"
                               rx="${radius}"></rect>`
                   : nothing
@@ -1305,24 +1312,25 @@ export class PowerOriginCard extends LitElement {
               <rect class="bat-cap" x="${shellW + 4}" y="18" width="7" height="16" rx="3"></rect>`
         }
         ${body}
-        ${(() => {
-          const reserve = config.battery_reserve;
-          if (!config.battery.reserve_line || reserve <= 0 || reserve >= 100) return nothing;
-          const x = innerStart + (innerWidth * reserve) / 100;
-          return svg`<line class="bat-reserve" x1="${x.toFixed(1)}" y1="${top - 3}"
-            x2="${x.toFixed(1)}" y2="${top + tall + 3}"></line>`;
-        })()}
+        ${reserve > 0 && config.battery.style === "solid"
+          ? svg`<rect class="bat-held" x="${innerStart - 1}" y="${top}" rx="8"
+                  width="${((innerWidth + 2) * Math.min(reserve, Math.max(0, soc))) / 100}"
+                  height="${tall}"></rect>`
+          : nothing}
         ${extra
           ? svg`
-            <text class="bat-extra" x="${shellW + 22}" y="${top + 13}">${extra.value}</text>
-            <text class="bat-extra-k" x="${shellW + 22}" y="${top + 27}">${extra.label}</text>`
+            <text class="bat-extra" x="340" y="${top + 12}" text-anchor="end"
+              >${extra.value}</text>
+            <text class="bat-extra-k" x="340" y="${top + 26}" text-anchor="end"
+              >${extra.label}</text>`
           : nothing}
         ${(() => {
           const id = (this._config as ResolvedConfig).entities.battery_soc;
           const on = id && (this._hass as HomeAssistant)?.states?.[id];
           const handlers = on ? this._tap(id!) : undefined;
-          return svg`<text class="bat-pct ${on ? "tap" : ""}" x="340" y="35"
-            text-anchor="end" tabindex="${on ? 0 : -1}"
+          return svg`<text class="bat-pct ${on ? "tap" : ""}"
+            x="${extra ? shellW + 20 : 340}" y="35"
+            text-anchor="${extra ? "start" : "end"}" tabindex="${on ? 0 : -1}"
             @click=${handlers?.click} @keydown=${handlers?.key}
             >${formatNumber(soc, locale, 0)}<tspan dx="4">%</tspan></text>`;
         })()}

@@ -905,12 +905,14 @@ export const cardStyles = css`
     opacity: 0.5;
   }
 
-  /* Where the reserve begins: below it the bar is full of power that never
-     comes out, which a plain bar cannot say. */
-  .bat-reserve {
-    stroke: var(--sst-ink);
-    stroke-width: 1.6;
-    stroke-dasharray: 3 3;
+  /* The reserve is full of power that never comes out, so it is drawn as
+     not coming out rather than marked with a line across the bar. */
+  .bat-fill.held {
+    opacity: 0.28;
+  }
+
+  .bat-held {
+    fill: var(--sst-bg, #000);
     opacity: 0.55;
   }
 
