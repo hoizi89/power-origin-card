@@ -20,9 +20,10 @@ export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 export type ChipMode = "always" | "gridfree" | "never";
-export type RingStyle = "single" | "double";
+export type RingStyle = "single" | "double" | "clock";
 export type RingSize = "auto" | "s" | "m" | "l";
-export type MeterStyle = "bar" | "blocks";
+export type OriginStyle = "bar" | "band";
+export type MeterStyle = "bar" | "blocks" | "day";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
 export type TodayStat =
@@ -112,6 +113,7 @@ export interface TodayOptions {
   money?: boolean;
   /** A slim bar splitting the day's consumption by where it came from. */
   origin_bar?: boolean;
+  origin_style?: OriginStyle;
   /** The small "exported / imported" note beside the balance. */
   breakdown?: boolean;
   /** How far the system has paid for itself, in the corner beside the balance. */

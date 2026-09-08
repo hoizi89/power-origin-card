@@ -42,6 +42,7 @@ export const DEFAULTS = {
   today: {
     money: true,
     origin_bar: false,
+    origin_style: "bar" as const,
     breakdown: false,
     amortisation: false,
     stats: ["peak", "autarky", "export", "import"] as TodayStat[]
@@ -86,6 +87,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     today: {
       money: config.today?.money ?? DEFAULTS.today.money,
       origin_bar: config.today?.origin_bar ?? DEFAULTS.today.origin_bar,
+      origin_style: config.today?.origin_style ?? DEFAULTS.today.origin_style,
       breakdown: config.today?.breakdown ?? DEFAULTS.today.breakdown,
       amortisation: config.today?.amortisation ?? DEFAULTS.today.amortisation,
       stats: config.today?.stats?.length ? config.today.stats : DEFAULTS.today.stats
@@ -264,7 +266,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               mode: "dropdown",
               options: [
                 { value: "single", label: t("editor.ring_single") },
-                { value: "double", label: t("editor.ring_double") }
+                { value: "double", label: t("editor.ring_double") },
+                { value: "clock", label: t("editor.ring_clock") }
               ]
             }
           }
@@ -324,6 +327,19 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         schema: [
           { name: "meter", selector: { boolean: {} } },
           ...only((resolved) => resolved.ring.meter, {
+            name: "meter_style",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "blocks", label: t("editor.meter_blocks") },
+                  { value: "bar", label: t("editor.meter_bar") },
+                  { value: "day", label: t("editor.meter_day") }
+                ]
+              }
+            }
+          }),
+          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style !== "day", {
             name: "meter_scope",
             selector: {
               select: {
@@ -335,19 +351,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
-          ...only((resolved) => resolved.ring.meter, {
-            name: "meter_style",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "bar", label: t("editor.meter_bar") },
-                  { value: "blocks", label: t("editor.meter_blocks") }
-                ]
-              }
-            }
-          }),
-          ...only((resolved) => resolved.ring.meter, {
+          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style !== "day", {
             type: "grid",
             schema: [
               {
@@ -362,8 +366,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 name: "meter_target",
                 selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
               },
-              { name: "meter_steps", selector: { number: { min: 3, max: 14, mode: "box" } } }
             ]
+          }),
+          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks", {
+            name: "meter_steps",
+            selector: { number: { min: 3, max: 14, mode: "box" } }
           })
         ]
       }
@@ -460,6 +467,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             { name: "amortisation", selector: { boolean: {} } }
           ]
         },
+        ...only(
+          (resolved) =>
+            resolved.today.origin_bar &&
+            (resolved.ring.rings !== "double" || !resolved.sections.ring),
+          {
+            name: "origin_style",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "bar", label: t("editor.origin_shares") },
+                  { value: "band", label: t("editor.origin_band") }
+                ]
+              }
+            }
+          }
+        ),
         {
           name: "stats",
           selector: {
@@ -540,6 +564,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     money: t("editor.money"),
     breakdown: t("editor.breakdown"),
     origin_bar: t("editor.origin_bar"),
+    origin_style: t("editor.origin_style"),
     battery_out_today: t("editor.battery_out_today"),
     amortisation: t("editor.amortisation"),
     // The entity picker and the today switch share a name; the switch is the
@@ -575,6 +600,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     battery_capacity: t("editor.help_capacity"),
     segments: t("editor.help_segments"),
     origin_bar: t("editor.help_origin_bar"),
+    origin_style: t("editor.help_origin_style"),
     runtime_window: t("editor.help_runtime")
   };
 

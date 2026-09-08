@@ -11,6 +11,7 @@ import {
   worthNaming,
   type Flow
 } from "./flow";
+import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { METER_HEIGHT, meterGeometry } from "./meter";
@@ -54,6 +55,7 @@ export class PowerOriginCard extends LitElement {
   static properties = {
     _config: { state: true },
     _series: { state: true },
+    _hours: { state: true },
     _error: { state: true }
   };
 
@@ -62,6 +64,7 @@ export class PowerOriginCard extends LitElement {
   private _hass?: HomeAssistant;
   private _config?: ResolvedConfig;
   private _series?: DaySeries;
+  private _hours?: HourShare[];
   private _error?: string;
   private _lastFetch = 0;
   private _pending = false;
@@ -138,7 +141,11 @@ export class PowerOriginCard extends LitElement {
     try {
       const solarId = config.entities.solar;
       const houseId = config.entities.house;
-      const ids = [solarId, houseId].filter(Boolean) as string[];
+      // Grid and battery ride along in the same query: the hourly views need
+      // them, and a second request would cost another recorder scan.
+      const gridId = this._needsHours() ? config.entities.grid_power : undefined;
+      const cellId = this._needsHours() ? config.entities.battery_power : undefined;
+      const ids = [solarId, houseId, gridId, cellId].filter(Boolean) as string[];
       const stats = await cachedStatistics(
         ids,
         REFRESH_MS,
@@ -153,6 +160,15 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
+      this._hours =
+        gridId || cellId
+          ? hourlyShares(
+              stats[houseId] ?? [],
+              (gridId && stats[gridId]) || [],
+              (cellId && stats[cellId]) || [],
+              divisor
+            )
+          : undefined;
       await this._fetchYearPeak(hass, solarId, houseId, divisor);
       this._error = undefined;
     } catch (error) {
@@ -321,6 +337,9 @@ export class PowerOriginCard extends LitElement {
 
     // The outer ring answers the same question over the whole day, in the same
     // colours. Only the window differs, so the two cannot contradict each other.
+    const clock = config.ring.rings === "clock" ? this._hours : undefined;
+    const asClock = clock !== undefined && worthDrawing(clock);
+
     const day = config.ring.rings === "double" ? this._dayOrigin() : undefined;
     let outer: Array<{ colour: string; length: number; offset: number }> = [];
     if (day) {
@@ -352,7 +371,18 @@ export class PowerOriginCard extends LitElement {
                 )}`
             : nothing}
           <circle class="ring-track" cx="100" cy="100" r="76" pathLength="100"></circle>
-          ${parts.map(
+          ${asClock
+            ? clock!.map(
+                (entry) => svg`<circle
+                  class="clock-hour ${entry.dominant ?? "empty"}"
+                  cx="100" cy="100" r="76" pathLength="100"
+                  stroke-dasharray="${(100 / 24 - 0.35).toFixed(2)} 100"
+                  stroke-dashoffset="${(-(entry.hour * 100) / 24).toFixed(2)}"
+                  transform="rotate(-90 100 100)"
+                ></circle>`
+              )
+            : nothing}
+          ${asClock ? nothing : parts.map(
             (part) => svg`
               <circle
                 class="seg ${part.key} ${single ? "single" : ""}"
@@ -362,6 +392,11 @@ export class PowerOriginCard extends LitElement {
                 transform="rotate(-90 100 100)"
               ></circle>`
           )}
+          ${asClock
+            ? svg`<circle class="clock-now" cx="100" cy="24" r="4.5"
+                transform="rotate(${((clock!.at(-1)!.hour + 0.5) * 15).toFixed(1)} 100 100)"
+              ></circle>`
+            : nothing}
           <path
             class="ring-mark"
             transform="${
@@ -397,9 +432,52 @@ export class PowerOriginCard extends LitElement {
    * Surplus climbs, grid draw sinks. A ring can show proportions but never a
    * direction, and the direction is what tells you whether to switch something on.
    */
+  /** Whether any of the day views is switched on, and the extra series worth fetching. */
+  private _needsHours(): boolean {
+    const config = this._config;
+    if (!config) return false;
+    return (
+      config.ring.rings === "clock" ||
+      config.ring.meter_style === "day" ||
+      (config.today.origin_bar && config.today.origin_style === "band")
+    );
+  }
+
+  /** The day as a vertical strip: one band per hour, coloured by what carried it. */
+  private _renderDayColumn(locale: string) {
+    const hours = this._hours;
+    if (!hours || !worthDrawing(hours)) return nothing;
+
+    const band = METER_HEIGHT / 24;
+    const nowHour = hours.at(-1)!.hour;
+
+    return html`
+      <div class="meter-block">
+        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+             aria-label="${localize("meter.day", locale)}">
+          ${hours.map((hour) => {
+            const y = hour.hour * band;
+            const key = hour.dominant;
+            return svg`<rect
+              class="day-band ${key ?? "empty"}"
+              x="6" y="${(y + 0.7).toFixed(1)}" width="76"
+              height="${(band - 1.4).toFixed(1)}" rx="2"
+            ></rect>`;
+          })}
+          <line class="day-now" x1="2" y1="${((nowHour + 1) * band).toFixed(1)}"
+                x2="86" y2="${((nowHour + 1) * band).toFixed(1)}"></line>
+        </svg>
+        <div class="meter-label idle">
+          <span class="meter-word">${localize("meter.day", locale)}</span>
+        </div>
+      </div>
+    `;
+  }
+
   private _renderMeter(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
+    if (config.ring.meter_style === "day") return this._renderDayColumn(locale);
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.
@@ -1005,7 +1083,35 @@ export class PowerOriginCard extends LitElement {
     return parts.length ? { used, parts } : undefined;
   }
 
+  /** The same day laid out left to right, so the bar carries a time axis. */
+  private _renderDayBand() {
+    const hours = this._hours;
+    if (!hours || !worthDrawing(hours)) return nothing;
+
+    const width = 100 / 24;
+
+    return html`
+      <div class="origin">
+        <div class="origin-bar band">
+          ${Array.from({ length: 24 }, (_, index) => {
+            const hour = hours.find((entry) => entry.hour === index);
+            return html`<span
+              class="day-cell ${hour?.dominant ?? "empty"}"
+              style="width: ${width.toFixed(4)}%"
+            ></span>`;
+          })}
+        </div>
+        <div class="origin-hours">
+          <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
+        </div>
+      </div>
+    `;
+  }
+
   private _renderOriginBar(locale: string) {
+    if ((this._config as ResolvedConfig).today.origin_style === "band") {
+      return this._renderDayBand();
+    }
     const day = this._dayOrigin();
     if (day === undefined) return nothing;
     const { used, parts } = day;

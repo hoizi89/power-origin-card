@@ -362,3 +362,34 @@ describe("the ring styles", () => {
     expect(labels).not.toContain("Autarkie");
   });
 });
+
+describe("the day views", () => {
+  it("turns the column into a strip of hours", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "day" } }),
+      foggy
+    );
+    expect(root.querySelectorAll(".day-band").length).toBeGreaterThan(1);
+    expect(root.querySelector(".meter-on")).toBeNull();
+  });
+
+  it("puts the day bar on a time axis when asked", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({ today: { origin_bar: true, origin_style: "band" } }),
+      foggy
+    );
+    expect(root.querySelectorAll(".day-cell").length).toBe(24);
+    expect(root.querySelector(".origin-hours")).toBeTruthy();
+  });
+
+  it("wraps the day around the ring as a clock", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(baseConfig({ ring: { rings: "clock" } }), foggy);
+    expect(root.querySelectorAll(".clock-hour").length).toBeGreaterThan(1);
+    expect(root.querySelector(".clock-now")).toBeTruthy();
+    // The share segments step aside; the circle now means time, not proportion.
+    expect(root.querySelectorAll(".seg").length).toBe(0);
+  });
+});

@@ -792,4 +792,52 @@ export const cardStyles = css`
     height: 190px;
     width: 82px;
   }
+
+  /* The day views share one palette with everything else on the card. */
+  .day-band, .day-cell {
+    transition: fill 0.4s ease, background 0.4s ease;
+  }
+
+  .day-band.solar { fill: var(--sst-sun); }
+  .day-band.battery { fill: var(--sst-leaf); }
+  .day-band.grid { fill: var(--sst-grid); }
+  .day-band.empty { fill: var(--sst-track); opacity: 0.35; }
+
+  .day-now {
+    stroke: var(--sst-ink);
+    stroke-width: 1.4;
+    opacity: 0.8;
+  }
+
+  .origin-bar.band { gap: 1px; }
+
+  .day-cell { display: block; height: 100%; }
+  .day-cell.solar { background: var(--sst-sun); }
+  .day-cell.battery { background: var(--sst-leaf); }
+  .day-cell.grid { background: var(--sst-grid); }
+  .day-cell.empty { background: var(--sst-track); opacity: 0.4; }
+
+  .origin-hours {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--sst-mono);
+    font-size: calc(8.5px * var(--sst-scale));
+    color: var(--sst-muted);
+    margin-top: 3px;
+  }
+
+  .clock-hour {
+    fill: none;
+    stroke-width: 11;
+  }
+
+  .clock-hour.solar { stroke: var(--sst-sun); }
+  .clock-hour.battery { stroke: var(--sst-leaf); }
+  .clock-hour.grid { stroke: var(--sst-grid); }
+  .clock-hour.empty { stroke: var(--sst-track); opacity: 0.5; }
+
+  .clock-now {
+    fill: var(--sst-ink);
+    opacity: 0.9;
+  }
 `;

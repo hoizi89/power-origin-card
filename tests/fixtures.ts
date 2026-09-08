@@ -132,7 +132,14 @@ function statistics(scenario: Scenario, ids: string[]) {
   for (const id of ids) {
     const rows: Array<Record<string, unknown>> = [];
     for (let t = midnight.getTime(); t <= now; t += 5 * 60 * 1000) {
-      const value = id === IDS.solar ? scenario.pv : scenario.house;
+      const value =
+        id === IDS.solar
+          ? scenario.pv
+          : id === IDS.grid_power
+            ? scenario.grid
+            : id === IDS.battery_power
+              ? scenario.battery
+              : scenario.house;
       rows.push({ start: t, mean: value, max: value * 1.1 });
     }
     out[id] = rows;
