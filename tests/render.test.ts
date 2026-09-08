@@ -690,3 +690,50 @@ describe("which end of the column is which", () => {
     expect(root.querySelector(".meter-mark")).toBeNull();
   });
 });
+
+describe("the battery block", () => {
+  it("marks where the reserve begins", async () => {
+    const { root } = await render(
+      baseConfig({ battery_capacity: 13100, battery_reserve: 20 }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelector(".bat-reserve")).toBeTruthy();
+  });
+
+  it("marks nothing when no reserve is set", async () => {
+    const { root } = await render(baseConfig({ battery_capacity: 13100 }), SCENARIOS[0]);
+    expect(root.querySelector(".bat-reserve")).toBeNull();
+  });
+
+  it("keeps the full width until a second figure is asked for", async () => {
+    const wide = await render(baseConfig({ battery_capacity: 13100 }), SCENARIOS[0]);
+    const before = Number(wide.root.querySelector(".bat-shell")!.getAttribute("width"));
+
+    const narrow = await render(
+      baseConfig({ battery_capacity: 13100, battery: { extra: "given" } }),
+      SCENARIOS[0]
+    );
+    const after = Number(narrow.root.querySelector(".bat-shell")!.getAttribute("width"));
+
+    expect(after).toBeLessThan(before);
+    expect(narrow.root.querySelector(".bat-extra")).toBeTruthy();
+  });
+
+  it("works the cycles out of what it already reads", async () => {
+    const { text } = await render(
+      baseConfig({ battery_capacity: 13100, battery: { extra: "cycles" } }),
+      SCENARIOS[0]
+    );
+    // 4.1 kWh given out of 13.1 usable.
+    expect(text).toContain("0,3");
+    expect(text).toContain("Zyklen");
+  });
+
+  it("says nothing rather than a wrong figure without the price", async () => {
+    const config = baseConfig({ battery_capacity: 13100, battery: { extra: "saved" } });
+    delete config.entities.price_import;
+    const { root } = await render(config, SCENARIOS[0]);
+    expect(root.querySelector(".bat-extra")).toBeNull();
+    expect(Number(root.querySelector(".bat-shell")!.getAttribute("width"))).toBeGreaterThan(200);
+  });
+});

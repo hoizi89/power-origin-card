@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHART_BOX, chartGeometry, niceTick } from "../src/chart";
-import { buildDaySeries, integrate, startOfToday } from "../src/stats";
+import { buildDaySeries, extremes, integrate, startOfToday } from "../src/stats";
 import { sunTimes } from "../src/sun";
 
 const NOW = new Date("2026-09-07T13:45:00+02:00");
@@ -138,5 +138,22 @@ describe("the reference line", () => {
     expect(geometry.tick?.value).toBe(8);
     expect(geometry.tick!.y).toBeGreaterThan(0);
     expect(geometry.tick!.y).toBeLessThan(CHART_BOX.height);
+  });
+});
+
+describe("extremes", () => {
+  const row = (value: number | null) => ({ start: MIDNIGHT, mean: value, max: value });
+
+  it("finds the lowest and the highest of the day", () => {
+    expect(extremes([row(40), row(12), row(97), row(55)])).toEqual({ low: 12, high: 97 });
+  });
+
+  it("ignores readings that are not numbers", () => {
+    expect(extremes([row(null), row(30), row(NaN)])).toEqual({ low: 30, high: 30 });
+  });
+
+  it("has nothing to report without readings", () => {
+    expect(extremes([])).toBeUndefined();
+    expect(extremes([row(null)])).toBeUndefined();
   });
 });

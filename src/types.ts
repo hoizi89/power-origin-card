@@ -16,6 +16,7 @@ export interface HomeAssistant {
 }
 
 export type RingCenter = "power" | "production" | "surplus" | "autarky";
+export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
@@ -129,6 +130,8 @@ export interface BatteryOptions {
   segments?: number;
   runtime?: boolean;
   runtime_window?: number;
+  reserve_line?: boolean;
+  extra?: BatteryExtra;
 }
 
 export interface TodayOptions {

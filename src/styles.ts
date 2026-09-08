@@ -904,4 +904,27 @@ export const cardStyles = css`
     stroke-linejoin: round;
     opacity: 0.5;
   }
+
+  /* Where the reserve begins: below it the bar is full of power that never
+     comes out, which a plain bar cannot say. */
+  .bat-reserve {
+    stroke: var(--sst-ink);
+    stroke-width: 1.6;
+    stroke-dasharray: 3 3;
+    opacity: 0.55;
+  }
+
+  .bat-extra {
+    fill: var(--sst-ink);
+    font-size: calc(15px * var(--sst-scale));
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .bat-extra-k {
+    fill: var(--sst-muted);
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    letter-spacing: 0.06em;
+  }
 `;

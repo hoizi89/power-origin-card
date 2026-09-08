@@ -51,7 +51,9 @@ export const DEFAULTS = {
     style: "segments" as const,
     segments: 0,
     runtime: true,
-    runtime_window: 30
+    runtime_window: 30,
+    reserve_line: true,
+    extra: "none" as const
   },
   today: {
     money: true,
@@ -615,8 +617,27 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               name: "segments",
               selector: { number: { min: 0, max: 20, mode: "box" } }
             }),
-            { name: "runtime", selector: { boolean: {} } }
+            { name: "runtime", selector: { boolean: {} } },
+            ...only((resolved) => resolved.battery_reserve > 0, {
+              name: "reserve_line",
+              selector: { boolean: {} }
+            })
           ]
+        },
+        {
+          name: "extra",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "none", label: t("editor.extra_none") },
+                { value: "range", label: t("editor.extra_range") },
+                { value: "cycles", label: t("editor.extra_cycles") },
+                { value: "saved", label: t("editor.extra_saved") },
+                { value: "given", label: t("editor.extra_given") }
+              ]
+            }
+          }
         },
         ...only((resolved) => resolved.battery.runtime, {
           name: "runtime_window",
@@ -741,6 +762,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     segments: t("editor.segments"),
     runtime: t("editor.runtime"),
     runtime_window: t("editor.runtime_window"),
+    reserve_line: t("editor.reserve_line"),
+    extra: t("editor.extra"),
     money: t("editor.money"),
     breakdown: t("editor.breakdown"),
     origin_bar: t("editor.origin_bar"),
@@ -758,6 +781,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   };
 
   const helpers: Record<string, string> = {
+    reserve_line: t("editor.help_reserve_line"),
+    extra: t("editor.help_extra"),
     compare: t("editor.help_compare"),
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),

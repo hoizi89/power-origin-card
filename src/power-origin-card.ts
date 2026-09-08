@@ -16,7 +16,7 @@ import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, fetchStatistics } from "./stats";
+import { buildDaySeries, cachedStatistics, extremes, fetchStatistics } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -69,6 +69,7 @@ export class PowerOriginCard extends LitElement {
   private _hours?: HourShare[];
   private _swing?: { up: number; down: number };
   private _earlier?: DaySeries;
+  private _socRange?: { low: number; high: number };
   private _error?: string;
   private _lastFetch = 0;
   private _pending = false;
@@ -163,7 +164,8 @@ export class PowerOriginCard extends LitElement {
       // them, and a second request would cost another recorder scan.
       const gridId = this._needsHours() ? config.entities.grid_power : undefined;
       const cellId = this._needsHours() ? config.entities.battery_power : undefined;
-      const ids = [solarId, houseId, gridId, cellId].filter(Boolean) as string[];
+      const socId = config.battery.extra === "range" ? config.entities.battery_soc : undefined;
+      const ids = [solarId, houseId, gridId, cellId, socId].filter(Boolean) as string[];
       const stats = await cachedStatistics(
         ids,
         REFRESH_MS,
@@ -178,6 +180,9 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
+      // A percentage, so it is read as it comes.
+      this._socRange = socId ? extremes(stats[socId] ?? []) : undefined;
+
       if (gridId && stats[gridId]?.length) {
         let up = 0;
         let down = 0;
@@ -1206,12 +1211,60 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /**
+   * The second figure beside the bar. Everything but the range is worked out
+   * from readings the card already holds, so only that one costs a query.
+   */
+  private _batteryExtra(locale: string): { value: string; label: string } | undefined {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const given = energyKwh(stateOf(hass, config.entities.battery_out_today));
+
+    switch (config.battery.extra) {
+      case "range": {
+        const range = this._socRange;
+        if (!range) return undefined;
+        return {
+          value: `${formatNumber(range.low, locale, 0)}\u2013${formatNumber(range.high, locale, 0)} %`,
+          label: localize("battery.range", locale)
+        };
+      }
+      case "cycles": {
+        const usable = config.battery_capacity / 1000;
+        if (given === undefined || usable <= 0) return undefined;
+        return {
+          value: formatNumber(given / usable, locale, 1),
+          label: localize("battery.cycles", locale)
+        };
+      }
+      case "saved": {
+        const price = numberOf(stateOf(hass, config.entities.price_import));
+        if (given === undefined || price === undefined) return undefined;
+        return {
+          value: formatMoney(given * price, locale),
+          label: localize("battery.saved", locale)
+        };
+      }
+      case "given": {
+        if (given === undefined) return undefined;
+        return {
+          value: `${formatEnergy(given, locale)} kWh`,
+          label: localize("battery.given", locale)
+        };
+      }
+      default:
+        return undefined;
+    }
+  }
+
   private _renderBatterySvg(soc: number, tone: string, locale: string) {
     const config = this._config as ResolvedConfig;
     const bare = config.battery.style === "bar";
 
+    const extra = this._batteryExtra(locale);
+
     // Without a casing the bar may use the width the cap would have taken.
-    const shellW = bare ? 259 : 248;
+    const shellW = extra ? (bare ? 150 : 142) : bare ? 259 : 248;
     const innerStart = bare ? 0 : 6;
     const innerWidth = bare ? shellW : shellW - 10;
     const top = bare ? 12 : 10;
@@ -1252,6 +1305,18 @@ export class PowerOriginCard extends LitElement {
               <rect class="bat-cap" x="${shellW + 4}" y="18" width="7" height="16" rx="3"></rect>`
         }
         ${body}
+        ${(() => {
+          const reserve = config.battery_reserve;
+          if (!config.battery.reserve_line || reserve <= 0 || reserve >= 100) return nothing;
+          const x = innerStart + (innerWidth * reserve) / 100;
+          return svg`<line class="bat-reserve" x1="${x.toFixed(1)}" y1="${top - 3}"
+            x2="${x.toFixed(1)}" y2="${top + tall + 3}"></line>`;
+        })()}
+        ${extra
+          ? svg`
+            <text class="bat-extra" x="${shellW + 22}" y="${top + 13}">${extra.value}</text>
+            <text class="bat-extra-k" x="${shellW + 22}" y="${top + 27}">${extra.label}</text>`
+          : nothing}
         ${(() => {
           const id = (this._config as ResolvedConfig).entities.battery_soc;
           const on = id && (this._hass as HomeAssistant)?.states?.[id];

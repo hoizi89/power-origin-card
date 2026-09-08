@@ -151,3 +151,16 @@ export function integrate(timestamps: number[], values: number[]): number {
   }
   return total;
 }
+
+/** The lowest and highest reading of the day, or nothing when there were none. */
+export function extremes(rows: StatisticPoint[]): { low: number; high: number } | undefined {
+  let low: number | undefined;
+  let high: number | undefined;
+  for (const row of rows) {
+    const value = row.mean;
+    if (value === null || value === undefined || !Number.isFinite(value)) continue;
+    if (low === undefined || value < low) low = value;
+    if (high === undefined || value > high) high = value;
+  }
+  return low === undefined || high === undefined ? undefined : { low, high };
+}

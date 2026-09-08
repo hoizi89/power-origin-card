@@ -13,7 +13,9 @@ export const IDS = {
   forecast: "sensor.forecast",
   cost_today: "sensor.cost_today",
   cost_export_today: "sensor.cost_export_today",
-  cost_import_today: "sensor.cost_import_today"
+  cost_import_today: "sensor.cost_import_today",
+  battery_out_today: "sensor.battery_out_today",
+  price_import: "sensor.price_import"
 };
 
 export interface Scenario {
@@ -165,6 +167,7 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     [IDS.cost_today]: entity(IDS.cost_today, v(scenario.cost), "€", "monetary"),
     [IDS.cost_export_today]: entity(IDS.cost_export_today, v(1.2), "€", "monetary"),
     [IDS.cost_import_today]: entity(IDS.cost_import_today, v(0.02), "€", "monetary"),
+    [IDS.battery_out_today]: entity(IDS.battery_out_today, v(4.1), "kWh", "energy"),
     "sensor.price_import": entity("sensor.price_import", v(0.29), "€/kWh", "monetary"),
     "sensor.price_export": entity("sensor.price_export", v(0.08), "€/kWh", "monetary")
   };
