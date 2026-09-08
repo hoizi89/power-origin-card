@@ -135,17 +135,35 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
 }
 
 /** Guesses entities by name so the card is useful the moment it is added. */
+/** One string of an array is not the array; a total is what the card wants. */
+const PARTIAL = /(^|[._])(pv|string|mppt|inverter)[ _]?[0-9]/;
+
 export function stubConfig(entityIds: string[]): PowerOriginCardConfig {
-  const find = (...needles: string[]) =>
-    entityIds.find((id) => needles.every((needle) => id.includes(needle)));
+  const find = (...needles: string[]) => {
+    const all = entityIds.filter((id) =>
+      needles.every((needle) => id.toLowerCase().includes(needle))
+    );
+    return all.find((id) => !PARTIAL.test(id)) ?? all[0];
+  };
 
   return {
     type: `custom:${CARD_TYPE}`,
     entities: {
-      house: find("house", "consumption") ?? find("load") ?? entityIds[0] ?? "",
-      solar: find("pv", "power") ?? find("solar", "power"),
-      battery_power: find("battery", "power"),
-      battery_soc: find("battery", "state_of_charge") ?? find("battery", "soc")
+      house:
+        find("house", "consumption") ??
+        find("hausverbrauch") ??
+        find("load") ??
+        entityIds[0] ??
+        "",
+      solar: find("pv", "power") ?? find("solar", "power") ?? find("erzeugung"),
+      battery_power: find("battery", "power") ?? find("speicher", "leistung"),
+      battery_soc:
+        find("battery", "state_of_charge") ??
+        find("battery", "soc") ??
+        find("ladestand"),
+      // A grid sensor that reads one direction only cannot carry the sign,
+      // so a net reading is looked for before anything else.
+      grid_power: find("grid", "net", "power") ?? find("netz", "power") ?? find("grid", "power")
     }
   };
 }

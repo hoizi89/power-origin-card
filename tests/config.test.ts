@@ -173,3 +173,47 @@ describe("editor coverage", () => {
     expect(() => resolveConfig(stub)).not.toThrow();
   });
 });
+
+describe("what the card starts with", () => {
+  // Taken from a real installation: eight strings, German sensor names, and a
+  // net grid reading buried among one-way ones.
+  const REAL = [
+    "sensor.house_consumption",
+    "sensor.pv1_power",
+    "sensor.pv2_power",
+    "sensor.pv_power",
+    "sensor.battery_power",
+    "sensor.battery_state_of_charge",
+    "sensor.netz_bezug_power",
+    "sensor.netz_einspeisung",
+    "sensor.energy_grid_net_power"
+  ];
+
+  it("prefers the whole array over one of its strings", () => {
+    const stub = stubConfig(REAL);
+    expect(stub.entities.solar).toBe("sensor.pv_power");
+  });
+
+  it("finds the grid, and the reading that carries a direction", () => {
+    const stub = stubConfig(REAL);
+    expect(stub.entities.grid_power).toBe("sensor.energy_grid_net_power");
+  });
+
+  it("understands German sensor names too", () => {
+    const stub = stubConfig([
+      "sensor.hausverbrauch",
+      "sensor.speicher_leistung",
+      "sensor.ladestand",
+      "sensor.netz_power"
+    ]);
+    expect(stub.entities.house).toBe("sensor.hausverbrauch");
+    expect(stub.entities.battery_power).toBe("sensor.speicher_leistung");
+    expect(stub.entities.battery_soc).toBe("sensor.ladestand");
+    expect(stub.entities.grid_power).toBe("sensor.netz_power");
+  });
+
+  it("takes a single string when that is all there is", () => {
+    const stub = stubConfig(["sensor.house_consumption", "sensor.pv1_power"]);
+    expect(stub.entities.solar).toBe("sensor.pv1_power");
+  });
+});

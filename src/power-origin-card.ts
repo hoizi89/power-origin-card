@@ -11,6 +11,7 @@ import {
   worthNaming,
   type Flow
 } from "./flow";
+import { pickFromEnergy, type EnergyPrefs } from "./energy";
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
@@ -82,8 +83,22 @@ export class PowerOriginCard extends LitElement {
     return document.createElement(`${CARD_TYPE}-editor`);
   }
 
-  static getStubConfig(hass: HomeAssistant): PowerOriginCardConfig {
-    return stubConfig(Object.keys(hass?.states ?? {}));
+  /**
+   * What the card starts with when it is dropped on a dashboard. The Energy
+   * dashboard is asked first, because it is configured knowledge rather than
+   * a guess at a name; the guess only fills what it does not cover.
+   */
+  static async getStubConfig(hass: HomeAssistant): Promise<PowerOriginCardConfig> {
+    const guessed = stubConfig(Object.keys(hass?.states ?? {}));
+    try {
+      const prefs = await hass.callWS<EnergyPrefs>({ type: "energy/get_prefs" });
+      const pick = pickFromEnergy(prefs);
+      const known = { ...guessed, entities: { ...guessed.entities, ...pick.entities } };
+      if (pick.battery_capacity) known.battery_capacity = pick.battery_capacity;
+      return known;
+    } catch {
+      return guessed;
+    }
   }
 
   setConfig(config: PowerOriginCardConfig): void {
