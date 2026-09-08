@@ -102,11 +102,18 @@ describe("editor coverage", () => {
   };
 
   /**
-   * Storage rather than a control. The column count writes the first two; the
-   * last two moved into the battery group as battery.capacity and
-   * battery.reserve, and stay at the top level only so an older card reads.
+   * Storage rather than a control. The column count writes meter; meter_second
+   * is written from what the right column shows and how it is drawn, which are
+   * the two fields the editor does offer. The last two moved into the battery
+   * group as battery.capacity and battery.reserve, and stay at the top level
+   * only so an older card reads.
    */
-  const DERIVED = new Set(["meter", "battery_capacity", "battery_reserve"]);
+  const DERIVED = new Set([
+    "meter",
+    "meter_second",
+    "battery_capacity",
+    "battery_reserve"
+  ]);
 
   it("offers every top-level option", () => {
     const found = names();
@@ -129,6 +136,65 @@ describe("editor coverage", () => {
         expect(found, group + "." + key).toContain(key);
       }
     }
+  });
+
+  it("reads a column type written before the subject and the drawing split", () => {
+    // A subject that never had a drawing to choose.
+    const priced = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_style: "money" }
+    });
+    expect(priced.ring.meter_shows).toBe("money");
+    expect(priced.ring.meter_style).toBe("money");
+
+    // A drawing of the grid exchange, which is what the old list mixed it with.
+    const smooth = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_style: "bar" }
+    });
+    expect(smooth.ring.meter_shows).toBe("grid");
+    expect(smooth.ring.meter_style).toBe("bar");
+  });
+
+  it("puts the subject and the drawing back together for the card", () => {
+    const roof = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_shows: "roof" }
+    });
+    expect(roof.ring.meter_style).toBe("roof");
+
+    const smooth = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_shows: "grid", meter_style: "bar" }
+    });
+    expect(smooth.ring.meter_style).toBe("bar");
+
+    const second = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { columns: "two", meter_second_shows: "grid", meter_second_style: "bar" }
+    });
+    expect(second.ring.meter_second).toBe("bar");
+  });
+
+  it("offers a drawing only for the one subject that has a choice", () => {
+    const grid = getConfigForm("de", {
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_shows: "grid" }
+    });
+    expect(JSON.stringify(grid.schema)).toContain("meter_style");
+
+    const priced = getConfigForm("de", {
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { meter_shows: "money" }
+    });
+    expect(JSON.stringify(priced.schema)).not.toContain("meter_style");
   });
 
   it("keeps a card written before the column count worked", () => {

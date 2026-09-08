@@ -52,9 +52,11 @@ ring:
   meter_scope: grid              # grid | all
   rings: single                  # single | double | clock
   inner: icon                    # icon | load | none
-  meter_style: blocks            # blocks | bar | day | balance | money | load | autarky | roof
+  meter_shows: grid              # grid | day | balance | money | load | autarky | roof
+  meter_style: blocks            # blocks | bar — only when meter_shows is grid
+  meter_second_shows: day        # the right column, when columns is two
+  meter_second_style: blocks     # blocks | bar — again only for grid
   meter_today: false             # a faint band for today's extremes
-  meter_second: none             # none | blocks | bar | day | balance
   clock_marks: true              # sun and moon, for the clock type
   meter_steps: 6
   meter_scale: 0                 # full deflection up, in kW; 0 derives it
@@ -121,8 +123,11 @@ today:
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
 | `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, or `two` — one on each side. |
-| `ring.meter_style` | `blocks` | What the left column is: `blocks`, `bar`, `day`, `balance`, `money`, `load`, `autarky` or `roof`. |
-| `ring.meter_second` | | What the right column is, when there are two. Defaults to `day`, the type that says what a needle cannot. |
+| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky` or `roof`. |
+| `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Only `grid` has a choice, so this is shown only then. |
+| `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
+| `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |
+| `ring.meter_second` | | Written from the two fields above; kept so a card configured before the split still reads. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |
 | `ring.rings` | `single` | One ring, two rings, or the clock. |
 | `ring.inner` | `icon` | Behind the centre figure: `icon`, `load` for the day's consumption curve, or `none`. |

@@ -47,6 +47,16 @@ export type MeterStyle =
   | "load"
   | "autarky"
   | "roof";
+/** What a column measures, as against how it is drawn. */
+export type MeterShows =
+  | "grid"
+  | "day"
+  | "balance"
+  | "money"
+  | "load"
+  | "autarky"
+  | "roof";
+export type MeterDrawn = "blocks" | "bar";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
 export type TodayStat =
@@ -107,9 +117,12 @@ export interface RingOptions {
   /** Blocks per direction. */
   meter_steps?: number;
   /** A continuous band or stepped blocks. */
+  meter_shows?: MeterShows;
   meter_style?: MeterStyle;
   meter_today?: boolean;
   meter_marks?: boolean;
+  meter_second_shows?: MeterShows;
+  meter_second_style?: MeterDrawn;
   meter_second?: MeterStyle | "none";
   meter_second_scope?: MeterScope;
   meter_scope?: MeterScope;

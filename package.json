@@ -1,6 +1,6 @@
 {
   "name": "power-origin-card",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "An energy card for Home Assistant that shows where the house's power comes from right now, how the day went, and what it earned.",
   "license": "MIT",
   "type": "module",

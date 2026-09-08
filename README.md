@@ -75,20 +75,29 @@ It only ever fills fields that are still empty, so a choice you made is never ov
 
 `production` and `surplus` fall back to `power` before sunrise: a ring about production has nothing to say when nothing is produced.
 
-## The ring and the column each have a type
+## The ring has a type, the column has a subject
 
-| `ring.rings` | | `ring.meter_style` | |
-| --- | --- | --- | --- |
-| `single` | the shares right now | `blocks` | a stepped needle |
-| `double` | a second ring outside, the same question over the whole day | `bar` | the same as one body |
-| `clock` | the whole circle is the day, noon at the top | `day` | 24 bands, one per hour |
-| | | `balance` | the roof against the house |
-| | | `money` | the same boundary, priced |
-| | | `load` | the house against its own day |
-| | | `autarky` | the self-supplied share |
-| | | `roof` | what the roof makes now, against its best today |
+| `ring.rings` | |
+| --- | --- |
+| `single` | the shares right now |
+| `double` | a second ring outside, the same question over the whole day |
+| `clock` | the whole circle is the day, noon at the top |
 
-`day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. `ring.meter_second` puts a second column on the other side of the ring, so a day strip and a live needle can stand together.
+A column answers two questions, and they are two settings. **What it measures** is `ring.meter_shows`:
+
+| | |
+| --- | --- |
+| `grid` | the grid exchange now — surplus up, draw down |
+| `day` | 24 bands, one per hour, of where the house drew from |
+| `balance` | the roof against the house, on one scale |
+| `money` | the same boundary as `grid`, priced per hour |
+| `load` | the house now against its own average today |
+| `autarky` | the self-supplied share now |
+| `roof` | what the roof makes now, against its best today |
+
+**How it is drawn** is `ring.meter_style`, and only `grid` has a choice: `blocks` for a stepped needle, `bar` for one body. The other six each have one honest shape, so the editor does not offer a drawing it would ignore.
+
+`day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. Set `ring.columns` to `two` for a second column on the other side of the ring, with its own `ring.meter_second_shows`, so a day strip and a live needle can stand together.
 
 ---
 

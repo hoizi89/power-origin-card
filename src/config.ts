@@ -1,6 +1,9 @@
 import { localize } from "./localize";
 import type {
   LegacyRingOptions,
+  MeterDrawn,
+  MeterShows,
+  MeterStyle,
   PowerOriginCardConfig,
   ResolvedConfig,
   TodayStat
@@ -29,9 +32,12 @@ export const DEFAULTS = {
     meter_scale_draw: 0,
     meter_target: 0,
     meter_steps: 6,
+    meter_shows: "grid" as const,
     meter_style: "blocks" as const,
     meter_today: false,
     meter_marks: true,
+    meter_second_shows: "day" as const,
+    meter_second_style: "blocks" as const,
     meter_second: "none" as const,
     meter_second_scope: "all" as const,
     meter_scope: "grid" as const,
@@ -79,21 +85,56 @@ export function assertConfig(config: PowerOriginCardConfig | undefined, locale?:
  * `columns` is the field the editor offers; `meter` and `meter_second` remain
  * the storage, so a card configured before the count existed still reads.
  */
+const isDrawn = (value: unknown): value is MeterDrawn =>
+  value === "blocks" || value === "bar";
+
 function resolveColumns(config: PowerOriginCardConfig) {
   const ring = config.ring ?? {};
   const second = ring.meter_second ?? DEFAULTS.ring.meter_second;
   const on = ring.meter ?? DEFAULTS.ring.meter;
 
   const columns =
-    ring.columns ?? (!on ? "none" : second !== "none" ? "two" : "one");
+    ring.columns ??
+    (!on ? "none" : second !== "none" || ring.meter_second_shows ? "two" : "one");
+
+  // What a column measures and how it is drawn were one list, which put a
+  // needle style and a subject in the same dropdown. They are two questions,
+  // and a card written before the split still answers the old one.
+  const shows =
+    ring.meter_shows ??
+    (isDrawn(ring.meter_style ?? DEFAULTS.ring.meter_style)
+      ? "grid"
+      : (ring.meter_style as MeterShows));
+  const drawn = isDrawn(ring.meter_style) ? ring.meter_style : DEFAULTS.ring.meter_style;
+
+  const secondShows =
+    ring.meter_second_shows ??
+    (second === "none"
+      ? DEFAULTS.ring.meter_second_shows
+      : isDrawn(second)
+        ? "grid"
+        : (second as MeterShows));
+  const secondDrawn = isDrawn(ring.meter_second_style)
+    ? ring.meter_second_style
+    : isDrawn(second)
+      ? second
+      : DEFAULTS.ring.meter_second_style;
 
   return {
     columns,
     meter: columns !== "none",
+    meter_shows: shows,
+    meter_style: shows === "grid" ? drawn : (shows as MeterStyle),
+    meter_second_shows: secondShows,
+    meter_second_style: secondDrawn,
     // Asking for two and leaving the right one unset gets the day, which is
     // the one type that says something a needle cannot.
     meter_second:
-      columns === "two" ? (second === "none" ? "day" : second) : ("none" as const)
+      columns === "two"
+        ? secondShows === "grid"
+          ? secondDrawn
+          : (secondShows as MeterStyle)
+        : ("none" as const)
   };
 }
 
@@ -454,13 +495,12 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           },
           ...only((resolved) => resolved.ring.meter, {
-            name: "meter_style",
+            name: "meter_shows",
             selector: {
               select: {
                 mode: "dropdown",
                 options: [
-                  { value: "blocks", label: t("editor.meter_blocks") },
-                  { value: "bar", label: t("editor.meter_bar") },
+                  { value: "grid", label: t("editor.shows_grid") },
                   { value: "day", label: t("editor.meter_day") },
                   { value: "balance", label: t("editor.meter_balance") },
                   { value: "money", label: t("editor.meter_money") },
@@ -471,20 +511,44 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
-          ...only((resolved) => resolved.ring.columns === "two", {
-            name: "meter_second",
+          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_shows === "grid", {
+            name: "meter_style",
             selector: {
               select: {
                 mode: "dropdown",
                 options: [
                   { value: "blocks", label: t("editor.meter_blocks") },
-                  { value: "bar", label: t("editor.meter_bar") },
+                  { value: "bar", label: t("editor.meter_bar") }
+                ]
+              }
+            }
+          }),
+          ...only((resolved) => resolved.ring.columns === "two", {
+            name: "meter_second_shows",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "grid", label: t("editor.shows_grid") },
                   { value: "day", label: t("editor.meter_day") },
                   { value: "balance", label: t("editor.meter_balance") },
                   { value: "money", label: t("editor.meter_money") },
                   { value: "load", label: t("editor.meter_load") },
                   { value: "autarky", label: t("editor.meter_autarky") },
                   { value: "roof", label: t("editor.meter_roof") }
+                ]
+              }
+            }
+          }),
+          ...only((resolved) =>
+            resolved.ring.columns === "two" && resolved.ring.meter_second_shows === "grid", {
+            name: "meter_second_style",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "blocks", label: t("editor.meter_blocks") },
+                  { value: "bar", label: t("editor.meter_bar") }
                 ]
               }
             }
@@ -765,7 +829,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
     meter_steps: t("editor.meter_steps"),
+    meter_shows: t("editor.meter_shows"),
     meter_style: t("editor.meter_style"),
+    meter_second_shows: t("editor.meter_second_shows"),
+    meter_second_style: t("editor.meter_second_style"),
     meter_today: t("editor.meter_today"),
     meter_marks: t("editor.meter_marks"),
     meter_second: t("editor.meter_second"),
@@ -823,6 +890,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
     meter_second: t("editor.help_meter_second"),
+    meter_shows: t("editor.help_meter_shows"),
     meter_second_scope: t("editor.help_meter_second_scope"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
