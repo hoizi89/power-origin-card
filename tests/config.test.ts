@@ -101,9 +101,17 @@ describe("editor coverage", () => {
     return found;
   };
 
+  /**
+   * Storage rather than a control. The column count writes the first two; the
+   * last two moved into the battery group as battery.capacity and
+   * battery.reserve, and stay at the top level only so an older card reads.
+   */
+  const DERIVED = new Set(["meter", "battery_capacity", "battery_reserve"]);
+
   it("offers every top-level option", () => {
     const found = names();
     for (const key of Object.keys(DEFAULTS)) {
+      if (DERIVED.has(key)) continue;
       expect(found, key).toContain(key);
     }
   });
@@ -113,8 +121,6 @@ describe("editor coverage", () => {
    * writes these two from it. Both stay so a card configured before the count
    * existed still reads.
    */
-  const DERIVED = new Set(["meter"]);
-
   it("offers every option inside every group", () => {
     const found = names();
     for (const group of ["sections", "ring", "chart", "battery", "today"] as const) {
@@ -215,5 +221,29 @@ describe("what the card starts with", () => {
   it("takes a single string when that is all there is", () => {
     const stub = stubConfig(["sensor.house_consumption", "sensor.pv1_power"]);
     expect(stub.entities.solar).toBe("sensor.pv1_power");
+  });
+});
+
+describe("where the capacity lives", () => {
+  it("reads a card that still has it at the top level", () => {
+    const resolved = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      battery_capacity: 9000,
+      battery_reserve: 12
+    });
+    expect(resolved.battery_capacity).toBe(9000);
+    expect(resolved.battery.capacity).toBe(9000);
+    expect(resolved.battery.reserve).toBe(12);
+  });
+
+  it("prefers the battery group when both are written", () => {
+    const resolved = resolveConfig({
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      battery_capacity: 9000,
+      battery: { capacity: 13100 }
+    });
+    expect(resolved.battery_capacity).toBe(13100);
   });
 });

@@ -1006,7 +1006,8 @@ export class PowerOriginCard extends LitElement {
             inDay.map((point) => series.solar[point.index]),
             config.chart.consumption ? inDay.map((point) => series.house[point.index]) : [],
             { start: dayStart, end: dayEnd },
-            box
+            box,
+            this._earlierSolar(inDay.length)
           )
         : undefined;
 
@@ -1107,8 +1108,8 @@ export class PowerOriginCard extends LitElement {
                               d="${geometry.area}"></path>`
                   : nothing
               }
-              ${geometry?.earlier
-                ? svg`<path class="earlier-line" d="${geometry.earlier}"></path>`
+              ${(geometry?.earlier ?? barGeometry?.earlier)
+                ? svg`<path class="earlier-line" d="${geometry?.earlier ?? barGeometry?.earlier}"></path>`
                 : nothing}
               ${geometry?.solar ? svg`<path class="prod-line" d="${geometry.solar}"></path>` : nothing}
               ${

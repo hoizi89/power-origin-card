@@ -113,8 +113,8 @@ today:
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
 | `tap_action` | `more-info` | What tapping a figure does, in Lovelace's own vocabulary. |
 | `chart.compare` | `false` | Draws the same weekday a week ago faintly behind today. Costs one more recorder query. |
-| `battery_capacity` | `0` | Usable capacity in Wh. Needed for kWh figures and the remaining time. |
-| `battery_reserve` | `0` | Percent held back and not counted as available. |
+| `battery.capacity` | `0` | Usable capacity in Wh. Needed for kWh figures and the remaining time. |
+| `battery.reserve` | `0` | Percent held back and not counted as available. |
 | `ring.center` | `power` | Which question the ring answers — see the table above. |
 | `ring.size` | `auto` | `auto` grows the ring and column when they have the card to themselves; `s`, `m`, `l` fix it. |
 | `ring.facts` | `bars` | The value list: `bars`, `plain`, `inline` or `none`. Defaults to `none` while the column is on. |

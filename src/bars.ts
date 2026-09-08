@@ -11,6 +11,8 @@ export interface BarGeometry {
   bars: Bar[];
   /** Consumption across the bar centres, on the same scale. */
   house: string;
+  /** The same day a week ago, on the same scale. */
+  earlier?: string;
   nowX?: number;
   tick?: ChartTick;
 }
@@ -50,7 +52,8 @@ export function chartBars(
   solar: number[],
   house: number[],
   domain: ChartDomain,
-  box: ChartBox
+  box: ChartBox,
+  earlier: number[] = []
 ): BarGeometry {
   if (timestamps.length < 2) return { bars: [], house: "" };
 
@@ -68,10 +71,12 @@ export function chartBars(
   const solarHours = hours.map((hour) => hourlyMean(timestamps, solar, hour, hour + HOUR));
   const houseHours = hours.map((hour) => hourlyMean(timestamps, house, hour, hour + HOUR));
 
+  // The comparison shares the scale, or the two days compare nothing.
   const max = Math.max(
     0.001,
     ...solarHours.filter((value): value is number => Number.isFinite(value)),
-    ...houseHours.filter((value): value is number => Number.isFinite(value))
+    ...houseHours.filter((value): value is number => Number.isFinite(value)),
+    ...earlier.filter((value) => Number.isFinite(value))
   );
 
   const scaleY = (value: number) => box.height - (Math.max(0, value) / max) * (box.height - box.padding);
@@ -104,10 +109,21 @@ export function chartBars(
 
   const tickValue = niceTick(max);
 
+  const earlierPath =
+    earlier.length > 1
+      ? earlier
+          .map((value, index) => {
+            const x = box.padding + (span * index) / (earlier.length - 1);
+            return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${scaleY(value).toFixed(1)}`;
+          })
+          .join(" ")
+      : undefined;
+
   return {
     bars,
     house: path,
     nowX: scaleX(timestamps.at(-1) ?? domain.start),
-    tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue) }
+    tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue) },
+    earlier: earlierPath
   };
 }

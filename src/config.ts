@@ -54,6 +54,8 @@ export const DEFAULTS = {
     runtime_window: 30,
     reserve_line: true,
     percent: true,
+    capacity: 0,
+    reserve: 0,
     extra: "none" as const
   },
   today: {
@@ -103,8 +105,12 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     text_scale: config.text_scale ?? DEFAULTS.text_scale,
     chip: config.chip ?? DEFAULTS.chip,
     tap_action: config.tap_action ?? DEFAULTS.tap_action,
-    battery_capacity: config.battery_capacity ?? DEFAULTS.battery_capacity,
-    battery_reserve: config.battery_reserve ?? DEFAULTS.battery_reserve,
+    // The two used to sit at the top level. They belong to the battery and
+    // live there now; a card written before that still reads.
+    battery_capacity:
+      config.battery?.capacity ?? config.battery_capacity ?? DEFAULTS.battery_capacity,
+    battery_reserve:
+      config.battery?.reserve ?? config.battery_reserve ?? DEFAULTS.battery_reserve,
     battery_invert: config.battery_invert ?? DEFAULTS.battery_invert,
     grid_invert: config.grid_invert ?? DEFAULTS.grid_invert,
     sections: { ...DEFAULTS.sections, ...config.sections },
@@ -125,7 +131,12 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
               : DEFAULTS.ring.facts)
     },
     chart: { ...DEFAULTS.chart, ...config.chart },
-    battery: { ...DEFAULTS.battery, ...config.battery },
+    battery: {
+      ...DEFAULTS.battery,
+      ...config.battery,
+      capacity: config.battery?.capacity ?? config.battery_capacity ?? DEFAULTS.battery.capacity,
+      reserve: config.battery?.reserve ?? config.battery_reserve ?? DEFAULTS.battery.reserve
+    },
     today: {
       money: config.today?.money ?? DEFAULTS.today.money,
       origin_bar: config.today?.origin_bar ?? DEFAULTS.today.origin_bar,
@@ -592,10 +603,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [
             {
-              name: "battery_capacity",
+              name: "capacity",
               selector: { number: { min: 0, max: 200000, step: 100, mode: "box" } }
             },
-            { name: "battery_reserve", selector: { number: { min: 0, max: 50, mode: "box" } } }
+            { name: "reserve", selector: { number: { min: 0, max: 50, mode: "box" } } }
           ]
         },
         {
@@ -779,13 +790,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     stats: t("editor.stats"),
     battery_capacity: t("editor.capacity"),
     battery_reserve: t("editor.reserve"),
+    capacity: t("editor.capacity"),
+    reserve: t("editor.reserve"),
     battery_invert: t("editor.battery_invert"),
     grid_invert: t("editor.grid_invert")
   };
 
   const helpers: Record<string, string> = {
-    percent: t("editor.help_percent"),
-    reserve_line: t("editor.help_reserve_line"),
     extra: t("editor.help_extra"),
     compare: t("editor.help_compare"),
     title: t("editor.help_title"),
@@ -801,23 +812,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     center: t("editor.help_center"),
     center_dark: t("editor.help_center_dark"),
     meter: t("editor.help_meter"),
-    columns: t("editor.help_columns"),
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
-    meter_marks: t("editor.help_meter_marks"),
     meter_second: t("editor.help_meter_second"),
     meter_second_scope: t("editor.help_meter_second_scope"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
-    inner: t("editor.help_inner"),
     clock_marks: t("editor.help_clock_marks"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),
     house: t("editor.help_house"),
-    battery_capacity: t("editor.help_capacity"),
     segments: t("editor.help_segments"),
-    origin_bar: t("editor.help_origin_bar"),
     origin_style: t("editor.help_origin_style"),
     runtime_window: t("editor.help_runtime")
   };
