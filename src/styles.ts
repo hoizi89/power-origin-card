@@ -548,15 +548,18 @@ export const cardStyles = css`
     fill: var(--sst-muted);
   }
 
+  /* The casing has to read against the cells it holds, and the divider colour
+     is too close to the card to do that. */
   .bat-shell {
     fill: none;
-    stroke: var(--sst-track);
-    stroke-width: 1.5;
-    opacity: 0.7;
+    stroke: var(--sst-muted);
+    stroke-width: 2;
+    opacity: 0.55;
   }
 
   .bat-cap {
-    fill: var(--sst-track);
+    fill: var(--sst-muted);
+    opacity: 0.55;
   }
 
   .bat-fill {

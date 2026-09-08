@@ -1182,7 +1182,7 @@ export class PowerOriginCard extends LitElement {
             : this._linked(
                 config.entities.solar,
                 html`<span class="row-note key-solar"
-                  ><span class="dim">${localize("chart.now", locale)}</span>
+                  ><span class="dim">${localize("chart.roof_now", locale)}</span>
                   ${formatPower(solarNow, locale)} <span class="unit">kW</span></span
                 >`
               )}
@@ -1399,9 +1399,11 @@ export class PowerOriginCard extends LitElement {
     const shellW = (bare ? 259 : 248) - aside;
     const innerStart = bare ? 0 : 6;
     const innerWidth = bare ? shellW : shellW - 10;
-    const top = bare ? 12 : 8;
-    const tall = bare ? 28 : 36;
-    const radius = bare ? 4 : 6;
+    // The cells sit inside the casing with ground above and below, and they are
+    // square: a round shell around round pills reads as a meter, not a battery.
+    const top = 12;
+    const tall = 28;
+    const radius = bare ? 4 : 2;
 
     const reserve =
       config.battery.reserve_line && config.battery_reserve > 0 && config.battery_reserve < 100
@@ -1440,8 +1442,8 @@ export class PowerOriginCard extends LitElement {
           bare
             ? nothing
             : svg`
-              <rect class="bat-shell" x="1" y="5" width="${shellW}" height="42" rx="12"></rect>
-              <rect class="bat-cap" x="${shellW + 4}" y="18" width="7" height="16" rx="3"></rect>`
+              <rect class="bat-shell" x="1" y="5" width="${shellW}" height="42" rx="6"></rect>
+              <rect class="bat-cap" x="${shellW + 4}" y="19" width="9" height="14" rx="2"></rect>`
         }
         ${body}
         ${reserve > 0 && config.battery.style === "solid"
