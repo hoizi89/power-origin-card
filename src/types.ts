@@ -129,7 +129,6 @@ export interface BatteryOptions {
   segments?: number;
   runtime?: boolean;
   runtime_window?: number;
-  history?: boolean;
 }
 
 export interface TodayOptions {
