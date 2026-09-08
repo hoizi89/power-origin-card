@@ -142,6 +142,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   const only = <T>(able: (resolved: ResolvedConfig) => boolean, ...items: T[]): T[] =>
     on(able) ? items : [];
 
+  /** Only a column with a needle has a scale, a direction and a threshold. */
+  const gauge = (resolved: ResolvedConfig) =>
+    resolved.ring.meter &&
+    (resolved.ring.meter_style === "blocks" || resolved.ring.meter_style === "bar");
+
   const schema = [
     {
       type: "grid",
@@ -334,12 +339,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 options: [
                   { value: "blocks", label: t("editor.meter_blocks") },
                   { value: "bar", label: t("editor.meter_bar") },
-                  { value: "day", label: t("editor.meter_day") }
+                  { value: "day", label: t("editor.meter_day") },
+                  { value: "balance", label: t("editor.meter_balance") }
                 ]
               }
             }
           }),
-          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style !== "day", {
+          ...only(gauge, {
             name: "meter_scope",
             selector: {
               select: {
@@ -351,13 +357,22 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
-          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style !== "day", {
+          ...only(
+            (resolved) =>
+              resolved.ring.meter &&
+              (gauge(resolved) || resolved.ring.meter_style === "balance"),
+            {
             type: "grid",
             schema: [
               {
                 name: "meter_scale",
                 selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
               },
+            ]
+          }),
+          ...only(gauge, {
+            type: "grid",
+            schema: [
               {
                 name: "meter_scale_draw",
                 selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
@@ -365,7 +380,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               {
                 name: "meter_target",
                 selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
-              },
+              }
             ]
           }),
           ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks", {

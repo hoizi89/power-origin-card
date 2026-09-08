@@ -840,4 +840,12 @@ export const cardStyles = css`
     fill: var(--sst-ink);
     opacity: 0.9;
   }
+
+  .bal-track {
+    fill: var(--sst-track);
+    opacity: 0.3;
+  }
+
+  .bal-roof { fill: var(--sst-sun); }
+  .bal-house { fill: var(--sst-house, var(--sst-muted)); opacity: 0.85; }
 `;

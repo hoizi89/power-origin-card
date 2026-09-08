@@ -64,6 +64,43 @@ export interface MeterGeometry {
   belowTarget: boolean;
 }
 
+export interface BalanceView {
+  /** Height of each column, 0..1 of the track. */
+  production: number;
+  house: number;
+  /** Full scale in kW, shared by both so the two heights are comparable. */
+  top: number;
+  /** Positive when the roof covers more than the house needs. */
+  spare: number;
+}
+
+/**
+ * The roof against the house on one scale. The comparison of two heights is a
+ * question no ring answers: a ring shows what a total is made of, never whether
+ * the total is enough.
+ */
+export function balanceView(
+  production: number,
+  house: number,
+  scale: number,
+  fallbackPeak = 0
+): BalanceView {
+  const roof = Math.max(0, production);
+  const load = Math.max(0, house);
+  const top = Math.max(
+    scale > 0 ? scale : Math.ceil(fallbackPeak) || 0,
+    roof,
+    load,
+    1
+  );
+  return {
+    production: Math.min(1, roof / top),
+    house: Math.min(1, load / top),
+    top,
+    spare: roof - load
+  };
+}
+
 export const METER_HEIGHT = 200;
 export const METER_STEPS = 6;
 

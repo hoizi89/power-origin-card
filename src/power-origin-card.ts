@@ -14,7 +14,7 @@ import {
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
-import { METER_HEIGHT, meterGeometry } from "./meter";
+import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
 import { buildDaySeries, cachedStatistics, fetchStatistics } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
@@ -474,10 +474,51 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /** Roof against house, side by side on one scale. */
+  private _renderBalance(flow: Flow, locale: string) {
+    const config = this._config as ResolvedConfig;
+    const view = balanceView(
+      flow.production,
+      flow.house,
+      config.ring.meter_scale,
+      this._yearPeak ?? this._series?.solarPeak ?? 0
+    );
+
+    const covered = view.spare >= 0;
+    const amount = Math.abs(view.spare);
+    const word = localize(covered ? "meter.spare" : "meter.short", locale);
+    const bar = (x: number, share: number) => ({
+      x,
+      y: METER_HEIGHT * (1 - share),
+      height: Math.max(1, METER_HEIGHT * share)
+    });
+    const roof = bar(8, view.production);
+    const load = bar(48, view.house);
+
+    return html`
+      <div class="meter-block">
+        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+             aria-label="${localize("meter.balance", locale)}">
+          <rect class="bal-track" x="8" y="0" width="32" height="${METER_HEIGHT}" rx="5"></rect>
+          <rect class="bal-track" x="48" y="0" width="32" height="${METER_HEIGHT}" rx="5"></rect>
+          <rect class="bal-roof" x="8" y="${roof.y.toFixed(1)}" width="32"
+                height="${roof.height.toFixed(1)}" rx="5"></rect>
+          <rect class="bal-house" x="48" y="${load.y.toFixed(1)}" width="32"
+                height="${load.height.toFixed(1)}" rx="5"></rect>
+        </svg>
+        <div class="meter-label ${covered ? "up" : "down"}">
+          <span class="meter-value">${formatPower(amount, locale)} <small>kW</small></span>
+          <span class="meter-word">${word}</span>
+        </div>
+      </div>
+    `;
+  }
+
   private _renderMeter(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
     if (config.ring.meter_style === "day") return this._renderDayColumn(locale);
+    if (config.ring.meter_style === "balance") return this._renderBalance(flow, locale);
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.

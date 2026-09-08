@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DRAW_KW, METER_STEPS, meterGeometry, type MeterKey } from "../src/meter";
+import { DEFAULT_DRAW_KW, METER_STEPS, meterGeometry, type MeterKey,
+  balanceView
+} from "../src/meter";
 
 const flow = (toBattery: number, toGrid: number, fromGrid: number, fromBattery = 0) => ({
   toBattery,
@@ -193,5 +195,32 @@ describe("the two scales", () => {
     expect(geometry.scale).toBe(1);
     // The draw side falls back to a household band rather than to nothing.
     expect(geometry.scaleDown).toBe(DEFAULT_DRAW_KW);
+  });
+});
+
+describe("balanceView", () => {
+  it("puts both columns on one scale so the heights compare", () => {
+    const view = balanceView(6, 3, 0, 10);
+    expect(view.top).toBe(10);
+    expect(view.production).toBeCloseTo(0.6, 3);
+    expect(view.house).toBeCloseTo(0.3, 3);
+    expect(view.spare).toBeCloseTo(3, 3);
+  });
+
+  it("grows the scale rather than letting a column overflow it", () => {
+    const view = balanceView(14, 2, 0, 10);
+    expect(view.top).toBe(14);
+    expect(view.production).toBe(1);
+  });
+
+  it("reports a shortfall when the roof cannot carry the house", () => {
+    const view = balanceView(0.4, 3.1, 0, 10);
+    expect(view.spare).toBeCloseTo(-2.7, 3);
+  });
+
+  it("never draws a negative column", () => {
+    const view = balanceView(-5, -2, 0, 10);
+    expect(view.production).toBe(0);
+    expect(view.house).toBe(0);
   });
 });

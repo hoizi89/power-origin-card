@@ -393,3 +393,25 @@ describe("the day views", () => {
     expect(root.querySelectorAll(".seg").length).toBe(0);
   });
 });
+
+describe("the balance column", () => {
+  it("draws the roof beside the house and names the shortfall", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root, text } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "balance" } }),
+      foggy
+    );
+    expect(root.querySelector(".bal-roof")).toBeTruthy();
+    expect(root.querySelector(".bal-house")).toBeTruthy();
+    // 0.38 kW off the roof against 3.1 kW in the house.
+    expect(text).toContain("zugekauft");
+  });
+
+  it("names the surplus when the roof is ahead", async () => {
+    const { text } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "balance" } }),
+      SCENARIOS[0]
+    );
+    expect(text).toContain("Dach");
+  });
+});
