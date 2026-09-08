@@ -91,6 +91,7 @@ export interface RingOptions {
   size?: RingSize;
   rings?: RingStyle;
   inner?: RingInner;
+  clock_marks?: boolean;
 }
 
 /** Configurations written before the facts option existed. */

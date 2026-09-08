@@ -416,7 +416,7 @@ export class PowerOriginCard extends LitElement {
                   cx="100" cy="100" r="76" pathLength="100"
                   stroke-dasharray="${(100 / 24 - 0.35).toFixed(2)} 100"
                   stroke-dashoffset="${(-(entry.hour * 100) / 24).toFixed(2)}"
-                  transform="rotate(-90 100 100)"
+                  transform="rotate(90 100 100)"
                 ></circle>`
               )
             : nothing}
@@ -431,9 +431,19 @@ export class PowerOriginCard extends LitElement {
               ></circle>`
           )}
           ${asClock
-            ? svg`<circle class="clock-now" cx="100" cy="24" r="4.5"
+            ? svg`<circle class="clock-now" cx="100" cy="176" r="4.5"
                 transform="rotate(${((clock!.at(-1)!.hour + 0.5) * 15).toFixed(1)} 100 100)"
               ></circle>`
+            : nothing}
+          ${asClock && config.ring.clock_marks
+            ? svg`
+              <g class="clock-mark sun" transform="translate(100 13)">
+                <circle cx="0" cy="0" r="3.4"></circle>
+                <path d="M0,-7 L0,-5.4 M0,5.4 L0,7 M-7,0 L-5.4,0 M5.4,0 L7,0
+                         M-5,-5 L-3.8,-3.8 M3.8,3.8 L5,5 M5,-5 L3.8,-3.8 M-3.8,3.8 L-5,5"></path>
+              </g>
+              <path class="clock-mark moon"
+                    d="M100,180.5 a6,6 0 1,0 5.4,-3.4 a4.6,4.6 0 1,1 -5.4,3.4 z"></path>`
             : nothing}
           ${config.ring.inner === "load"
             ? svg`<path class="ring-curve" d="${this._innerCurve() ?? ""}"></path>`

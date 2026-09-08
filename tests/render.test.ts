@@ -513,3 +513,30 @@ describe("the second column", () => {
     expect(root.querySelectorAll(".meter-block").length).toBe(0);
   });
 });
+
+describe("the clock face", () => {
+  it("puts noon at the top rather than at the bottom", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(baseConfig({ ring: { rings: "clock" } }), foggy);
+    const hour = root.querySelector(".clock-hour")!;
+    expect(hour.getAttribute("transform")).toBe("rotate(90 100 100)");
+  });
+
+  it("marks which way round it reads, and lets that be turned off", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const on = await render(baseConfig({ ring: { rings: "clock" } }), foggy);
+    expect(on.root.querySelector(".clock-mark.sun")).toBeTruthy();
+    expect(on.root.querySelector(".clock-mark.moon")).toBeTruthy();
+
+    const off = await render(
+      baseConfig({ ring: { rings: "clock", clock_marks: false } }),
+      foggy
+    );
+    expect(off.root.querySelector(".clock-mark")).toBeNull();
+  });
+
+  it("shows no dial marks on a ring that is not a clock", async () => {
+    const { root } = await render(baseConfig({ ring: { rings: "double" } }), SCENARIOS[0]);
+    expect(root.querySelector(".clock-mark")).toBeNull();
+  });
+});

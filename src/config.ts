@@ -33,7 +33,8 @@ export const DEFAULTS = {
     meter_scope: "grid" as const,
     size: "auto" as const,
     rings: "single" as const,
-    inner: "icon" as const
+    inner: "icon" as const,
+    clock_marks: true
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
@@ -281,6 +282,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
+        ...only((resolved) => resolved.ring.rings === "clock", {
+          name: "clock_marks",
+          selector: { boolean: {} }
+        }),
         {
           name: "inner",
           selector: {
@@ -600,6 +605,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     size: t("editor.size"),
     rings: t("editor.ring_style"),
     inner: t("editor.inner"),
+    clock_marks: t("editor.clock_marks"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     height: t("editor.chart_height"),
@@ -642,6 +648,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     inner: t("editor.help_inner"),
+    clock_marks: t("editor.help_clock_marks"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),

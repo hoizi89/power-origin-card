@@ -868,4 +868,15 @@ export const cardStyles = css`
 
   .meter-swing.up { fill: var(--sst-sun); }
   .meter-swing.down { fill: var(--sst-grid); }
+
+  .clock-mark {
+    fill: var(--sst-muted);
+    stroke: var(--sst-muted);
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    opacity: 0.55;
+  }
+
+  .clock-mark.sun path { fill: none; }
+  .clock-mark.moon { stroke: none; }
 `;

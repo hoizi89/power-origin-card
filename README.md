@@ -318,8 +318,9 @@ English and German ship with the card, chosen from the Home Assistant user's lan
 ```bash
 npm install
 npm run check     # the test suite, then the production build
-npm run build
 ```
+
+The release process, the HACS requirements and the traps worth knowing are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The suite covers the arithmetic and, in jsdom, the rendering: every ring mode against ten system states, including an offline inverter, an empty battery and a system at a standstill.
 
