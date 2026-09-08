@@ -487,3 +487,29 @@ describe("the chart before the day has a shape", () => {
     expect(root.querySelector("svg.chart")).toBeTruthy();
   });
 });
+
+describe("the second column", () => {
+  it("draws a different type on the other side of the ring", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "blocks", meter_second: "day" } }),
+      foggy
+    );
+    expect(root.querySelectorAll(".meter-block").length).toBe(2);
+    expect(root.querySelectorAll(".day-band").length).toBeGreaterThan(1);
+    expect(root.querySelectorAll(".meter-off").length).toBeGreaterThan(0);
+  });
+
+  it("stays at one column by default", async () => {
+    const { root } = await render(baseConfig({ ring: { meter: true } }), SCENARIOS[0]);
+    expect(root.querySelectorAll(".meter-block").length).toBe(1);
+  });
+
+  it("draws none when the column is switched off entirely", async () => {
+    const { root } = await render(
+      baseConfig({ ring: { meter: false, meter_second: "day" } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelectorAll(".meter-block").length).toBe(0);
+  });
+});

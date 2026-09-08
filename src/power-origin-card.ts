@@ -20,6 +20,7 @@ import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
   DaySeries,
+  MeterStyle,
   HomeAssistant,
   ResolvedConfig,
   PowerOriginCardConfig,
@@ -464,6 +465,9 @@ export class PowerOriginCard extends LitElement {
           }
 
         </svg>
+        ${config.ring.meter_second === "none"
+          ? nothing
+          : this._renderMeter(flow, locale, config.ring.meter_second)}
         </div>
         ${this._renderLegend(flow, locale)}
       </div>
@@ -481,6 +485,7 @@ export class PowerOriginCard extends LitElement {
     return (
       config.ring.rings === "clock" ||
       config.ring.meter_style === "day" ||
+      config.ring.meter_second === "day" ||
       config.ring.meter_today ||
       (config.today.origin_bar && config.today.origin_style === "band")
     );
@@ -581,11 +586,12 @@ export class PowerOriginCard extends LitElement {
       .join(" ");
   }
 
-  private _renderMeter(flow: Flow, locale: string) {
+  private _renderMeter(flow: Flow, locale: string, override?: MeterStyle) {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
-    if (config.ring.meter_style === "day") return this._renderDayColumn(locale);
-    if (config.ring.meter_style === "balance") return this._renderBalance(flow, locale);
+    const style = override ?? config.ring.meter_style;
+    if (style === "day") return this._renderDayColumn(locale);
+    if (style === "balance") return this._renderBalance(flow, locale);
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.

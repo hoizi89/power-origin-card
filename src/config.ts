@@ -29,6 +29,7 @@ export const DEFAULTS = {
     meter_steps: 6,
     meter_style: "blocks" as const,
     meter_today: false,
+    meter_second: "none" as const,
     meter_scope: "grid" as const,
     size: "auto" as const,
     rings: "single" as const,
@@ -384,16 +385,15 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 name: "meter_scale",
                 selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
               },
+              ...only(gauge, {
+                name: "meter_scale_draw",
+                selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+              })
             ]
           }),
-          ...only(gauge, { name: "meter_today", selector: { boolean: {} } }),
           ...only(gauge, {
             type: "grid",
             schema: [
-              {
-                name: "meter_scale_draw",
-                selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-              },
               {
                 name: "meter_target",
                 selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
@@ -403,6 +403,22 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks", {
             name: "meter_steps",
             selector: { number: { min: 3, max: 14, mode: "box" } }
+          }),
+          ...only(gauge, { name: "meter_today", selector: { boolean: {} } }),
+          ...only((resolved) => resolved.ring.meter, {
+            name: "meter_second",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: t("editor.second_none") },
+                  { value: "blocks", label: t("editor.meter_blocks") },
+                  { value: "bar", label: t("editor.meter_bar") },
+                  { value: "day", label: t("editor.meter_day") },
+                  { value: "balance", label: t("editor.meter_balance") }
+                ]
+              }
+            }
           })
         ]
       }
@@ -579,6 +595,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_steps: t("editor.meter_steps"),
     meter_style: t("editor.meter_style"),
     meter_today: t("editor.meter_today"),
+    meter_second: t("editor.meter_second"),
     meter_scope: t("editor.meter_scope"),
     size: t("editor.size"),
     rings: t("editor.ring_style"),
@@ -621,6 +638,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter: t("editor.help_meter"),
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
+    meter_second: t("editor.help_meter_second"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     inner: t("editor.help_inner"),
