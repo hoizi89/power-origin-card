@@ -100,6 +100,7 @@ export interface RingOptions {
   /** A continuous band or stepped blocks. */
   meter_style?: MeterStyle;
   meter_today?: boolean;
+  meter_marks?: boolean;
   meter_second?: MeterStyle | "none";
   meter_second_scope?: MeterScope;
   meter_scope?: MeterScope;

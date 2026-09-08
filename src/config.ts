@@ -31,6 +31,7 @@ export const DEFAULTS = {
     meter_steps: 6,
     meter_style: "blocks" as const,
     meter_today: false,
+    meter_marks: true,
     meter_second: "none" as const,
     meter_second_scope: "all" as const,
     meter_scope: "grid" as const,
@@ -525,7 +526,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             name: "meter_steps",
             selector: { number: { min: 3, max: 14, mode: "box" } }
           }),
-          ...only(gauge, { name: "meter_today", selector: { boolean: {} } })
+          ...only(gauge, {
+            type: "grid",
+            schema: [
+              { name: "meter_marks", selector: { boolean: {} } },
+              { name: "meter_today", selector: { boolean: {} } }
+            ]
+          })
         ]
       }
     ),
@@ -718,6 +725,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_steps: t("editor.meter_steps"),
     meter_style: t("editor.meter_style"),
     meter_today: t("editor.meter_today"),
+    meter_marks: t("editor.meter_marks"),
     meter_second: t("editor.meter_second"),
     meter_second_scope: t("editor.meter_second_scope"),
     meter_scope: t("editor.meter_scope"),
@@ -767,6 +775,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     columns: t("editor.help_columns"),
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
+    meter_marks: t("editor.help_meter_marks"),
     meter_second: t("editor.help_meter_second"),
     meter_second_scope: t("editor.help_meter_second_scope"),
     size: t("editor.help_size"),

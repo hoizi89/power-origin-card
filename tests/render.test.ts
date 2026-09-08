@@ -663,3 +663,30 @@ describe("what a tap does", () => {
     expect(events).toEqual([]);
   });
 });
+
+describe("which end of the column is which", () => {
+  it("marks both ends, and makes room for the marks", async () => {
+    const { root } = await render(baseConfig({ ring: { meter: true } }), SCENARIOS[0]);
+    expect(root.querySelectorAll(".meter-mark").length).toBe(2);
+    // The band is added to the window, never taken out of the track.
+    expect(root.querySelector("svg.meter")!.getAttribute("viewBox")).toBe("-8 -18 104 236");
+  });
+
+  it("gives the height back when they are switched off", async () => {
+    const { root } = await render(
+      baseConfig({ ring: { meter: true, meter_marks: false } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelector(".meter-mark")).toBeNull();
+    expect(root.querySelector("svg.meter")!.getAttribute("viewBox")).toBe("0 0 88 200");
+  });
+
+  it("leaves the day strip alone, which has no up and down", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "day" } }),
+      foggy
+    );
+    expect(root.querySelector(".meter-mark")).toBeNull();
+  });
+});

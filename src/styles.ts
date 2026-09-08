@@ -108,8 +108,8 @@ export const cardStyles = css`
 
   .meter {
     display: block;
-    height: 150px;
     width: 66px;
+    height: auto;
     flex: 0 0 auto;
   }
 
@@ -760,7 +760,6 @@ export const cardStyles = css`
     }
 
     .ring-group.solo .meter {
-      height: 186px;
       width: 82px;
     }
   }
@@ -771,7 +770,6 @@ export const cardStyles = css`
   }
 
   .ring-group.size-s .meter {
-    height: 128px;
     width: 60px;
   }
 
@@ -780,7 +778,6 @@ export const cardStyles = css`
   }
 
   .ring-group.size-m .meter {
-    height: 150px;
     width: 66px;
   }
 
@@ -789,7 +786,6 @@ export const cardStyles = css`
   }
 
   .ring-group.size-l .meter {
-    height: 190px;
     width: 82px;
   }
 
@@ -898,5 +894,14 @@ export const cardStyles = css`
     stroke-width: 1.6;
     stroke-dasharray: 3 3;
     opacity: 0.4;
+  }
+
+  .meter-mark {
+    fill: none;
+    stroke: var(--sst-muted);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.5;
   }
 `;
