@@ -29,12 +29,14 @@ export async function ensureHaFormLoaded(): Promise<void> {
 export class PowerOriginCardEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
-    _config: { state: true }
+    _config: { state: true },
+    _offer: { state: true }
   };
 
   hass?: HomeAssistant;
   private _config?: PowerOriginCardConfig;
-  private _picked?: string;
+  private _offer: string[] = [];
+  private _prefs?: EnergyPrefs;
 
   static styles = css`
     :host {
@@ -59,6 +61,24 @@ export class PowerOriginCardEditor extends LitElement {
   setConfig(config: PowerOriginCardConfig): void {
     this.form().assertConfig(config);
     this._config = config;
+    void this._measureOffer();
+  }
+
+  /**
+   * What the Energy dashboard could still contribute. The card takes it on
+   * its own when it is added, so most of the time the answer is nothing —
+   * and then there is no reason to show a button.
+   */
+  private async _measureOffer(): Promise<void> {
+    if (!this.hass || !this._config) return;
+    try {
+      this._prefs ??= await this.hass.callWS<EnergyPrefs>({
+        type: "energy/get_prefs"
+      });
+      this._offer = mergePick(this._config, pickFromEnergy(this._prefs)).filled;
+    } catch {
+      this._offer = [];
+    }
   }
 
   private form() {
@@ -73,14 +93,17 @@ export class PowerOriginCardEditor extends LitElement {
     // otherwise every unset switch reads as off while its block is on screen.
     const data = resolveConfig(this._config);
     return html`
-      <div class="adopt">
-        <ha-button @click=${this._adopt}
-          >${localize("editor.adopt", localeOf(this.hass))}</ha-button
-        >
-      </div>
-      ${this._picked
-        ? html`<p class="note">${this._picked}</p>`
-        : nothing}
+      ${this._offer.length === 0
+        ? nothing
+        : html`<div class="adopt">
+            <ha-button @click=${this._adopt}
+              >${localize("editor.adopt", localeOf(this.hass))}</ha-button
+            >
+            <span class="note"
+              >${localize("editor.adopt_offer", localeOf(this.hass))}
+              ${this._offer.length}</span
+            >
+          </div>`}
       <ha-form
         .hass=${this.hass}
         .data=${data}
@@ -99,16 +122,15 @@ export class PowerOriginCardEditor extends LitElement {
    */
   private async _adopt(): Promise<void> {
     if (!this.hass || !this._config) return;
-    const locale = localeOf(this.hass);
     try {
       const prefs = await this.hass.callWS<EnergyPrefs>({ type: "energy/get_prefs" });
       const { merged, filled } = mergePick(this._config, pickFromEnergy(prefs));
       if (filled.length === 0) {
-        this._picked = localize("editor.adopt_none", locale);
+        this._offer = [];
         return;
       }
-      this._picked = `${localize("editor.adopt_done", locale)} ${filled.length}`;
       this._config = merged;
+      this._offer = [];
       this.dispatchEvent(
         new CustomEvent("config-changed", {
           bubbles: true,
@@ -117,7 +139,7 @@ export class PowerOriginCardEditor extends LitElement {
         })
       );
     } catch {
-      this._picked = localize("editor.adopt_failed", locale);
+      this._offer = [];
     }
   }
 

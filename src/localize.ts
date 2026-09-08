@@ -1,5 +1,4 @@
 type Table = Record<string, string>;
-
 const en: Table = {
   "card.name": "Power Origin",
   "card.description": "Where the house's power comes from, how the day went, what it earned.",
@@ -101,10 +100,8 @@ const en: Table = {
   "editor.help_title": "Name it after your system. Left empty the card shows no heading.",
   "editor.help_text_scale": "1.2 or so for a tablet read from across the room.",
   "editor.adopt": "Take what the Energy dashboard knows",
-  "editor.adopt_done": "Filled in, fields:",
-  "editor.adopt_none": "Nothing to add — everything it knows is already set.",
-  "editor.adopt_failed": "The Energy dashboard could not be read.",
-  "editor.entities": "Entities",
+  "editor.adopt_offer": "fields it can still fill:",
+        "editor.entities": "Entities",
   "editor.house": "House consumption",
   "editor.solar": "Solar power",
   "editor.battery": "Battery power",
@@ -216,7 +213,6 @@ const en: Table = {
   "editor.help_runtime": "The remaining time is averaged over this many minutes so a kettle does not move it.",
   "editor.help_house": "The only required entity. Everything else fills in a block when set."
 };
-
 const de: Table = {
   "card.name": "Power Origin",
   "card.description": "Woher der Strom im Haus kommt, wie der Tag lief, was er gebracht hat.",
@@ -318,10 +314,8 @@ const de: Table = {
   "editor.help_title": "Nach der Anlage benennen. Leer gelassen zeigt die Karte keine Überschrift.",
   "editor.help_text_scale": "Etwa 1,2 für ein Tablet, das man aus einigen Metern liest.",
   "editor.adopt": "Aus der Energie-Übersicht übernehmen",
-  "editor.adopt_done": "Eingetragen, Felder:",
-  "editor.adopt_none": "Nichts zu ergänzen — alles, was sie kennt, steht schon.",
-  "editor.adopt_failed": "Die Energie-Übersicht war nicht lesbar.",
-  "editor.entities": "Entitäten",
+  "editor.adopt_offer": "Felder, die sie noch füllen kann:",
+        "editor.entities": "Entitäten",
   "editor.house": "Hausverbrauch",
   "editor.solar": "PV-Leistung",
   "editor.battery": "Speicherleistung",
@@ -433,15 +427,12 @@ const de: Table = {
   "editor.help_runtime": "Die Restzeit wird über so viele Minuten gemittelt, damit ein Wasserkocher sie nicht verreißt.",
   "editor.help_house": "Die einzige Pflichtangabe. Alles andere blendet einen Block ein, sobald es gesetzt ist."
 };
-
 export const TRANSLATIONS: Record<string, Table> = { en, de };
-
 export function baseLanguage(locale: string | undefined): string {
   const tag = String(locale ?? "").toLowerCase();
   const base = tag.split(/[-_]/)[0];
   return base in TRANSLATIONS ? base : "en";
 }
-
 export function localize(key: string, locale?: string): string {
   const table = TRANSLATIONS[baseLanguage(locale)];
   return table[key] ?? en[key] ?? key;
