@@ -29,7 +29,8 @@ export const DEFAULTS = {
     meter_steps: 6,
     meter_style: "blocks" as const,
     meter_scope: "grid" as const,
-    size: "auto" as const
+    size: "auto" as const,
+    rings: "single" as const
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
@@ -257,6 +258,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           }
         ),
         {
+          name: "rings",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "single", label: t("editor.ring_single") },
+                { value: "double", label: t("editor.ring_double") }
+              ]
+            }
+          }
+        },
+        {
           name: "size",
           selector: {
             select: {
@@ -439,7 +452,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [
             { name: "money", selector: { boolean: {} } },
-            { name: "origin_bar", selector: { boolean: {} } },
+            ...only(
+              (resolved) => resolved.ring.rings !== "double" || !resolved.sections.ring,
+              { name: "origin_bar", selector: { boolean: {} } }
+            ),
             { name: "breakdown", selector: { boolean: {} } },
             { name: "amortisation", selector: { boolean: {} } }
           ]
@@ -513,6 +529,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_style: t("editor.meter_style"),
     meter_scope: t("editor.meter_scope"),
     size: t("editor.size"),
+    rings: t("editor.ring_style"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     height: t("editor.chart_height"),
@@ -550,6 +567,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter: t("editor.help_meter"),
     meter_scope: t("editor.help_meter_scope"),
     size: t("editor.help_size"),
+    rings: t("editor.help_ring_style"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),

@@ -20,6 +20,7 @@ export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 export type ChipMode = "always" | "gridfree" | "never";
+export type RingStyle = "single" | "double";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type MeterStyle = "bar" | "blocks";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
@@ -84,6 +85,7 @@ export interface RingOptions {
   meter_style?: MeterStyle;
   meter_scope?: MeterScope;
   size?: RingSize;
+  rings?: RingStyle;
 }
 
 /** Configurations written before the facts option existed. */

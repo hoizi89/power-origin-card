@@ -333,3 +333,32 @@ describe("the battery caption", () => {
     expect(text).not.toContain("Reicht bis");
   });
 });
+
+describe("the ring styles", () => {
+  it("draws the day as a second ring and drops the bar that repeated it", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const config = baseConfig({
+      ring: { rings: "double" },
+      today: { origin_bar: true }
+    });
+    const { root } = await render(config, foggy);
+    expect(root.querySelectorAll(".ring-day").length).toBeGreaterThan(0);
+    expect(root.querySelector(".origin-bar")).toBeNull();
+  });
+
+  it("keeps one ring and the bar by default", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(baseConfig({ today: { origin_bar: true } }), foggy);
+    expect(root.querySelectorAll(".ring-day").length).toBe(0);
+    expect(root.querySelector(".origin-bar")).toBeTruthy();
+  });
+
+  it("never repeats the ring figure in the tiles", async () => {
+    const { root } = await render(
+      baseConfig({ ring: { center: "autarky" }, today: { stats: ["autarky", "peak"] } }),
+      SCENARIOS[0]
+    );
+    const labels = [...root.querySelectorAll(".stat-k")].map((n) => n.textContent?.trim());
+    expect(labels).not.toContain("Autarkie");
+  });
+});

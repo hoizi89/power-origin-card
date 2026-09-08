@@ -237,6 +237,20 @@ export const cardStyles = css`
     max-width: 200px;
   }
 
+  .ring-day-track {
+    fill: none;
+    stroke: var(--sst-track);
+    stroke-width: 5;
+    opacity: 0.5;
+  }
+
+  .ring-day {
+    fill: none;
+    stroke-width: 5;
+    opacity: 0.85;
+    transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;
+  }
+
   .ring-track {
     fill: none;
     stroke: var(--sst-track);

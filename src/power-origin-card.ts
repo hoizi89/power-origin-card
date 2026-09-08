@@ -319,11 +319,38 @@ export class PowerOriginCard extends LitElement {
 
     const caption = config.ring.caption ? localize(captionKey, locale) : undefined;
 
+    // The outer ring answers the same question over the whole day, in the same
+    // colours. Only the window differs, so the two cannot contradict each other.
+    const day = config.ring.rings === "double" ? this._dayOrigin() : undefined;
+    let outer: Array<{ colour: string; length: number; offset: number }> = [];
+    if (day) {
+      let offset = 0;
+      outer = day.parts.map((part) => {
+        const length = (part.value / day.used) * 100;
+        const segment = { colour: part.colour, length, offset };
+        offset += length;
+        return segment;
+      });
+    }
+
     return html`
       <div class="ring-block ${config.ring.layout}">
         <div class="ring-group size-${config.ring.size} ${config.ring.facts === "none" ? "solo" : ""}">
         ${this._renderMeter(flow, locale)}
         <svg class="ring ${showSurplus ? "surplus" : ""}" viewBox="0 0 200 200" role="img" aria-label="${value} ${unit}">
+          ${outer.length
+            ? svg`<circle class="ring-day-track" cx="100" cy="100" r="93" pathLength="100"></circle>
+                ${outer.map(
+                  (segment) => svg`<circle
+                    class="ring-day"
+                    cx="100" cy="100" r="93" pathLength="100"
+                    stroke="${segment.colour}"
+                    stroke-dasharray="${segment.length.toFixed(2)} 100"
+                    stroke-dashoffset="${(-segment.offset).toFixed(2)}"
+                    transform="rotate(-90 100 100)"
+                  ></circle>`
+                )}`
+            : nothing}
           <circle class="ring-track" cx="100" cy="100" r="76" pathLength="100"></circle>
           ${parts.map(
             (part) => svg`
@@ -667,7 +694,8 @@ export class PowerOriginCard extends LitElement {
           <span class="row-title">${localize("chart.title", locale)}</span>
           ${solarNow !== undefined
             ? html`<span class="row-note key-solar"
-                >${formatPower(solarNow, locale)} <span class="unit">kW</span></span
+                ><span class="dim">${localize("chart.now", locale)}</span>
+                ${formatPower(solarNow, locale)} <span class="unit">kW</span></span
               >`
             : nothing}
         </div>
@@ -912,7 +940,16 @@ export class PowerOriginCard extends LitElement {
   private _renderToday(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
     const money = config.today.money ? this._renderMoney(locale) : nothing;
+    // In autarky mode the ring already prints this very percentage.
+    const ringShowsAutarky =
+      config.sections.ring &&
+      (config.ring.center === "autarky" ||
+        ((config.ring.center === "surplus" || config.ring.center === "production") &&
+          flow.production <= 0.05 &&
+          config.ring.center_dark === "autarky"));
+
     const stats = config.today.stats
+      .filter((stat) => !(ringShowsAutarky && stat === "autarky"))
       .map((stat) => this._renderStat(stat, flow, locale))
       .filter((item) => item !== nothing);
 
@@ -923,7 +960,9 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="today ${earning ? "earning" : ""}">
         ${money}
-        ${config.today.origin_bar ? this._renderOriginBar(locale) : nothing}
+        ${config.today.origin_bar && config.ring.rings !== "double"
+          ? this._renderOriginBar(locale)
+          : nothing}
         ${stats.length ? html`<div class="stats">${stats}</div>` : nothing}
       </div>
     `;
@@ -934,13 +973,20 @@ export class PowerOriginCard extends LitElement {
    * are already configured, so it costs no new sensor unless the battery's own
    * output is wanted as a third share.
    */
-  private _renderOriginBar(locale: string) {
+  /**
+   * Where the day's consumption came from, out of the daily counters that are
+   * already configured. One computation, drawn twice: as the outer ring and
+   * as the bar under the balance.
+   */
+  private _dayOrigin():
+    | { used: number; parts: Array<{ key: string; colour: string; value: number }> }
+    | undefined {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
 
     const used = energyKwh(stateOf(hass, config.entities.house_today));
     const imported = energyKwh(stateOf(hass, config.entities.import_today)) ?? 0;
-    if (used === undefined || used <= 0) return nothing;
+    if (used === undefined || used <= 0) return undefined;
 
     const battery = energyKwh(stateOf(hass, config.entities.battery_out_today));
     const fromBattery = Math.min(Math.max(0, battery ?? 0), Math.max(0, used - imported));
@@ -956,7 +1002,23 @@ export class PowerOriginCard extends LitElement {
       { key: "ring.source_grid", colour: "var(--sst-grid)", value: imported }
     ].filter((part) => part.value >= 0.2 || part.value / used >= 0.05);
 
-    if (parts.length === 0) return nothing;
+    return parts.length ? { used, parts } : undefined;
+  }
+
+  private _renderOriginBar(locale: string) {
+    const day = this._dayOrigin();
+    if (day === undefined) return nothing;
+    const { used, parts } = day;
+
+    if (parts.length === 1) {
+      const only = parts[0];
+      return html`<div class="origin single">
+        <span class="origin-keys"
+          ><span><i style="background: ${only.colour}"></i>${localize(only.key, locale)}
+          <b>${formatEnergy(only.value, locale)} kWh</b></span></span
+        >
+      </div>`;
+    }
 
     return html`
       <div class="origin">
