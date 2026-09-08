@@ -25,6 +25,24 @@ Then **bump the version on the Lovelace resource**, or the browser keeps the old
 
 Change the `?v=` to anything new. A timestamp works. This step has been forgotten often enough to be worth its own paragraph.
 
+## The readme pictures
+
+They are rendered, not photographed. `tools/screenshots.mjs` writes one HTML page per capture against the built bundle and an invented but consistent day, and Chrome takes them headlessly:
+
+```bash
+npm run check                       # dist/ must be current
+node tools/screenshots.mjs          # writes tools/*.html
+
+chrome --headless=new --disable-gpu --virtual-time-budget=8000 \\
+  --window-size=432,850 --screenshot=docs/card.png tools/card.html
+```
+
+The sizes per capture are in the script. Redraw them whenever the card changes rather than re-shooting by hand — a screenshot from two versions ago is how a store page starts lying.
+
+One limit: the day views draw today up to the current hour, because that is what the card asks the recorder for. Take them in the afternoon and the clock and the day strip are satisfyingly full.
+
+---
+
 ## Releasing
 
 HACS installs from GitHub releases, so a release is what users actually get.
