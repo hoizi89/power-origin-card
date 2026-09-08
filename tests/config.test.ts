@@ -197,6 +197,34 @@ describe("editor coverage", () => {
     expect(JSON.stringify(priced.schema)).not.toContain("meter_style");
   });
 
+  it("offers the needle settings when either column is a needle", () => {
+    const form = (ring: Record<string, unknown>) =>
+      JSON.stringify(
+        getConfigForm("de", {
+          type: "custom:power-origin-card",
+          entities: { house: "sensor.h" },
+          ring
+        }).schema
+      );
+
+    // The needle is on the right, so the settings that shape it still apply.
+    const right = form({ columns: "two", meter_shows: "roof", meter_second_shows: "grid" });
+    expect(right).toContain("meter_marks");
+    expect(right).toContain("meter_steps");
+
+    // Neither column is a needle, so none of them can do anything.
+    const none = form({ columns: "two", meter_shows: "roof", meter_second_shows: "autarky" });
+    expect(none).not.toContain("meter_marks");
+    expect(none).not.toContain("meter_steps");
+  });
+
+  it("says what each switch and box does", () => {
+    const form = getConfigForm("de");
+    for (const name of ["meter_marks", "meter_today", "meter_scale", "meter_scale_draw"]) {
+      expect(form.computeHelper({ name }), name).toBeTruthy();
+    }
+  });
+
   it("keeps a card written before the column count worked", () => {
     const off = resolveConfig({
       type: "custom:power-origin-card",

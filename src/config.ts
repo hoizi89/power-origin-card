@@ -270,6 +270,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     resolved.ring.meter &&
     (resolved.ring.meter_style === "blocks" || resolved.ring.meter_style === "bar");
 
+  /**
+   * The shaping settings belong to the ring, not to one side of it, so they
+   * can act as soon as either column is a needle.
+   */
+  const needle = (resolved: ResolvedConfig) =>
+    resolved.ring.meter &&
+    [resolved.ring.meter_style, resolved.ring.meter_second].some(
+      (style) => style === "blocks" || style === "bar"
+    );
+
+  const scaled = (resolved: ResolvedConfig) =>
+    needle(resolved) ||
+    (resolved.ring.meter &&
+      [resolved.ring.meter_style, resolved.ring.meter_second].some(
+        (style) => style === "balance"
+      ));
+
   const schema = [
     {
       type: "grid",
@@ -582,24 +599,20 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 }
               }
             }
-          ),          ...only(
-            (resolved) =>
-              resolved.ring.meter &&
-              (gauge(resolved) || resolved.ring.meter_style === "balance"),
-            {
+          ),          ...only(scaled, {
             type: "grid",
             schema: [
               {
                 name: "meter_scale",
                 selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
               },
-              ...only(gauge, {
+              ...only(needle, {
                 name: "meter_scale_draw",
                 selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
               })
             ]
           }),
-          ...only(gauge, {
+          ...only(needle, {
             type: "grid",
             schema: [
               {
@@ -608,11 +621,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             ]
           }),
-          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks", {
-            name: "meter_steps",
-            selector: { number: { min: 3, max: 14, mode: "box" } }
-          }),
-          ...only(gauge, {
+          ...only(
+            (resolved) =>
+              resolved.ring.meter &&
+              [resolved.ring.meter_style, resolved.ring.meter_second].some(
+                (style) => style === "blocks"
+              ),
+            {
+              name: "meter_steps",
+              selector: { number: { min: 3, max: 14, mode: "box" } }
+            }
+          ),
+          ...only(needle, {
             type: "grid",
             schema: [
               { name: "meter_marks", selector: { boolean: {} } },
@@ -895,6 +915,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),
+    meter_marks: t("editor.help_meter_marks"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),
