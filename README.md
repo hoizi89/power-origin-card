@@ -279,6 +279,14 @@ The card only asks for numbers and units, never for a particular brand: anything
 
 ---
 
+## Tapping a figure
+
+Any figure that comes from one entity opens that entity in Home Assistant's own more-info dialog, the way every other card does it: the ring-s centre figure, the battery percentage, the balance, the paid-off share, the reading beside the day heading, and the tiles for exported, imported, produced, used and expected.
+
+Figures the card works out itself lead nowhere, and are not made to look as though they do. The peak and the self-supplied share have no entity behind them, so they stay plain text.
+
+---
+
 ## Sign conventions
 
 Two sensors carry a direction, and inverters disagree about which way is positive:

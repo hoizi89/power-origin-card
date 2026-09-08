@@ -879,4 +879,14 @@ export const cardStyles = css`
 
   .clock-mark.sun path { fill: none; }
   .clock-mark.moon { stroke: none; }
+
+  .tap {
+    cursor: pointer;
+  }
+
+  .tap:focus-visible {
+    outline: 2px solid var(--sst-sun);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
 `;

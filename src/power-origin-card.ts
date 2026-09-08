@@ -466,9 +466,18 @@ export class PowerOriginCard extends LitElement {
                   : "M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"
             }"
           ></path>`}
-          <text class="ring-value" x="100" y="${caption ? 104 : 112}" text-anchor="middle"
-            >${value}<tspan dx="5">${unit}</tspan></text
-          >
+          ${(() => {
+            const source = showSurplus || showProduction
+              ? config.entities.solar
+              : config.entities.house;
+            const on = source && (this._hass as HomeAssistant)?.states?.[source];
+            const handlers = on ? this._tap(source!) : undefined;
+            return svg`<text class="ring-value ${on ? "tap" : ""}" x="100"
+              y="${caption ? 104 : 112}" text-anchor="middle"
+              @click=${handlers?.click} @keydown=${handlers?.key}
+              tabindex="${on ? 0 : -1}"
+              >${value}<tspan dx="5">${unit}</tspan></text>`;
+          })()}
           ${
             caption
               ? svg`<text class="ring-caption" x="100" y="126" text-anchor="middle">${caption}</text>`
@@ -595,6 +604,42 @@ export class PowerOriginCard extends LitElement {
     return points
       .map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
       .join(" ");
+  }
+
+  /**
+   * Home Assistant's own dialog, opened the way every other card opens it.
+   * A figure that comes from one entity should be a way to that entity; a
+   * figure the card works out itself is not, and stays plain.
+   */
+  private _moreInfo(entityId: string): void {
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      detail: { entityId },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  private _tap(entityId: string) {
+    return {
+      click: (event: Event) => {
+        event.stopPropagation();
+        this._moreInfo(entityId);
+      },
+      key: (event: KeyboardEvent) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        this._moreInfo(entityId);
+      }
+    };
+  }
+
+  /** Wraps a figure so it opens its entity, or leaves it alone when it has none. */
+  private _linked(entityId: string | undefined, content: unknown) {
+    if (!entityId || !(this._hass as HomeAssistant)?.states?.[entityId]) return content;
+    const handlers = this._tap(entityId);
+    return html`<span class="tap" role="button" tabindex="0"
+      @click=${handlers.click} @keydown=${handlers.key}>${content}</span>`;
   }
 
   private _renderMeter(flow: Flow, locale: string, override?: MeterStyle) {
@@ -919,12 +964,15 @@ export class PowerOriginCard extends LitElement {
       <div class="row">
         <div class="row-head">
           <span class="row-title">${localize("chart.title", locale)}</span>
-          ${solarNow !== undefined
-            ? html`<span class="row-note key-solar"
-                ><span class="dim">${localize("chart.now", locale)}</span>
-                ${formatPower(solarNow, locale)} <span class="unit">kW</span></span
-              >`
-            : nothing}
+          ${solarNow === undefined
+            ? nothing
+            : this._linked(
+                config.entities.solar,
+                html`<span class="row-note key-solar"
+                  ><span class="dim">${localize("chart.now", locale)}</span>
+                  ${formatPower(solarNow, locale)} <span class="unit">kW</span></span
+                >`
+              )}
         </div>
         ${this._error ? html`<div class="row-note dim">${this._error}</div>` : nothing}
         ${shapeless
@@ -1108,9 +1156,15 @@ export class PowerOriginCard extends LitElement {
               <rect class="bat-cap" x="${shellW + 4}" y="18" width="7" height="16" rx="3"></rect>`
         }
         ${body}
-        <text class="bat-pct" x="340" y="35" text-anchor="end"
-          >${formatNumber(soc, locale, 0)}<tspan dx="4">%</tspan></text
-        >
+        ${(() => {
+          const id = (this._config as ResolvedConfig).entities.battery_soc;
+          const on = id && (this._hass as HomeAssistant)?.states?.[id];
+          const handlers = on ? this._tap(id!) : undefined;
+          return svg`<text class="bat-pct ${on ? "tap" : ""}" x="340" y="35"
+            text-anchor="end" tabindex="${on ? 0 : -1}"
+            @click=${handlers?.click} @keydown=${handlers?.key}
+            >${formatNumber(soc, locale, 0)}<tspan dx="4">%</tspan></text>`;
+        })()}
       </svg>`;
   }
 
@@ -1334,18 +1388,24 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="money">
-        <span class="money-v ${earned ? "plus" : "minus"}">
-          ${earned ? "+" : "−"}${formatMoney(Math.abs(balance), locale)}
-          <small>${localize(earned ? "today.earned" : "today.paid", locale)}</small>
-        </span>
+        ${this._linked(
+          config.entities.cost_today,
+          html`<span class="money-v ${earned ? "plus" : "minus"}">
+            ${earned ? "+" : "−"}${formatMoney(Math.abs(balance), locale)}
+            <small>${localize(earned ? "today.earned" : "today.paid", locale)}</small>
+          </span>`
+        )}
         ${breakdown}
         ${
           paidOff === undefined
             ? nothing
-            : html`<span class="corner"
-                >${formatNumber(paidOff, locale, 0)} %
-                <span class="dim">${localize("stat.amortisation", locale)}</span></span
-              >`
+            : this._linked(
+                config.entities.amortisation,
+                html`<span class="corner"
+                  >${formatNumber(paidOff, locale, 0)} %
+                  <span class="dim">${localize("stat.amortisation", locale)}</span></span
+                >`
+              )
         }
       </div>
     `;
@@ -1414,10 +1474,23 @@ export class PowerOriginCard extends LitElement {
 
     if (value === undefined) return nothing;
 
+    // Peak and self-sufficiency are worked out here, so they lead nowhere.
+    const behind: Partial<Record<TodayStat, string | undefined>> = {
+      export: config.entities.export_today,
+      import: config.entities.import_today,
+      solar: config.entities.solar_today,
+      house: config.entities.house_today,
+      forecast: config.entities.forecast,
+      amortisation: config.entities.amortisation
+    };
+
     return html`
       <div class="stat">
         <span class="stat-k">${localize(`stat.${stat}`, locale)}</span>
-        <span class="stat-v">${value} <small>${unit}</small></span>
+        ${this._linked(
+          behind[stat],
+          html`<span class="stat-v">${value} <small>${unit}</small></span>`
+        )}
       </div>
     `;
   }

@@ -540,3 +540,49 @@ describe("the clock face", () => {
     expect(root.querySelector(".clock-mark")).toBeNull();
   });
 });
+
+describe("opening the entity behind a figure", () => {
+  it("asks Home Assistant for the house when the ring shows the house", async () => {
+    const { root } = await render(baseConfig(), SCENARIOS[0]);
+    const value = root.querySelector(".ring-value") as SVGElement;
+    expect(value.getAttribute("class")).toContain("tap");
+
+    let asked: string | undefined;
+    root.host.addEventListener("hass-more-info", (event) => {
+      asked = (event as CustomEvent).detail.entityId;
+    });
+    value.dispatchEvent(new Event("click", { bubbles: true, composed: true }));
+    expect(asked).toBe(IDS.house);
+  });
+
+  it("asks for the roof when the ring shows the roof", async () => {
+    const { root } = await render(baseConfig({ ring: { center: "production" } }), SCENARIOS[0]);
+    let asked: string | undefined;
+    root.host.addEventListener("hass-more-info", (event) => {
+      asked = (event as CustomEvent).detail.entityId;
+    });
+    (root.querySelector(".ring-value") as SVGElement).dispatchEvent(
+      new Event("click", { bubbles: true, composed: true })
+    );
+    expect(asked).toBe(IDS.solar);
+  });
+
+  it("leaves a figure it worked out itself alone", async () => {
+    const { root } = await render(
+      baseConfig({ today: { stats: ["autarky", "export"] } }),
+      SCENARIOS[0]
+    );
+    const tiles = [...root.querySelectorAll(".stat")];
+    const autarky = tiles.find((t) => t.textContent?.includes("Autarkie"))!;
+    const exported = tiles.find((t) => t.textContent?.includes("Eingespeist"))!;
+    expect(autarky.querySelector(".tap")).toBeNull();
+    expect(exported.querySelector(".tap")).toBeTruthy();
+  });
+
+  it("does not make a figure clickable when its entity is missing", async () => {
+    const config = baseConfig({ today: { stats: ["export"] } });
+    delete config.entities.export_today;
+    const { root } = await render(config, SCENARIOS[0]);
+    expect(root.querySelector(".stat .tap")).toBeNull();
+  });
+});
