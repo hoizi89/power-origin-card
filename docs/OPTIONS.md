@@ -138,6 +138,7 @@ today:
 | `battery.style` | `segments` | `segments`, `solid`, or `bar` without a casing. |
 | `battery.segments` | `0` | `0` gives one block per kilowatt hour of capacity. |
 | `battery.runtime_window` | `30` | Minutes averaged before dividing. |
+| `battery.history` | `false` | The day’s charge as a small curve beside the bar, which gives up width for it. Costs one more recorder reading. |
 | `today.stats` | `[peak, autarky, export, import]` | Which four values appear at the bottom. |
 
 Options that cannot take effect in the current mode are **not shown in the editor at all** — no switch that does nothing.

@@ -51,7 +51,8 @@ export const DEFAULTS = {
     style: "segments" as const,
     segments: 0,
     runtime: true,
-    runtime_window: 30
+    runtime_window: 30,
+    history: false
   },
   today: {
     money: true,
@@ -615,7 +616,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               name: "segments",
               selector: { number: { min: 0, max: 20, mode: "box" } }
             }),
-            { name: "runtime", selector: { boolean: {} } }
+            { name: "runtime", selector: { boolean: {} } },
+            ...only((resolved) => Boolean(resolved.entities.battery_soc), {
+              name: "history",
+              selector: { boolean: {} }
+            })
           ]
         },
         ...only((resolved) => resolved.battery.runtime, {
@@ -741,6 +746,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     segments: t("editor.segments"),
     runtime: t("editor.runtime"),
     runtime_window: t("editor.runtime_window"),
+    history: t("editor.history"),
     money: t("editor.money"),
     breakdown: t("editor.breakdown"),
     origin_bar: t("editor.origin_bar"),
@@ -758,6 +764,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   };
 
   const helpers: Record<string, string> = {
+    history: t("editor.help_history"),
     compare: t("editor.help_compare"),
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),

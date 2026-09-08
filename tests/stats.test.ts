@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHART_BOX, chartGeometry, niceTick } from "../src/chart";
-import { buildDaySeries, integrate, startOfToday } from "../src/stats";
+import { buildDaySeries, integrate, sampleSeries, startOfToday } from "../src/stats";
 import { sunTimes } from "../src/sun";
 
 const NOW = new Date("2026-09-07T13:45:00+02:00");
@@ -138,5 +138,40 @@ describe("the reference line", () => {
     expect(geometry.tick?.value).toBe(8);
     expect(geometry.tick!.y).toBeGreaterThan(0);
     expect(geometry.tick!.y).toBeLessThan(CHART_BOX.height);
+  });
+});
+
+describe("sampleSeries", () => {
+  const midnight = () => {
+    const start = new Date(NOW);
+    start.setHours(0, 0, 0, 0);
+    return start.getTime();
+  };
+  const at = (hour: number, value: number) => ({
+    start: midnight() + hour * 3600_000,
+    mean: value,
+    max: value
+  });
+
+  it("spreads the day over as many points as asked for", () => {
+    const series = sampleSeries([at(0, 10), at(6, 50), at(12, 90)], 5, NOW);
+    expect(series).toHaveLength(5);
+    expect(series[0]).toBe(10);
+  });
+
+  it("holds the last known value rather than inventing one", () => {
+    const series = sampleSeries([at(0, 20), at(1, 40)], 4, NOW);
+    expect(series.at(-1)).toBe(40);
+  });
+
+  it("has nothing to draw without readings", () => {
+    expect(sampleSeries([], 8, NOW)).toEqual([]);
+    expect(sampleSeries([at(0, 5)], 1, NOW)).toEqual([]);
+  });
+
+  it("skips readings that are not numbers", () => {
+    const broken = { start: midnight() + 1800_000, mean: null, max: null };
+    const series = sampleSeries([broken, at(1, 33)], 3, NOW);
+    expect(series.every((value) => Number.isFinite(value))).toBe(true);
   });
 });

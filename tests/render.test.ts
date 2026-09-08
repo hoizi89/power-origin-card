@@ -690,3 +690,25 @@ describe("which end of the column is which", () => {
     expect(root.querySelector(".meter-mark")).toBeNull();
   });
 });
+
+describe("the battery's own day", () => {
+  it("draws the curve and narrows the bar to make room", async () => {
+    const { root } = await render(
+      baseConfig({ battery: { history: true } }),
+      SCENARIOS[0]
+    );
+    const curve = root.querySelector(".soc-line");
+    expect(curve).toBeTruthy();
+    expect(curve!.getAttribute("d")!.length).toBeGreaterThan(20);
+
+    const shell = root.querySelector(".bat-shell")!;
+    expect(Number(shell.getAttribute("width"))).toBeLessThan(200);
+  });
+
+  it("keeps the full width when the curve is off", async () => {
+    const { root } = await render(baseConfig(), SCENARIOS[0]);
+    expect(root.querySelector(".soc-line")).toBeNull();
+    const shell = root.querySelector(".bat-shell")!;
+    expect(Number(shell.getAttribute("width"))).toBeGreaterThan(200);
+  });
+});

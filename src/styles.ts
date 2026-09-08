@@ -904,4 +904,13 @@ export const cardStyles = css`
     stroke-linejoin: round;
     opacity: 0.5;
   }
+
+  .soc-line {
+    fill: none;
+    stroke: var(--sst-leaf);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.7;
+  }
 `;

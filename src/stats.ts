@@ -151,3 +151,30 @@ export function integrate(timestamps: number[], values: number[]): number {
   }
   return total;
 }
+
+/**
+ * A short series of its own, evenly spaced from midnight to now. Used where a
+ * shape matters more than the values — a sparkline has no axis to read.
+ */
+export function sampleSeries(
+  rows: StatisticPoint[],
+  points: number,
+  now = new Date()
+): number[] {
+  const usable = rows
+    .filter((row) => row.mean !== null && row.mean !== undefined && Number.isFinite(row.mean))
+    .sort((a, b) => a.start - b.start);
+  if (usable.length === 0 || points < 2) return [];
+
+  const start = startOfToday(now).getTime();
+  const span = Math.max(1, now.getTime() - start);
+  const out: number[] = [];
+
+  let at = 0;
+  for (let index = 0; index < points; index += 1) {
+    const when = start + (span * index) / (points - 1);
+    while (at + 1 < usable.length && usable[at + 1].start <= when) at += 1;
+    out.push(usable[at].mean as number);
+  }
+  return out;
+}

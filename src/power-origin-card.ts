@@ -16,7 +16,7 @@ import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, fetchStatistics } from "./stats";
+import { buildDaySeries, cachedStatistics, fetchStatistics, sampleSeries } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -69,6 +69,7 @@ export class PowerOriginCard extends LitElement {
   private _hours?: HourShare[];
   private _swing?: { up: number; down: number };
   private _earlier?: DaySeries;
+  private _soc: number[] = [];
   private _error?: string;
   private _lastFetch = 0;
   private _pending = false;
@@ -163,7 +164,8 @@ export class PowerOriginCard extends LitElement {
       // them, and a second request would cost another recorder scan.
       const gridId = this._needsHours() ? config.entities.grid_power : undefined;
       const cellId = this._needsHours() ? config.entities.battery_power : undefined;
-      const ids = [solarId, houseId, gridId, cellId].filter(Boolean) as string[];
+      const socId = config.battery.history ? config.entities.battery_soc : undefined;
+      const ids = [solarId, houseId, gridId, cellId, socId].filter(Boolean) as string[];
       const stats = await cachedStatistics(
         ids,
         REFRESH_MS,
@@ -178,6 +180,9 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
+      // The charge is a percentage, so it needs no divisor.
+      this._soc = socId ? sampleSeries(stats[socId] ?? [], 40) : [];
+
       if (gridId && stats[gridId]?.length) {
         let up = 0;
         let down = 0;
@@ -1206,12 +1211,33 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /** Today's charge as a curve, in the band the bar gave up. */
+  private _socPath(): string {
+    const values = this._soc;
+    if (values.length < 2) return "";
+    const left = 166;
+    const right = 262;
+    const top = 12;
+    const bottom = 42;
+    return values
+      .map((value, index) => {
+        const x = left + ((right - left) * index) / (values.length - 1);
+        const share = Math.min(100, Math.max(0, value)) / 100;
+        const y = bottom - (bottom - top) * share;
+        return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+  }
+
   private _renderBatterySvg(soc: number, tone: string, locale: string) {
     const config = this._config as ResolvedConfig;
     const bare = config.battery.style === "bar";
 
+    // The day's curve takes its width from the bar, which is the point of it.
+    const history = config.battery.history && this._soc.length > 1;
+
     // Without a casing the bar may use the width the cap would have taken.
-    const shellW = bare ? 259 : 248;
+    const shellW = history ? (bare ? 148 : 140) : bare ? 259 : 248;
     const innerStart = bare ? 0 : 6;
     const innerWidth = bare ? shellW : shellW - 10;
     const top = bare ? 12 : 10;
@@ -1252,6 +1278,7 @@ export class PowerOriginCard extends LitElement {
               <rect class="bat-cap" x="${shellW + 4}" y="18" width="7" height="16" rx="3"></rect>`
         }
         ${body}
+        ${history ? svg`<path class="soc-line" d="${this._socPath()}"></path>` : nothing}
         ${(() => {
           const id = (this._config as ResolvedConfig).entities.battery_soc;
           const on = id && (this._hass as HomeAssistant)?.states?.[id];
