@@ -87,6 +87,7 @@ export interface RingOptions {
   meter_style?: MeterStyle;
   meter_today?: boolean;
   meter_second?: MeterStyle | "none";
+  meter_second_scope?: MeterScope;
   meter_scope?: MeterScope;
   size?: RingSize;
   rings?: RingStyle;

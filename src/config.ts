@@ -30,6 +30,7 @@ export const DEFAULTS = {
     meter_style: "blocks" as const,
     meter_today: false,
     meter_second: "none" as const,
+    meter_second_scope: "all" as const,
     meter_scope: "grid" as const,
     size: "auto" as const,
     rings: "single" as const,
@@ -367,6 +368,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
+          ...only(
+            (resolved) =>
+              resolved.ring.meter &&
+              (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
+            {
+              name: "meter_second_scope",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "grid", label: t("editor.meter_scope_grid") },
+                    { value: "all", label: t("editor.meter_scope_all") }
+                  ]
+                }
+              }
+            }
+          ),
           ...only(gauge, {
             name: "meter_scope",
             selector: {
@@ -424,7 +442,24 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 ]
               }
             }
-          })
+          }),
+          ...only(
+            (resolved) =>
+              resolved.ring.meter &&
+              (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
+            {
+              name: "meter_second_scope",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "grid", label: t("editor.meter_scope_grid") },
+                    { value: "all", label: t("editor.meter_scope_all") }
+                  ]
+                }
+              }
+            }
+          )
         ]
       }
     ),
@@ -601,6 +636,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_style: t("editor.meter_style"),
     meter_today: t("editor.meter_today"),
     meter_second: t("editor.meter_second"),
+    meter_second_scope: t("editor.meter_second_scope"),
     meter_scope: t("editor.meter_scope"),
     size: t("editor.size"),
     rings: t("editor.ring_style"),
@@ -645,6 +681,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
     meter_second: t("editor.help_meter_second"),
+    meter_second_scope: t("editor.help_meter_second_scope"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     inner: t("editor.help_inner"),

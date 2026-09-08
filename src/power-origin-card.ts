@@ -655,7 +655,8 @@ export class PowerOriginCard extends LitElement {
 
     // Grid scope keeps the column on the meter itself, so the ring can name the
     // battery without the two saying the same thing twice.
-    const withBattery = config.ring.meter_scope === "all";
+    const scope = override ? config.ring.meter_second_scope : config.ring.meter_scope;
+    const withBattery = scope === "all";
     const meter = meterGeometry(
       {
         toBattery: withBattery ? flow.toBattery : 0,

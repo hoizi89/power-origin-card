@@ -125,6 +125,7 @@ today:
 | `ring.meter_style` | `blocks` | `blocks`, `bar`, `day` or `balance`. |
 | `ring.meter_today` | `false` | A faint band for how far the needle swung today, in both directions. |
 | `ring.meter_second` | `none` | A second column on the other side of the ring, with a type of its own. |
+| `ring.meter_second_scope` | `all` | Which boundary the second column watches, when it is a needle. Set it to the other one, or both needles draw the same picture. |
 | `ring.clock_marks` | `true` | Sun and moon on the clock dial, so it is clear which way round it reads. |
 | `today.origin_style` | `bar` | The day bar as shares, or as a `band` with one cell per hour. |
 | `ring.meter_scale` | `0` | Full deflection up, in kW. `0` takes the system's peak over the past year. |

@@ -586,3 +586,26 @@ describe("opening the entity behind a figure", () => {
     expect(root.querySelector(".stat .tap")).toBeNull();
   });
 });
+
+describe("two needles", () => {
+  it("lets each one watch a different boundary", async () => {
+    // Evening: the battery carries the house and nothing crosses the meter.
+    // Grid-only reads quiet, grid-and-battery reads a draw. Same picture would
+    // mean the pair is pointless.
+    const night = SCENARIOS.find((s) => s.name === "evening on battery")!;
+    const { text } = await render(
+      baseConfig({
+        ring: {
+          meter: true,
+          meter_style: "blocks",
+          meter_scope: "grid",
+          meter_second: "blocks",
+          meter_second_scope: "all"
+        }
+      }),
+      night
+    );
+    expect(text).toContain("kein Netzaustausch");
+    expect(text).toContain("Aus dem Speicher");
+  });
+});
