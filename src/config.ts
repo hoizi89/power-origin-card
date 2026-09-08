@@ -148,6 +148,16 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   const only = <T>(able: (resolved: ResolvedConfig) => boolean, ...items: T[]): T[] =>
     on(able) ? items : [];
 
+  /** Whether anything can put a price on the day: a sensor, or a price to work it out from. */
+  const money = (resolved: ResolvedConfig) =>
+    Boolean(
+      resolved.entities.cost_today ||
+        resolved.entities.cost_export_today ||
+        resolved.entities.cost_import_today ||
+        resolved.entities.price_import ||
+        resolved.entities.price_export
+    );
+
   /** Only a column with a needle has a scale, a direction and a threshold. */
   const gauge = (resolved: ResolvedConfig) =>
     resolved.ring.meter &&
@@ -211,7 +221,14 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         },
         { type: "grid", schema: [entityField("price_import"), entityField("price_export")] },
         entityField("battery_out_today", "energy"),
-        entityField("amortisation")
+        entityField("amortisation"),
+        {
+          type: "grid",
+          schema: [
+            { name: "battery_invert", selector: { boolean: {} } },
+            { name: "grid_invert", selector: { boolean: {} } }
+          ]
+        }
       ]
     },
     {
@@ -368,23 +385,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
-          ...only(
-            (resolved) =>
-              resolved.ring.meter &&
-              (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
-            {
-              name: "meter_second_scope",
-              selector: {
-                select: {
-                  mode: "dropdown",
-                  options: [
-                    { value: "grid", label: t("editor.meter_scope_grid") },
-                    { value: "all", label: t("editor.meter_scope_all") }
-                  ]
-                }
-              }
-            }
-          ),
           ...only(gauge, {
             name: "meter_scope",
             selector: {
@@ -487,7 +487,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [
             { name: "consumption", selector: { boolean: {} } },
-            { name: "show_forecast", selector: { boolean: {} } }
+            ...only((resolved) => Boolean(resolved.entities.forecast), {
+              name: "show_forecast",
+              selector: { boolean: {} }
+            })
           ]
         },
         {
@@ -505,6 +508,16 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       title: t("editor.battery_settings"),
       icon: "mdi:battery-70",
       schema: [
+        {
+          type: "grid",
+          schema: [
+            {
+              name: "battery_capacity",
+              selector: { number: { min: 0, max: 200000, step: 100, mode: "box" } }
+            },
+            { name: "battery_reserve", selector: { number: { min: 0, max: 50, mode: "box" } } }
+          ]
+        },
         {
           name: "style",
           selector: {
@@ -546,10 +559,25 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         {
           type: "grid",
           schema: [
-            { name: "money", selector: { boolean: {} } },
+            ...only(money, { name: "money", selector: { boolean: {} } }),
             { name: "origin_bar", selector: { boolean: {} } },
-            { name: "breakdown", selector: { boolean: {} } },
-            { name: "amortisation", selector: { boolean: {} } }
+            ...only(
+              (resolved) =>
+                money(resolved) &&
+                resolved.today.money &&
+                Boolean(
+                  resolved.entities.cost_export_today ||
+                    resolved.entities.cost_import_today ||
+                    resolved.entities.price_import ||
+                    resolved.entities.price_export
+                ),
+              { name: "breakdown", selector: { boolean: {} } }
+            ),
+            ...only(
+              (resolved) =>
+                money(resolved) && resolved.today.money && Boolean(resolved.entities.amortisation),
+              { name: "amortisation", selector: { boolean: {} } }
+            )
           ]
         },
         ...only(
@@ -579,23 +607,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       ]
     }
     ),
-    {
-      type: "grid",
-      schema: [
-        {
-          name: "battery_capacity",
-          selector: { number: { min: 0, max: 200000, step: 100, mode: "box" } }
-        },
-        { name: "battery_reserve", selector: { number: { min: 0, max: 50, mode: "box" } } }
-      ]
-    },
-    {
-      type: "grid",
-      schema: [
-        { name: "battery_invert", selector: { boolean: {} } },
-        { name: "grid_invert", selector: { boolean: {} } }
-      ]
-    }
   ];
 
   const labels: Record<string, string> = {
