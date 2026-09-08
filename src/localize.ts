@@ -332,7 +332,7 @@ const de: Table = {
   "stat.peak": "Spitze",
   "stat.autarky": "Autarkie",
   "stat.export": "Eingespeist",
-  "stat.import": "Netz",
+  "stat.import": "Bezogen",
   "stat.solar": "Erzeugt",
   "stat.house": "Verbraucht",
   "stat.forecast": "Noch erwartet",

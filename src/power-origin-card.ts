@@ -145,7 +145,10 @@ export class PowerOriginCard extends LitElement {
     if (!hass || !config || this._pending || !this.isConnected) return;
     const meterNeedsScale =
       config.ring.meter &&
-      (config.ring.meter_scale === 0 || config.ring.meter_second_scale === 0);
+      (config.ring.meter_scale === 0 ||
+        config.ring.meter_second_scale === 0 ||
+        config.ring.meter_style === "roof" ||
+        config.ring.meter_second === "roof");
     if (
       !config.sections.chart &&
       !config.battery.runtime &&
@@ -829,11 +832,15 @@ export class PowerOriginCard extends LitElement {
 
     const showPeak = second ? config.ring.meter_second_top : config.ring.meter_top;
 
-    // Now counts towards its own scale, so a new daily high fills the column
-    // rather than overflowing it.
+    // The column reaches what the system can do, so that today's best can
+    // stand inside it as a shadow and now as the light on top: three readings
+    // in one shape. Without a year behind it, today's best is the scale.
     const peak = Math.max(this._series?.solarPeak ?? 0, flow.production);
-    const share = peak > 0 ? Math.min(1, Math.max(0, flow.production / peak)) : 0;
-    const height = METER_HEIGHT * share;
+    const scale = Math.max(this._yearPeak ?? 0, peak);
+    const shareNow = scale > 0 ? Math.min(1, Math.max(0, flow.production / scale)) : 0;
+    const sharePeak = scale > 0 ? Math.min(1, peak / scale) : 0;
+    const height = METER_HEIGHT * shareNow;
+    const shadow = METER_HEIGHT * sharePeak;
 
     return html`
       <div class="meter-block">
@@ -843,6 +850,11 @@ export class PowerOriginCard extends LitElement {
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.roof", locale)}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
+          ${shadow > height
+            ? svg`<rect class="bat-fill fill-sun held roof-best" x="8"
+                    y="${(METER_HEIGHT - shadow).toFixed(1)}" width="72"
+                    height="${shadow.toFixed(1)}" rx="6"></rect>`
+            : nothing}
           <rect class="bat-fill fill-sun" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
                 width="72" height="${height.toFixed(1)}" rx="6"></rect>
         </svg>

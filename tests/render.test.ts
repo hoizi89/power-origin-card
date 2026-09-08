@@ -818,6 +818,18 @@ describe("the three priced and relative columns", () => {
     expect(text).toContain("Dach jetzt");
   });
 
+  it("keeps today's best inside the column as a shadow under now", async () => {
+    const { root } = await render(
+      baseConfig({ ring: { meter: true, meter_shows: "roof" } }),
+      SCENARIOS.find((s) => s.name === "little sun, battery helping")!
+    );
+    const best = root.querySelector(".roof-best");
+    const now = root.querySelector(".meter .bat-fill:not(.roof-best)");
+    expect(best, "the shadow").toBeTruthy();
+    expect(Number(best!.getAttribute("height"))).toBeGreaterThan(Number(now!.getAttribute("height")));
+    expect(Number(best!.getAttribute("height"))).toBeLessThanOrEqual(200);
+  });
+
   it("can be told to leave the mark off", async () => {
     const shown = await render(
       baseConfig({ ring: { meter: true, meter_shows: "roof" } }),
