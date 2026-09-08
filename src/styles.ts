@@ -186,7 +186,7 @@ export const cardStyles = css`
   }
 
   .meter-band.grid {
-    fill: var(--sst-sun);
+    fill: var(--sst-grid);
   }
   .meter-band.battery,
   .meter-band.discharge {
@@ -201,7 +201,7 @@ export const cardStyles = css`
   }
 
   .meter-on.grid {
-    fill: var(--sst-sun);
+    fill: var(--sst-grid);
   }
 
   .meter-on.battery {
@@ -280,7 +280,7 @@ export const cardStyles = css`
   }
 
   .seg.free {
-    stroke: var(--sst-sun);
+    stroke: var(--sst-grid);
   }
 
   .seg.single {

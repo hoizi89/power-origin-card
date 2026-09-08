@@ -208,7 +208,7 @@ Get one wrong and the ring shows the wrong colour, which makes it obvious.
 
 ## Colours
 
-One rule throughout: **the colour names the participant that is not the house.** Sun is gold, battery green, grid blue, and the house itself neutral. The same kilowatts therefore wear the same colour wherever they appear — in the ring, in the column, in the origin bar and in the value list. There are no traffic lights, which would put a second meaning on the same scale.
+One rule throughout: **the colour names the participant that is not the house.** Direction is never a colour: power leaving for the grid and power drawn from it are both blue, and which way it is going is said by where it sits and by the word beside it. Sun is gold, battery green, grid blue, and the house itself neutral. The same kilowatts therefore wear the same colour wherever they appear — in the ring, in the column, in the origin bar and in the value list. There are no traffic lights, which would put a second meaning on the same scale.
 
 Override the accents per card or in a theme:
 
