@@ -38,7 +38,14 @@ export type ColumnCount = "none" | "one" | "two";
 export type RingInner = "icon" | "load" | "none";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type OriginStyle = "bar" | "band";
-export type MeterStyle = "bar" | "blocks" | "day" | "balance";
+export type MeterStyle =
+  | "bar"
+  | "blocks"
+  | "day"
+  | "balance"
+  | "money"
+  | "load"
+  | "autarky";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
 export type TodayStat =

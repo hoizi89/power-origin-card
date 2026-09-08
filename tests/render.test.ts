@@ -738,6 +738,53 @@ describe("the battery block", () => {
     delete config.entities.price_import;
     const { root } = await render(config, SCENARIOS[0]);
     expect(root.querySelector(".bat-extra")).toBeNull();
-    expect(Number(root.querySelector(".bat-shell")!.getAttribute("width"))).toBeGreaterThan(200);
+
+    // No figure on the right means the bar keeps that room.
+    const withFigure = await render(
+      baseConfig({ battery_capacity: 13100, battery: { extra: "given" } }),
+      SCENARIOS[0]
+    );
+    expect(Number(root.querySelector(".bat-shell")!.getAttribute("width"))).toBeGreaterThan(
+      Number(withFigure.root.querySelector(".bat-shell")!.getAttribute("width"))
+    );
+  });
+});
+
+describe("the three priced and relative columns", () => {
+  it("prices the boundary rather than measuring it", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { text } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "money" } }),
+      foggy
+    );
+    // Drawing 1.9 kW at 29 cents, nothing exported: it is costing.
+    expect(text).toContain("Kosten");
+  });
+
+  it("says nothing at all without a price to use", async () => {
+    const config = baseConfig({ ring: { meter: true, meter_style: "money" } });
+    delete config.entities.price_import;
+    delete config.entities.price_export;
+    const { root } = await render(config, SCENARIOS[0]);
+    expect(root.querySelector(".meter-block")).toBeNull();
+  });
+
+  it("measures the house against its own day", async () => {
+    const { root, text } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "load" } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelector(".meter-block")).toBeTruthy();
+    // The fixture holds the house steady, so now is an ordinary hour.
+    expect(text).toContain("wie sonst");
+  });
+
+  it("fills from nothing to everything, with no middle", async () => {
+    const { root, text } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "autarky" } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelector(".meter-zero")).toBeNull();
+    expect(text).toContain("Autarkie");
   });
 });

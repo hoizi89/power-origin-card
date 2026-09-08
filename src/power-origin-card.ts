@@ -719,12 +719,123 @@ export class PowerOriginCard extends LitElement {
       @click=${handlers.click} @keydown=${handlers.key}>${content}</span>`;
   }
 
+  /**
+   * The same boundary priced. A kilowatt is not a decision; a euro an hour is,
+   * and on a moving tariff the two do not track each other.
+   */
+  private _renderMoneyMeter(flow: Flow, locale: string) {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const buy = numberOf(stateOf(hass, config.entities.price_import));
+    const sell = numberOf(stateOf(hass, config.entities.price_export));
+    if (buy === undefined && sell === undefined) return nothing;
+
+    const earning = flow.toGrid * (sell ?? 0);
+    const costing = flow.fromGrid * (buy ?? 0);
+    const top = Math.max(0.2, earning, costing);
+
+    const up = Math.min(1, earning / top);
+    const down = Math.min(1, costing / top);
+    const net = earning - costing;
+
+    return this._renderTwoWay(
+      up,
+      down,
+      formatMoney(Math.abs(net), locale),
+      localize(net >= 0 ? "meter.earning" : "meter.costing", locale),
+      net >= 0
+    );
+  }
+
+  /**
+   * The house against the day it has had so far. The middle is an ordinary
+   * hour, so a spike says something is running that usually is not.
+   */
+  private _renderLoadMeter(flow: Flow, locale: string) {
+    const average = this._series?.house?.length
+      ? this._series.house.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0) /
+        this._series.house.filter((value) => Number.isFinite(value)).length
+      : undefined;
+    if (average === undefined || average <= 0) return nothing;
+
+    const ratio = flow.house / average;
+    const up = Math.min(1, Math.max(0, ratio - 1));
+    const down = Math.min(1, Math.max(0, 1 - ratio));
+    const quiet = Math.abs(ratio - 1) < 0.08;
+
+    return this._renderTwoWay(
+      up,
+      down,
+      formatPower(flow.house, locale),
+      localize(
+        quiet ? "meter.usual" : ratio > 1 ? "meter.above" : "meter.below",
+        locale
+      ),
+      ratio <= 1
+    );
+  }
+
+  /** No middle to speak of: it fills from nothing to everything. */
+  private _renderAutarkyMeter(flow: Flow, locale: string) {
+    const share = Math.min(1, Math.max(0, flow.autarky));
+    const height = METER_HEIGHT * share;
+
+    return html`
+      <div class="meter-block">
+        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+             aria-label="${localize("meter.autarky", locale)}">
+          <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
+          <rect class="bat-fill charging" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
+                width="72" height="${height.toFixed(1)}" rx="6"></rect>
+        </svg>
+        <div class="meter-label up">
+          <span class="meter-value">${formatNumber(flow.autarky * 100, locale, 0)} <small>%</small></span>
+          <span class="meter-word">${localize("meter.autarky", locale)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  /** One body up, one down, and a line where they meet. */
+  private _renderTwoWay(
+    up: number,
+    down: number,
+    value: string,
+    word: string,
+    good: boolean
+  ) {
+    const half = METER_HEIGHT / 2;
+    return html`
+      <div class="meter-block">
+        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${word}">
+          <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
+          ${up > 0.01
+            ? svg`<rect class="meter-on grid" x="8" y="${(half - half * up).toFixed(1)}"
+                width="72" height="${(half * up).toFixed(1)}" rx="5"></rect>`
+            : nothing}
+          ${down > 0.01
+            ? svg`<rect class="meter-on import" x="8" y="${half}"
+                width="72" height="${(half * down).toFixed(1)}" rx="5"></rect>`
+            : nothing}
+          <line class="meter-zero" x1="1" y1="${half}" x2="87" y2="${half}"></line>
+        </svg>
+        <div class="meter-label ${good ? "up" : "down"}">
+          <span class="meter-value">${value}</span>
+          <span class="meter-word">${word}</span>
+        </div>
+      </div>
+    `;
+  }
+
   private _renderMeter(flow: Flow, locale: string, override?: MeterStyle) {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
     const style = override ?? config.ring.meter_style;
     if (style === "day") return this._renderDayColumn(locale);
     if (style === "balance") return this._renderBalance(flow, locale);
+    if (style === "money") return this._renderMoneyMeter(flow, locale);
+    if (style === "load") return this._renderLoadMeter(flow, locale);
+    if (style === "autarky") return this._renderAutarkyMeter(flow, locale);
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.
@@ -1199,7 +1310,8 @@ export class PowerOriginCard extends LitElement {
       <div class="row">
         <div class="row-head">
           <span class="row-title"
-            >${localize("battery.title", locale)}${config.battery.percent
+            >${localize("battery.title", locale)}${config.battery.percent &&
+            config.battery.extra !== "none"
               ? html`<span class="row-pct"
                   >${this._linked(
                     config.entities.battery_soc,
@@ -1274,7 +1386,10 @@ export class PowerOriginCard extends LitElement {
     const extra = this._batteryExtra(locale);
 
     // Without a casing the bar may use the width the cap would have taken.
-    const shellW = extra ? (bare ? 236 : 228) : bare ? 259 : 248;
+    // Whatever stands to the right takes its room from the bar, and only
+    // one thing ever does.
+    const aside = extra ? 112 : config.battery.percent ? 84 : 0;
+    const shellW = (bare ? 259 : 248) - aside;
     const innerStart = bare ? 0 : 6;
     const innerWidth = bare ? shellW : shellW - 10;
     const top = bare ? 12 : 8;
@@ -1334,6 +1449,17 @@ export class PowerOriginCard extends LitElement {
             <text class="bat-extra-k" x="340" y="${top + 26}" text-anchor="end"
               >${extra.label}</text>`
           : nothing}
+        ${extra || !config.battery.percent
+          ? nothing
+          : (() => {
+              const id = config.entities.battery_soc;
+              const on = id && (this._hass as HomeAssistant)?.states?.[id];
+              const handlers = on ? this._tap(id!) : undefined;
+              return svg`<text class="bat-pct ${on ? "tap" : ""}" x="340" y="36"
+                text-anchor="end" tabindex="${on ? 0 : -1}"
+                @click=${handlers?.click} @keydown=${handlers?.key}
+                >${formatNumber(soc, locale, 0)}<tspan dx="4">%</tspan></text>`;
+            })()}
 
       </svg>`;
   }

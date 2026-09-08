@@ -924,4 +924,18 @@ export const cardStyles = css`
     letter-spacing: -0.01em;
     color: var(--sst-ink);
   }
+
+  .bat-pct {
+    fill: var(--sst-ink);
+    font-size: calc(26px * var(--sst-scale));
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .bat-pct tspan {
+    font-family: var(--sst-mono);
+    font-size: calc(11px * var(--sst-scale));
+    font-weight: 400;
+    fill: var(--sst-muted);
+  }
 `;
