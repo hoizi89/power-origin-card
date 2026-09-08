@@ -141,9 +141,10 @@ export const cardStyles = css`
   /* The figure the column is measured against, where the column reaches it. */
   .meter-top {
     font-family: var(--sst-mono);
-    font-size: calc(9.5px * var(--sst-scale));
+    font-size: calc(9px * var(--sst-scale));
     letter-spacing: 0.06em;
     color: var(--sst-muted);
+    opacity: 0.6;
   }
 
   .meter-word {

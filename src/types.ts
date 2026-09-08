@@ -121,6 +121,8 @@ export interface RingOptions {
   meter_style?: MeterStyle;
   meter_today?: boolean;
   meter_marks?: boolean;
+  meter_top?: boolean;
+  meter_second_top?: boolean;
   meter_second_scale?: number;
   meter_second_scale_draw?: number;
   meter_second_target?: number;

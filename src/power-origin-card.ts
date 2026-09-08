@@ -822,9 +822,11 @@ export class PowerOriginCard extends LitElement {
     );
   }
 
-  private _renderRoofMeter(flow: Flow, locale: string) {
+  private _renderRoofMeter(flow: Flow, locale: string, second = false) {
     const config = this._config as ResolvedConfig;
     if (!config.entities.solar) return nothing;
+
+    const showPeak = second ? config.ring.meter_second_top : config.ring.meter_top;
 
     // Now counts towards its own scale, so a new daily high fills the column
     // rather than overflowing it.
@@ -834,7 +836,7 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
-        ${peak > 0
+        ${showPeak && peak > 0
           ? html`<span class="meter-top">${formatPower(peak, locale)} kW</span>`
           : nothing}
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
@@ -892,7 +894,7 @@ export class PowerOriginCard extends LitElement {
     if (style === "money") return this._renderMoneyMeter(flow, locale);
     if (style === "load") return this._renderLoadMeter(flow, locale);
     if (style === "autarky") return this._renderAutarkyMeter(flow, locale);
-    if (style === "roof") return this._renderRoofMeter(flow, locale);
+    if (style === "roof") return this._renderRoofMeter(flow, locale, Boolean(override));
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.

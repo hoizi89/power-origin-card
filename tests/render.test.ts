@@ -799,6 +799,22 @@ describe("the three priced and relative columns", () => {
     expect(text).toContain("Dach jetzt");
   });
 
+  it("can be told to leave the mark off", async () => {
+    const shown = await render(
+      baseConfig({ ring: { meter: true, meter_shows: "roof" } }),
+      SCENARIOS[0]
+    );
+    expect(shown.root.querySelector(".meter-top")).toBeTruthy();
+
+    const bare = await render(
+      baseConfig({ ring: { meter: true, meter_shows: "roof", meter_top: false } }),
+      SCENARIOS[0]
+    );
+    expect(bare.root.querySelector(".meter-top")).toBeNull();
+    // The column itself is untouched: only the mark above it goes.
+    expect(bare.root.querySelector(".meter-block")).toBeTruthy();
+  });
+
   it("names the roof once, not in the column and the day heading both", async () => {
     const alone = await render(
       baseConfig({ ring: { meter: true, meter_shows: "grid" } }),

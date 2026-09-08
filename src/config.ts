@@ -36,6 +36,8 @@ export const DEFAULTS = {
     meter_style: "blocks" as const,
     meter_today: false,
     meter_marks: true,
+    meter_top: true,
+    meter_second_top: true,
     meter_second_scale: 0,
     meter_second_scale_draw: 0,
     meter_second_target: 0,
@@ -306,6 +308,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   }
                 }
               }),
+              ...only((resolved) => resolved.ring.meter_shows === "roof", {
+                name: "meter_top",
+                selector: { boolean: {} }
+              }),
               ...only((resolved) => resolved.ring.meter && resolved.ring.meter_shows === "grid", {
                 name: "meter_style",
                 selector: {
@@ -349,6 +355,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                     ]
                   }
                 }
+              }),
+              ...only((resolved) => resolved.ring.meter_second_shows === "roof", {
+                name: "meter_second_top",
+                selector: { boolean: {} }
               }),
               ...only((resolved) => resolved.ring.meter_second_shows === "grid", {
                 name: "meter_second_style",
@@ -917,6 +927,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_second_style: t("editor.meter_second_style"),
     meter_today: t("editor.meter_today"),
     meter_marks: t("editor.meter_marks"),
+    meter_top: t("editor.meter_top"),
     meter_second: t("editor.meter_second"),
     meter_second_scope: t("editor.meter_second_scope"),
     meter_scope: t("editor.meter_scope"),
@@ -978,6 +989,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),
     meter_marks: t("editor.help_meter_marks"),
+    meter_top: t("editor.help_meter_top"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),
@@ -992,6 +1004,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     const help = helpers["meter_" + name];
     if (help) helpers["meter_second_" + name] = help;
   }
+  labels.meter_second_top = labels.meter_top;
+  helpers.meter_second_top = helpers.meter_top;
   labels.meter_second_shows = labels.meter_shows;
   labels.meter_second_style = labels.meter_style;
   labels.meter_second_scope = labels.meter_scope;
