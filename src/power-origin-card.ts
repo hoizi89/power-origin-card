@@ -742,6 +742,7 @@ export class PowerOriginCard extends LitElement {
       up,
       down,
       formatMoney(Math.abs(net), locale),
+      "\u20ac/h",
       localize(net >= 0 ? "meter.earning" : "meter.costing", locale),
       net >= 0
     );
@@ -767,6 +768,7 @@ export class PowerOriginCard extends LitElement {
       up,
       down,
       formatPower(flow.house, locale),
+      "kW",
       localize(
         quiet ? "meter.usual" : ratio > 1 ? "meter.above" : "meter.below",
         locale
@@ -785,7 +787,7 @@ export class PowerOriginCard extends LitElement {
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.autarky", locale)}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
-          <rect class="bat-fill charging" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
+          <rect class="bat-fill fill-leaf" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
                 width="72" height="${height.toFixed(1)}" rx="6"></rect>
         </svg>
         <div class="meter-label up">
@@ -801,6 +803,7 @@ export class PowerOriginCard extends LitElement {
     up: number,
     down: number,
     value: string,
+    unit: string,
     word: string,
     good: boolean
   ) {
@@ -820,7 +823,7 @@ export class PowerOriginCard extends LitElement {
           <line class="meter-zero" x1="1" y1="${half}" x2="87" y2="${half}"></line>
         </svg>
         <div class="meter-label ${good ? "up" : "down"}">
-          <span class="meter-value">${value}</span>
+          <span class="meter-value">${value} <small>${unit}</small></span>
           <span class="meter-word">${word}</span>
         </div>
       </div>

@@ -790,9 +790,6 @@ describe("the three priced and relative columns", () => {
 });
 
 describe("the charge appears once", () => {
-  const percents = (root: ShadowRoot) =>
-    (root.textContent ?? "").match(/100s*%/g)?.length ?? 0;
-
   it("stands beside the bar when nothing else does", async () => {
     const { root } = await render(baseConfig({ battery_capacity: 13100 }), SCENARIOS[0]);
     expect(root.querySelector(".bat-pct")).toBeTruthy();
