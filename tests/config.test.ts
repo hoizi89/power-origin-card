@@ -281,6 +281,60 @@ describe("editor coverage", () => {
     }
   });
 
+  /** The fields of each column section, by section title. */
+  const sections = (ring: Record<string, unknown>) => {
+    const out: Record<string, string[]> = {};
+    const walk = (items: Array<Record<string, unknown>>, into?: string) => {
+      for (const item of items) {
+        if (item.type === "expandable" && typeof item.title === "string" && !item.name) {
+          out[item.title] = [];
+          walk(item.schema as Array<Record<string, unknown>>, item.title);
+        } else if (Array.isArray(item.schema)) {
+          walk(item.schema as Array<Record<string, unknown>>, into);
+        } else if (typeof item.name === "string" && into) {
+          out[into].push(item.name);
+        }
+      }
+    };
+    walk(
+      getConfigForm("de", {
+        type: "custom:power-origin-card",
+        entities: { house: "sensor.h", solar: "sensor.s", grid_power: "sensor.g" },
+        ring
+      }).schema as Array<Record<string, unknown>>
+    );
+    return out;
+  };
+
+  it("keeps every field inside the section of the column it belongs to", () => {
+    const both = sections({ columns: "two", meter_shows: "grid", meter_second_shows: "grid" });
+    const left = both["Die linke Säule"];
+    const right = both["Die rechte Säule"];
+    expect(left.length).toBeGreaterThan(3);
+    expect(right.length).toBe(left.length);
+    for (const name of left) expect(name, name).not.toMatch(/^meter_second_/);
+    for (const name of right) expect(name, name).toMatch(/^meter_second_/);
+    // And they are the same settings, side for side.
+    expect(right.map((n) => n.replace("meter_second_", "meter_"))).toEqual(left);
+  });
+
+  it("offers a roof column only what a roof column has", () => {
+    const both = sections({ columns: "two", meter_shows: "grid", meter_second_shows: "roof" });
+    expect(both["Die rechte Säule"]).toEqual(["meter_second_shows", "meter_second_top"]);
+    expect(both["Die linke Säule"]).toContain("meter_marks");
+  });
+
+  it("resolves every label and helper in both languages", () => {
+    for (const locale of ["de", "en"]) {
+      const form = getConfigForm(locale);
+      for (const name of names()) {
+        expect(form.computeLabel({ name }), locale + " label " + name).not.toMatch(/^editor./);
+        const help = form.computeHelper({ name });
+        if (help) expect(help, locale + " helper " + name).not.toMatch(/^editor./);
+      }
+    }
+  });
+
   it("keeps a card written before the column count worked", () => {
     const off = resolveConfig({
       type: "custom:power-origin-card",

@@ -335,6 +335,42 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                     ]
                   }
                 }
+              }),
+              ...only(scaled, {
+                type: "grid",
+                schema: [
+                  {
+                    name: "meter_scale",
+                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+                  },
+                  ...only(gauge, {
+                    name: "meter_scale_draw",
+                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+                  })
+                ]
+              }),
+              ...only(gauge, {
+                type: "grid",
+                schema: [
+                  {
+                    name: "meter_target",
+                    selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
+                  }
+                ]
+              }),
+              ...only(
+                (resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks",
+                {
+                  name: "meter_steps",
+                  selector: { number: { min: 3, max: 14, mode: "box" } }
+                }
+              ),
+              ...only(gauge, {
+                type: "grid",
+                schema: [
+                  { name: "meter_marks", selector: { boolean: {} } },
+                  { name: "meter_today", selector: { boolean: {} } }
+                ]
               })
   ];
 
@@ -389,42 +425,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                     }
                   }
                 }
-              ),          ...only(scaled, {
-                type: "grid",
-                schema: [
-                  {
-                    name: "meter_scale",
-                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-                  },
-                  ...only(gauge, {
-                    name: "meter_scale_draw",
-                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-                  })
-                ]
-              }),
-              ...only(gauge, {
-                type: "grid",
-                schema: [
-                  {
-                    name: "meter_target",
-                    selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
-                  }
-                ]
-              }),
-              ...only(
-                (resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks",
-                {
-                  name: "meter_steps",
-                  selector: { number: { min: 3, max: 14, mode: "box" } }
-                }
               ),
-              ...only(gauge, {
-                type: "grid",
-                schema: [
-                  { name: "meter_marks", selector: { boolean: {} } },
-                  { name: "meter_today", selector: { boolean: {} } }
-                ]
-              }),
               ...only(secondScaled, {
                 type: "grid",
                 schema: [

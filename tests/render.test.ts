@@ -674,6 +674,25 @@ describe("which end of the column is which", () => {
     expect(root.querySelector("svg.meter")!.getAttribute("viewBox")).toBe("0 -18 88 236");
   });
 
+  it("marks each column from its own switch", async () => {
+    const { root } = await render(
+      baseConfig({
+        ring: {
+          columns: "two",
+          meter_shows: "grid",
+          meter_second_shows: "grid",
+          meter_marks: true,
+          meter_second_marks: false
+        }
+      }),
+      SCENARIOS[0]
+    );
+    const blocks = root.querySelectorAll(".meter-block");
+    expect(blocks.length).toBe(2);
+    expect(blocks[0].querySelectorAll(".meter-mark").length).toBe(2);
+    expect(blocks[1].querySelectorAll(".meter-mark").length).toBe(0);
+  });
+
   it("gives the height back when they are switched off", async () => {
     const { root } = await render(
       baseConfig({ ring: { meter: true, meter_marks: false } }),
