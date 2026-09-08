@@ -799,6 +799,20 @@ describe("the three priced and relative columns", () => {
     expect(text).toContain("Dach jetzt");
   });
 
+  it("names the roof once, not in the column and the day heading both", async () => {
+    const alone = await render(
+      baseConfig({ ring: { meter: true, meter_shows: "grid" } }),
+      SCENARIOS[0]
+    );
+    expect(alone.text).toContain("Dach jetzt");
+
+    const inColumn = await render(
+      baseConfig({ ring: { meter: true, meter_shows: "roof" } }),
+      SCENARIOS[0]
+    );
+    expect(inColumn.text.match(/Dach jetzt/g)?.length).toBe(1);
+  });
+
   it("draws no roof column without a roof sensor", async () => {
     const config = baseConfig({ ring: { meter: true, meter_style: "roof" } });
     delete config.entities.solar;

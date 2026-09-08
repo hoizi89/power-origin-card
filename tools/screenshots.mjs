@@ -234,15 +234,6 @@ const shots = {
       ring: { center: "power", rings: "clock", meter: false, facts: "none", size: "l" }
     }, "MIDDAY", false);`
   },
-  columns: {
-    width: 460,
-    body: `place(stage, {
-      title: "", chip: "never",
-      sections: { ring: true, chart: false, battery: false, today: false },
-      ring: { center: "power", columns: "two", meter_shows: "day",
-              meter_second_shows: "grid", facts: "none", size: "m" }
-    }, "MIDDAY", false);`
-  },
   subjects: {
     width: 960,
     body: `const SUBJECTS = ["roof", "money", "autarky", "day", "balance", "load"];
@@ -260,6 +251,16 @@ const shots = {
             ring: { center: 'power', meter: true, meter_shows: shows, facts: 'none', size: 'm' }
           }, 'MIDDAY', false);
         }`
+  },
+  two: {
+    width: 400,
+    body: `place(stage, {
+      title: 'Energie',
+      ring: { center: 'power', columns: 'two', meter_shows: 'day',
+              meter_second_shows: 'roof', facts: 'none' },
+      battery: { extra: 'saved' },
+      today: ${JSON.stringify(full)}
+    }, 'MIDDAY', false);`
   },
   modes: {
     width: 820,

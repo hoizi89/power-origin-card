@@ -26,11 +26,11 @@ Only the house consumption sensor is required. Everything is configurable from t
 Left, an evening: the sun is down, the battery carries the house, and the card says how comfortably it reaches sunrise. Right, a grey day: two columns on one scale show the roof is short by two kilowatts, which is the one thing a ring cannot say.
 
 <p>
+  <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/two.png" alt="A card with a column either side of the ring" width="290">
   <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/clock.png" alt="The clock: the whole circle is the day" width="230">
-  <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/columns.png" alt="A day strip and a live needle either side of the ring" width="330">
 </p>
 
-Left, the clock: the whole circle is the day, noon at the top, sunrise on the left, a dot for now. Right, two columns at once — the day on one side of the ring, the moment on the other.
+Left, a card with a column either side of the ring: the day strip on one side, what the roof makes against its best today on the other. Each column has its own subject, so the pair answers two questions at once. Right, the clock: the whole circle is the day, noon at the top, sunrise on the left, a dot for now.
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/modes.png" alt="The four ring modes side by side" width="600">
 

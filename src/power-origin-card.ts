@@ -810,6 +810,16 @@ export class PowerOriginCard extends LitElement {
    * What the roof makes now against the best it managed today. Without that
    * mark the kilowatts alone never say whether this is a good moment.
    */
+/** A column showing the roof already prints this hour, and nothing twice. */
+  private _roofInColumn(): boolean {
+    const config = this._config as ResolvedConfig;
+    return (
+      config.sections.ring &&
+      config.ring.meter &&
+      (config.ring.meter_style === "roof" || config.ring.meter_second === "roof")
+    );
+  }
+
   private _renderRoofMeter(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
     if (!config.entities.solar) return nothing;
@@ -1221,7 +1231,7 @@ export class PowerOriginCard extends LitElement {
       <div class="row">
         <div class="row-head">
           <span class="row-title">${localize("chart.title", locale)}</span>
-          ${solarNow === undefined
+          ${solarNow === undefined || this._roofInColumn()
             ? nothing
             : this._linked(
                 config.entities.solar,
