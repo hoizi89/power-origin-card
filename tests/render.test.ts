@@ -609,3 +609,18 @@ describe("two needles", () => {
     expect(text).toContain("Aus dem Speicher");
   });
 });
+
+describe("the second column draws itself", () => {
+  it("uses its own style, not the first one’s", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({
+        ring: { meter: true, meter_style: "bar", meter_second: "blocks" }
+      }),
+      foggy
+    );
+    // The first is continuous, the second is stepped: both kinds must appear.
+    expect(root.querySelectorAll(".meter-band").length).toBeGreaterThan(0);
+    expect(root.querySelectorAll(".meter-off").length).toBeGreaterThan(0);
+  });
+});

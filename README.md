@@ -18,9 +18,27 @@ Only the house consumption sensor is required. Everything is configurable from t
 
 ## What it looks like
 
-<img src="docs/evening.png" alt="Evening: the whole house on the battery" width="430">
+<p>
+  <img src="docs/evening.png" alt="Evening: the whole house on the battery" width="290">
+  <img src="docs/grey.png" alt="A grey day: the roof is short and the grid makes up the difference" width="290">
+</p>
 
-An evening: the sun is down, the battery carries the house, and the card says how comfortably it reaches sunrise.
+Left, an evening: the sun is down, the battery carries the house, and the card says how comfortably it reaches sunrise. Right, a grey day: two columns on one scale show the roof is short by two kilowatts, which is the one thing a ring cannot say.
+
+<p>
+  <img src="docs/clock.png" alt="The clock: the whole circle is the day" width="230">
+  <img src="docs/columns.png" alt="A day strip and a live needle either side of the ring" width="330">
+</p>
+
+Left, the clock: the whole circle is the day, noon at the top, sunrise on the left, a dot for now. Right, two columns at once — the day on one side of the ring, the moment on the other.
+
+<img src="docs/modes.png" alt="The four ring modes side by side" width="600">
+
+The four questions the ring can answer, side by side.
+
+<img src="docs/no-battery.png" alt="A system without a battery" width="290">
+
+And a system without a battery: no battery block, no green anywhere. Nothing is invented for a sensor that is not there.
 
 ---
 

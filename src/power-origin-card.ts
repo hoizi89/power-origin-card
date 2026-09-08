@@ -710,7 +710,7 @@ export class PowerOriginCard extends LitElement {
       <div class="meter-block">
       <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${label}">
         ${
-          config.ring.meter_style === "blocks"
+          style === "blocks"
             ? meter.segments.map(
                 (segment) => svg`
                   <rect class="meter-off" x="4" y="${segment.y}" width="80"
