@@ -1061,6 +1061,7 @@ export class PowerOriginCard extends LitElement {
     const money = config.today.money ? this._renderMoney(locale) : nothing;
     // In autarky mode the ring already prints this very percentage.
     const ringShowsAutarky =
+      !config.today.stats_chosen &&
       config.sections.ring &&
       (config.ring.center === "autarky" ||
         ((config.ring.center === "surplus" || config.ring.center === "production") &&
@@ -1079,9 +1080,7 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="today ${earning ? "earning" : ""}">
         ${money}
-        ${config.today.origin_bar && config.ring.rings !== "double"
-          ? this._renderOriginBar(locale)
-          : nothing}
+        ${config.today.origin_bar ? this._renderOriginBar(locale) : nothing}
         ${stats.length ? html`<div class="stats">${stats}</div>` : nothing}
       </div>
     `;

@@ -90,7 +90,8 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       origin_style: config.today?.origin_style ?? DEFAULTS.today.origin_style,
       breakdown: config.today?.breakdown ?? DEFAULTS.today.breakdown,
       amortisation: config.today?.amortisation ?? DEFAULTS.today.amortisation,
-      stats: config.today?.stats?.length ? config.today.stats : DEFAULTS.today.stats
+      stats: config.today?.stats?.length ? config.today.stats : DEFAULTS.today.stats,
+      stats_chosen: Boolean(config.today?.stats?.length)
     }
   };
 }
@@ -474,18 +475,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [
             { name: "money", selector: { boolean: {} } },
-            ...only(
-              (resolved) => resolved.ring.rings !== "double" || !resolved.sections.ring,
-              { name: "origin_bar", selector: { boolean: {} } }
-            ),
+            { name: "origin_bar", selector: { boolean: {} } },
             { name: "breakdown", selector: { boolean: {} } },
             { name: "amortisation", selector: { boolean: {} } }
           ]
         },
         ...only(
-          (resolved) =>
-            resolved.today.origin_bar &&
-            (resolved.ring.rings !== "double" || !resolved.sections.ring),
+          (resolved) => resolved.today.origin_bar,
           {
             name: "origin_style",
             selector: {

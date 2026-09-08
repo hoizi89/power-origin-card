@@ -335,15 +335,22 @@ describe("the battery caption", () => {
 });
 
 describe("the ring styles", () => {
-  it("draws the day as a second ring and drops the bar that repeated it", async () => {
+  it("draws the day as a second ring", async () => {
     const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
-    const config = baseConfig({
-      ring: { rings: "double" },
-      today: { origin_bar: true }
-    });
-    const { root } = await render(config, foggy);
+    const { root } = await render(baseConfig({ ring: { rings: "double" } }), foggy);
     expect(root.querySelectorAll(".ring-day").length).toBeGreaterThan(0);
-    expect(root.querySelector(".origin-bar")).toBeNull();
+  });
+
+  it("still shows the day bar beside it when that was asked for", async () => {
+    // Saying the same thing twice is allowed when both were chosen; what is
+    // not allowed is the card deciding it on its own.
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({ ring: { rings: "double" }, today: { origin_bar: true } }),
+      foggy
+    );
+    expect(root.querySelectorAll(".ring-day").length).toBeGreaterThan(0);
+    expect(root.querySelector(".origin-bar")).toBeTruthy();
   });
 
   it("keeps one ring and the bar by default", async () => {
@@ -353,13 +360,19 @@ describe("the ring styles", () => {
     expect(root.querySelector(".origin-bar")).toBeTruthy();
   });
 
-  it("never repeats the ring figure in the tiles", async () => {
+  it("drops the default autarky tile when the ring already prints it", async () => {
+    const { root } = await render(baseConfig({ ring: { center: "autarky" } }), SCENARIOS[0]);
+    const labels = [...root.querySelectorAll(".stat-k")].map((n) => n.textContent?.trim());
+    expect(labels).not.toContain("Autarkie");
+  });
+
+  it("keeps it when the list was chosen by hand", async () => {
     const { root } = await render(
       baseConfig({ ring: { center: "autarky" }, today: { stats: ["autarky", "peak"] } }),
       SCENARIOS[0]
     );
     const labels = [...root.querySelectorAll(".stat-k")].map((n) => n.textContent?.trim());
-    expect(labels).not.toContain("Autarkie");
+    expect(labels).toContain("Autarkie");
   });
 });
 

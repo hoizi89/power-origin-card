@@ -146,7 +146,7 @@ export interface ResolvedConfig extends Required<Omit<PowerOriginCardConfig, "ti
   ring: Required<RingOptions>;
   chart: Required<ChartOptions>;
   battery: Required<BatteryOptions>;
-  today: Required<TodayOptions>;
+  today: Required<TodayOptions> & { stats_chosen: boolean };
 }
 
 export interface StatisticPoint {
