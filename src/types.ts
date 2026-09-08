@@ -45,7 +45,8 @@ export type MeterStyle =
   | "balance"
   | "money"
   | "load"
-  | "autarky";
+  | "autarky"
+  | "roof";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
 export type TodayStat =

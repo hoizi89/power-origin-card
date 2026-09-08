@@ -52,7 +52,7 @@ ring:
   meter_scope: grid              # grid | all
   rings: single                  # single | double | clock
   inner: icon                    # icon | load | none
-  meter_style: blocks            # blocks | bar | day | balance | money | load | autarky
+  meter_style: blocks            # blocks | bar | day | balance | money | load | autarky | roof
   meter_today: false             # a faint band for today's extremes
   meter_second: none             # none | blocks | bar | day | balance
   clock_marks: true              # sun and moon, for the clock type
@@ -121,7 +121,7 @@ today:
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
 | `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, or `two` — one on each side. |
-| `ring.meter_style` | `blocks` | What the left column is: `blocks`, `bar`, `day`, `balance`, `money`, `load` or `autarky`. |
+| `ring.meter_style` | `blocks` | What the left column is: `blocks`, `bar`, `day`, `balance`, `money`, `load`, `autarky` or `roof`. |
 | `ring.meter_second` | | What the right column is, when there are two. Defaults to `day`, the type that says what a needle cannot. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |
 | `ring.rings` | `single` | One ring, two rings, or the clock. |

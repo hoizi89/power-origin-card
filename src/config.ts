@@ -465,7 +465,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   { value: "balance", label: t("editor.meter_balance") },
                   { value: "money", label: t("editor.meter_money") },
                   { value: "load", label: t("editor.meter_load") },
-                  { value: "autarky", label: t("editor.meter_autarky") }
+                  { value: "autarky", label: t("editor.meter_autarky") },
+                  { value: "roof", label: t("editor.meter_roof") }
                 ]
               }
             }
@@ -482,7 +483,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   { value: "balance", label: t("editor.meter_balance") },
                   { value: "money", label: t("editor.meter_money") },
                   { value: "load", label: t("editor.meter_load") },
-                  { value: "autarky", label: t("editor.meter_autarky") }
+                  { value: "autarky", label: t("editor.meter_autarky") },
+                  { value: "roof", label: t("editor.meter_roof") }
                 ]
               }
             }

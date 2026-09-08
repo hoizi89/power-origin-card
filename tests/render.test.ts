@@ -787,6 +787,22 @@ describe("the three priced and relative columns", () => {
     expect(root.querySelector(".meter-zero")).toBeNull();
     expect(text).toContain("Autarkie");
   });
+
+  it("measures the roof against its own best today", async () => {
+    const { root, text } = await render(
+      baseConfig({ ring: { meter: true, meter_style: "roof" } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelector(".meter-block")).toBeTruthy();
+    expect(text).toContain("Dach jetzt");
+  });
+
+  it("draws no roof column without a roof sensor", async () => {
+    const config = baseConfig({ ring: { meter: true, meter_style: "roof" } });
+    delete config.entities.solar;
+    const { root } = await render(config, SCENARIOS[0]);
+    expect(root.querySelector(".meter-block")).toBeNull();
+  });
 });
 
 describe("the charge appears once", () => {

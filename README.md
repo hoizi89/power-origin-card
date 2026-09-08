@@ -86,6 +86,7 @@ It only ever fills fields that are still empty, so a choice you made is never ov
 | | | `money` | the same boundary, priced |
 | | | `load` | the house against its own day |
 | | | `autarky` | the self-supplied share |
+| | | `roof` | what the roof makes now, against its best today |
 
 `day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. `ring.meter_second` puts a second column on the other side of the ring, so a day strip and a live needle can stand together.
 

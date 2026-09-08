@@ -798,6 +798,37 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+
+  /**
+   * What the roof makes now against the best it managed today. Without that
+   * mark the kilowatts alone never say whether this is a good moment.
+   */
+  private _renderRoofMeter(flow: Flow, locale: string) {
+    const config = this._config as ResolvedConfig;
+    if (!config.entities.solar) return nothing;
+
+    // Now counts towards its own scale, so a new daily high fills the column
+    // rather than overflowing it.
+    const peak = Math.max(this._series?.solarPeak ?? 0, flow.production);
+    const share = peak > 0 ? Math.min(1, Math.max(0, flow.production / peak)) : 0;
+    const height = METER_HEIGHT * share;
+
+    return html`
+      <div class="meter-block">
+        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+             aria-label="${localize("meter.roof", locale)}">
+          <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
+          <rect class="bat-fill fill-sun" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
+                width="72" height="${height.toFixed(1)}" rx="6"></rect>
+        </svg>
+        <div class="meter-label up">
+          <span class="meter-value">${formatPower(flow.production, locale)} <small>kW</small></span>
+          <span class="meter-word">${localize("meter.roof", locale)}</span>
+        </div>
+      </div>
+    `;
+  }
+
   /** One body up, one down, and a line where they meet. */
   private _renderTwoWay(
     up: number,
@@ -839,6 +870,7 @@ export class PowerOriginCard extends LitElement {
     if (style === "money") return this._renderMoneyMeter(flow, locale);
     if (style === "load") return this._renderLoadMeter(flow, locale);
     if (style === "autarky") return this._renderAutarkyMeter(flow, locale);
+    if (style === "roof") return this._renderRoofMeter(flow, locale);
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.
