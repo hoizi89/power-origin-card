@@ -71,6 +71,9 @@ export type TodayStat =
 
 export interface PowerOriginEntities {
   house: string;
+  /** The sensor counts the other way round. */
+  battery_invert?: boolean;
+  grid_invert?: boolean;
   solar?: string;
   battery_power?: string;
   battery_soc?: string;

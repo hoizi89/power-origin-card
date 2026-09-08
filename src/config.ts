@@ -160,8 +160,11 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       config.battery?.capacity ?? config.battery_capacity ?? DEFAULTS.battery_capacity,
     battery_reserve:
       config.battery?.reserve ?? config.battery_reserve ?? DEFAULTS.battery_reserve,
-    battery_invert: config.battery_invert ?? DEFAULTS.battery_invert,
-    grid_invert: config.grid_invert ?? DEFAULTS.grid_invert,
+    // The two switches sit with the sensors they reverse, so the editor writes
+    // them under entities; a card that set them at the top level still reads.
+    battery_invert:
+      config.entities?.battery_invert ?? config.battery_invert ?? DEFAULTS.battery_invert,
+    grid_invert: config.entities?.grid_invert ?? config.grid_invert ?? DEFAULTS.grid_invert,
     sections: { ...DEFAULTS.sections, ...config.sections },
     ring: {
       ...DEFAULTS.ring,
@@ -916,7 +919,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     facts: t("editor.facts"),
     layout: t("editor.layout"),
     caption: t("editor.caption"),
-    meter: t("editor.meter"),
     columns: t("editor.columns"),
     meter_scale: t("editor.meter_scale"),
     meter_scale_draw: t("editor.meter_scale_draw"),
@@ -924,13 +926,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_steps: t("editor.meter_steps"),
     meter_shows: t("editor.meter_shows"),
     meter_style: t("editor.meter_style"),
-    meter_second_shows: t("editor.meter_second_shows"),
-    meter_second_style: t("editor.meter_second_style"),
     meter_today: t("editor.meter_today"),
     meter_marks: t("editor.meter_marks"),
     meter_top: t("editor.meter_top"),
-    meter_second: t("editor.meter_second"),
-    meter_second_scope: t("editor.meter_second_scope"),
     meter_scope: t("editor.meter_scope"),
     size: t("editor.size"),
     rings: t("editor.ring_style"),
@@ -980,12 +978,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     caption: t("editor.help_caption"),
     center: t("editor.help_center"),
     center_dark: t("editor.help_center_dark"),
-    meter: t("editor.help_meter"),
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
-    meter_second: t("editor.help_meter_second"),
     meter_shows: t("editor.help_meter_shows"),
-    meter_second_scope: t("editor.help_meter_second_scope"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),

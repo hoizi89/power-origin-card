@@ -68,7 +68,8 @@ export function mergePick<T extends { entities?: Partial<PowerOriginEntities>; b
   const filled: string[] = [];
 
   for (const [key, value] of Object.entries(pick.entities)) {
-    if (!value || entities[key]) continue;
+    // The two invert switches live beside the sensors but are not sensors.
+    if (typeof value !== "string" || !value || entities[key]) continue;
     entities[key] = value;
     filled.push(key);
   }

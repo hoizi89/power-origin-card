@@ -569,6 +569,7 @@ export class PowerOriginCard extends LitElement {
       config.ring.meter_style === "day" ||
       config.ring.meter_second === "day" ||
       config.ring.meter_today ||
+      config.ring.meter_second_today ||
       (config.today.origin_bar && config.today.origin_style === "band")
     );
   }
@@ -1313,11 +1314,11 @@ export class PowerOriginCard extends LitElement {
               ${
                 nowX !== undefined
                   ? svg`
-                    <line class="nowline" x1="${nowX}" y1="4"
+                    <line class="nowline" x1="${(nowX).toFixed(1)}" y1="4"
                           x2="${nowX}" y2="${box.height}"></line>
                     ${
                       geometry?.nowY !== undefined
-                        ? svg`<circle cx="${nowX}" cy="${geometry.nowY}" r="4.5"
+                        ? svg`<circle cx="${nowX.toFixed(1)}" cy="${geometry.nowY.toFixed(1)}" r="4.5"
                                      fill="var(--sst-sun)"></circle>`
                         : nothing
                     }`
@@ -1331,7 +1332,7 @@ export class PowerOriginCard extends LitElement {
               }
               ${
                 nowLabel !== undefined
-                  ? svg`<text class="axis" x="${nowLabel}" y="${box.height + 16}"
+                  ? svg`<text class="axis" x="${nowLabel.toFixed(1)}" y="${box.height + 16}"
                               text-anchor="middle">${localize("chart.now", locale)}</text>`
                   : nothing
               }
