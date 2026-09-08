@@ -437,13 +437,14 @@ export class PowerOriginCard extends LitElement {
             : nothing}
           ${asClock && config.ring.clock_marks
             ? svg`
-              <g class="clock-mark sun" transform="translate(100 13)">
-                <circle cx="0" cy="0" r="3.4"></circle>
-                <path d="M0,-7 L0,-5.4 M0,5.4 L0,7 M-7,0 L-5.4,0 M5.4,0 L7,0
-                         M-5,-5 L-3.8,-3.8 M3.8,3.8 L5,5 M5,-5 L3.8,-3.8 M-3.8,3.8 L-5,5"></path>
+              <g class="clock-mark sun" transform="translate(100 8.5)">
+                <circle cx="0" cy="0" r="2.7"></circle>
+                <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
+                         M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
+                         M-3.3,3.3 L-4.4,4.4"></path>
               </g>
               <path class="clock-mark moon"
-                    d="M100,180.5 a6,6 0 1,0 5.4,-3.4 a4.6,4.6 0 1,1 -5.4,3.4 z"></path>`
+                    d="M100,188 a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>`
             : nothing}
           ${config.ring.inner === "load"
             ? svg`<path class="ring-curve" d="${this._innerCurve() ?? ""}"></path>`
