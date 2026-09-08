@@ -21,6 +21,7 @@ export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 export type ChipMode = "always" | "gridfree" | "never";
 export type RingStyle = "single" | "double" | "clock";
+export type RingInner = "icon" | "load" | "none";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type OriginStyle = "bar" | "band";
 export type MeterStyle = "bar" | "blocks" | "day" | "balance";
@@ -84,9 +85,11 @@ export interface RingOptions {
   meter_steps?: number;
   /** A continuous band or stepped blocks. */
   meter_style?: MeterStyle;
+  meter_today?: boolean;
   meter_scope?: MeterScope;
   size?: RingSize;
   rings?: RingStyle;
+  inner?: RingInner;
 }
 
 /** Configurations written before the facts option existed. */

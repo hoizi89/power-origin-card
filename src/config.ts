@@ -28,9 +28,11 @@ export const DEFAULTS = {
     meter_target: 0,
     meter_steps: 6,
     meter_style: "blocks" as const,
+    meter_today: false,
     meter_scope: "grid" as const,
     size: "auto" as const,
-    rings: "single" as const
+    rings: "single" as const,
+    inner: "icon" as const
   },
   chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
   battery: {
@@ -279,6 +281,19 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           }
         },
         {
+          name: "inner",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "icon", label: t("editor.inner_icon") },
+                { value: "load", label: t("editor.inner_load") },
+                { value: "none", label: t("editor.inner_none") }
+              ]
+            }
+          }
+        },
+        {
           name: "size",
           selector: {
             select: {
@@ -371,6 +386,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               },
             ]
           }),
+          ...only(gauge, { name: "meter_today", selector: { boolean: {} } }),
           ...only(gauge, {
             type: "grid",
             schema: [
@@ -562,9 +578,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_target: t("editor.meter_target"),
     meter_steps: t("editor.meter_steps"),
     meter_style: t("editor.meter_style"),
+    meter_today: t("editor.meter_today"),
     meter_scope: t("editor.meter_scope"),
     size: t("editor.size"),
     rings: t("editor.ring_style"),
+    inner: t("editor.inner"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     height: t("editor.chart_height"),
@@ -602,8 +620,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     center_dark: t("editor.help_center_dark"),
     meter: t("editor.help_meter"),
     meter_scope: t("editor.help_meter_scope"),
+    meter_today: t("editor.help_meter_today"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
+    inner: t("editor.help_inner"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),

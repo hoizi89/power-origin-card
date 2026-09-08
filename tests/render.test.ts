@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { CARD_TYPE } from "../src/config";
 import type { PowerOriginCardConfig, RingCenter, FactsStyle, BatteryStyle } from "../src/types";
+import { clearStatisticsCache } from "../src/stats";
 import { IDS, SCENARIOS, makeHass, type Scenario } from "./fixtures";
 
 const MODES: RingCenter[] = ["power", "production", "surplus", "autarky"];
@@ -24,6 +25,7 @@ async function render(
   config: PowerOriginCardConfig,
   scenario: Scenario
 ): Promise<Rendered> {
+  clearStatisticsCache();
   const element = document.createElement(CARD_TYPE) as HTMLElement & {
     setConfig(config: PowerOriginCardConfig): void;
     hass: unknown;
@@ -280,7 +282,8 @@ describe("the minimal configuration", () => {
   });
 
   it("refuses a configuration without a house sensor", () => {
-    const element = document.createElement(CARD_TYPE) as HTMLElement & {
+    clearStatisticsCache();
+  const element = document.createElement(CARD_TYPE) as HTMLElement & {
       setConfig(config: unknown): void;
     };
     expect(() => element.setConfig({ type: "x", entities: {} })).toThrow();
@@ -426,5 +429,61 @@ describe("the balance column", () => {
       SCENARIOS[0]
     );
     expect(text).toContain("Dach");
+  });
+});
+
+describe("what fills the empty space", () => {
+  it("lets the outer ring follow the question the centre asks", async () => {
+    // A ring about the roof gets the roof's day, not the house's.
+    const { root } = await render(
+      baseConfig({ ring: { rings: "double", center: "production" } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelectorAll(".ring-day").length).toBeGreaterThan(0);
+    expect(root.querySelectorAll(".ring-day.faint").length).toBeGreaterThan(0);
+  });
+
+  it("draws no forecast arc without a forecast sensor", async () => {
+    const config = baseConfig({ ring: { rings: "double", center: "production" } });
+    delete config.entities.forecast;
+    const { root } = await render(config, SCENARIOS[0]);
+    expect(root.querySelectorAll(".ring-day.faint").length).toBe(0);
+  });
+
+  it("puts the day's consumption curve behind the number", async () => {
+    const { root } = await render(baseConfig({ ring: { inner: "load" } }), SCENARIOS[0]);
+    const curve = root.querySelector(".ring-curve");
+    expect(curve).toBeTruthy();
+    expect(curve!.getAttribute("d")!.length).toBeGreaterThan(20);
+    expect(root.querySelector(".ring-mark")).toBeNull();
+  });
+
+  it("leaves the middle bare when asked to", async () => {
+    const { root } = await render(baseConfig({ ring: { inner: "none" } }), SCENARIOS[0]);
+    expect(root.querySelector(".ring-curve")).toBeNull();
+    expect(root.querySelector(".ring-mark")).toBeNull();
+  });
+
+  it("keeps the day's swing behind the needle", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(
+      baseConfig({ ring: { meter: true, meter_today: true } }),
+      foggy
+    );
+    expect(root.querySelectorAll(".meter-swing").length).toBeGreaterThan(0);
+  });
+});
+
+describe("the chart before the day has a shape", () => {
+  it("drops the empty frame but keeps the sentence under it", async () => {
+    const dark = SCENARIOS.find((s) => s.name === "nothing produced, empty battery")!;
+    const { root, text } = await render(baseConfig(), dark);
+    expect(root.querySelector("svg.chart")).toBeNull();
+    expect(text).toContain("erzeugt");
+  });
+
+  it("draws it as soon as there is one", async () => {
+    const { root } = await render(baseConfig(), SCENARIOS[0]);
+    expect(root.querySelector("svg.chart")).toBeTruthy();
   });
 });

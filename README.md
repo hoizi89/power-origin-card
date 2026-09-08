@@ -57,15 +57,42 @@ Nothing is invented for a sensor you have not given. No battery entities means n
 
 `production` and `surplus` fall back to `power` before sunrise: a ring about production has nothing to say when nothing is produced.
 
+### The ring has a type too
+
+| `ring.rings` | |
+| --- | --- |
+| `single` *(default)* | one ring: the shares right now |
+| `double` | a second, thinner ring outside, carrying **the same question over the whole day** |
+| `clock` | the whole circle is the day: position is the hour, colour is the source that carried it |
+
+The outer ring follows the question the centre asks. For `power` and `autarky` that is the day the house was supplied from; for `production` and `surplus` it is the roof's day, with the energy still expected drawn faintly on the end of it.
+
+This is not the outer ring an earlier version had, where blue meant *from the grid* inside and *to the grid* outside. Here the same colour always means the same thing, and only the window differs.
+
+`ring.inner` decides what sits behind the centre figure: a symbol for the mode, the day's consumption curve, or nothing at all.
+
 <img src="docs/evening.png" alt="After sunset: a hundred per cent own power, the whole house on the battery, well past sunrise" width="430">
 
 Evening, the same card: the house runs entirely on the battery, the grid is untouched, and the battery reckons how comfortably it reaches sunrise rather than quoting an hour the sun will make nonsense of.
 
 ---
 
-## What the column measures
+## The column has a type
 
-The column is a meter with a middle. Up is surplus, down is draw, and one setting decides which boundary it watches:
+| `ring.meter_style` | What the column is |
+| --- | --- |
+| `blocks` *(default)* | a stepped needle: up is surplus, down is draw |
+| `bar` | the same reading as one continuous body |
+| `day` | the day itself: 24 bands, one per hour, coloured by the source that carried it |
+| `balance` | two columns on one scale, the roof beside the house |
+
+`day` and `balance` are the two that are never empty. A needle reads zero all night; the day strip still shows the day, and the two columns still show that the roof is off while the house draws.
+
+**`balance` answers what no ring can.** A ring shows what a total is made of, never whether the total is enough. Taller roof means spare, taller house means bought in, and the label names the difference, which is the part anyone acts on. Both columns share one scale, because two bars on separate scales compare nothing.
+
+### What a needle measures
+
+For `blocks` and `bar`, one setting decides which boundary it watches:
 
 | `ring.meter_scope` | Up | Down |
 | --- | --- | --- |
@@ -139,7 +166,10 @@ ring:
   facts: none                    # bars | plain | inline | none
   meter: true                    # the column beside the ring
   meter_scope: grid              # grid | all
-  meter_style: blocks            # blocks | bar
+  rings: single                  # single | double | clock
+  inner: icon                    # icon | load | none
+  meter_style: blocks            # blocks | bar | day | balance
+  meter_today: false             # a faint band for today's extremes
   meter_steps: 6
   meter_scale: 0                 # full deflection up, in kW; 0 derives it
   meter_scale_draw: 0            # full deflection down, in kW; 0 uses 3 kW
@@ -162,6 +192,7 @@ today:
   breakdown: true                # earned and paid, under the balance
   amortisation: true             # paid-off percentage, in the corner
   origin_bar: true               # where the day's energy came from
+  origin_style: bar              # bar | band
   stats: [peak, autarky, export, amortisation]
 ```
 
@@ -200,7 +231,11 @@ today:
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
 | `ring.meter` | `true` | The direction column beside the ring. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |
-| `ring.meter_style` | `blocks` | Stepped blocks or one continuous bar. |
+| `ring.rings` | `single` | One ring, two rings, or the clock. |
+| `ring.inner` | `icon` | Behind the centre figure: `icon`, `load` for the day's consumption curve, or `none`. |
+| `ring.meter_style` | `blocks` | `blocks`, `bar`, `day` or `balance`. |
+| `ring.meter_today` | `false` | A faint band for how far the needle swung today, in both directions. |
+| `today.origin_style` | `bar` | The day bar as shares, or as a `band` with one cell per hour. |
 | `ring.meter_scale` | `0` | Full deflection up, in kW. `0` takes the system's peak over the past year. |
 | `ring.meter_scale_draw` | `0` | Full deflection down, in kW. `0` uses 3 kW, the band a house lives in. |
 | `ring.meter_target` | `0` | Spare power worth acting on. Below it the column is held back and a line marks the level. |

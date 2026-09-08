@@ -65,6 +65,10 @@ export function cachedStatistics(
   return inFlight;
 }
 
+export function clearStatisticsCache(): void {
+  cache.clear();
+}
+
 export async function fetchStatistics(
   hass: HomeAssistant,
   ids: string[],

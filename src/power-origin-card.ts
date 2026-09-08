@@ -65,6 +65,7 @@ export class PowerOriginCard extends LitElement {
   private _config?: ResolvedConfig;
   private _series?: DaySeries;
   private _hours?: HourShare[];
+  private _swing?: { up: number; down: number };
   private _error?: string;
   private _lastFetch = 0;
   private _pending = false;
@@ -160,6 +161,20 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
+      if (gridId && stats[gridId]?.length) {
+        let up = 0;
+        let down = 0;
+        for (const row of stats[gridId]) {
+          const value = row.mean;
+          if (value === null || value === undefined || !Number.isFinite(value)) continue;
+          const kw = value / divisor;
+          if (kw > down) down = kw;
+          if (-kw > up) up = -kw;
+        }
+        this._swing = { up, down };
+      } else {
+        this._swing = undefined;
+      }
       this._hours =
         gridId || cellId
           ? hourlyShares(
@@ -340,16 +355,38 @@ export class PowerOriginCard extends LitElement {
     const clock = config.ring.rings === "clock" ? this._hours : undefined;
     const asClock = clock !== undefined && worthDrawing(clock);
 
-    const day = config.ring.rings === "double" ? this._dayOrigin() : undefined;
-    let outer: Array<{ colour: string; length: number; offset: number }> = [];
-    if (day) {
-      let offset = 0;
-      outer = day.parts.map((part) => {
-        const length = (part.value / day.used) * 100;
-        const segment = { colour: part.colour, length, offset };
-        offset += length;
-        return segment;
-      });
+    const wantsOuter = config.ring.rings === "double";
+    let outer: Array<{ colour: string; length: number; offset: number; faint?: boolean }> = [];
+
+    if (wantsOuter && (showProduction || showSurplus)) {
+      const hass = this._hass as HomeAssistant;
+      const produced = energyKwh(stateOf(hass, config.entities.solar_today)) ?? 0;
+      const expected = config.chart.show_forecast
+        ? (energyKwh(stateOf(hass, config.entities.forecast)) ?? 0)
+        : 0;
+      const whole = produced + expected;
+      if (whole > 0) {
+        outer = [
+          { colour: "var(--sst-sun)", length: (produced / whole) * 100, offset: 0 },
+          {
+            colour: "var(--sst-sun)",
+            length: (expected / whole) * 100,
+            offset: (produced / whole) * 100,
+            faint: true
+          }
+        ].filter((segment) => segment.length > 0.5);
+      }
+    } else if (wantsOuter) {
+      const day = this._dayOrigin();
+      if (day) {
+        let offset = 0;
+        outer = day.parts.map((part) => {
+          const length = (part.value / day.used) * 100;
+          const segment = { colour: part.colour, length, offset };
+          offset += length;
+          return segment;
+        });
+      }
     }
 
     return html`
@@ -361,7 +398,7 @@ export class PowerOriginCard extends LitElement {
             ? svg`<circle class="ring-day-track" cx="100" cy="100" r="93" pathLength="100"></circle>
                 ${outer.map(
                   (segment) => svg`<circle
-                    class="ring-day"
+                    class="ring-day ${segment.faint ? "faint" : ""}"
                     cx="100" cy="100" r="93" pathLength="100"
                     stroke="${segment.colour}"
                     stroke-dasharray="${segment.length.toFixed(2)} 100"
@@ -397,7 +434,12 @@ export class PowerOriginCard extends LitElement {
                 transform="rotate(${((clock!.at(-1)!.hour + 0.5) * 15).toFixed(1)} 100 100)"
               ></circle>`
             : nothing}
-          <path
+          ${config.ring.inner === "load"
+            ? svg`<path class="ring-curve" d="${this._innerCurve() ?? ""}"></path>`
+            : nothing}
+          ${config.ring.inner !== "icon"
+            ? nothing
+            : svg`<path
             class="ring-mark"
             transform="${
               showSurplus || showProduction
@@ -411,7 +453,7 @@ export class PowerOriginCard extends LitElement {
                   ? "M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.77 5.95,15.5C6.37,16.2 6.91,16.81 7.5,17.31L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.35C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.22L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"
                   : "M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"
             }"
-          ></path>
+          ></path>`}
           <text class="ring-value" x="100" y="${caption ? 104 : 112}" text-anchor="middle"
             >${value}<tspan dx="5">${unit}</tspan></text
           >
@@ -439,6 +481,7 @@ export class PowerOriginCard extends LitElement {
     return (
       config.ring.rings === "clock" ||
       config.ring.meter_style === "day" ||
+      config.ring.meter_today ||
       (config.today.origin_bar && config.today.origin_style === "band")
     );
   }
@@ -512,6 +555,30 @@ export class PowerOriginCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  /** The house's own day, drawn inside the ring where the symbol used to sit. */
+  private _innerCurve(): string | undefined {
+    const series = this._series;
+    if (!series || series.house.length < 4) return undefined;
+
+    const values = series.house.filter((value) => Number.isFinite(value));
+    const top = Math.max(...values, 0.001);
+    const left = 44;
+    const right = 156;
+    const base = 132;
+    const height = 46;
+    const last = series.house.length - 1;
+
+    const points = series.house.map((value, index) => {
+      const x = left + ((right - left) * index) / last;
+      const safe = Number.isFinite(value) ? Math.max(0, value) : 0;
+      return [x, base - (safe / top) * height] as const;
+    });
+
+    return points
+      .map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+      .join(" ");
   }
 
   private _renderMeter(flow: Flow, locale: string) {
@@ -636,6 +703,22 @@ export class PowerOriginCard extends LitElement {
                   </g>`
                 )}`
         }
+        ${config.ring.meter_today && this._swing
+          ? svg`
+            ${this._swing.up > 0.05
+              ? svg`<rect class="meter-swing up" x="4"
+                  y="${(METER_HEIGHT / 2 - (Math.min(1, this._swing.up / meter.scale) * METER_HEIGHT) / 2).toFixed(1)}"
+                  width="80"
+                  height="${((Math.min(1, this._swing.up / meter.scale) * METER_HEIGHT) / 2).toFixed(1)}"
+                  rx="6"></rect>`
+              : nothing}
+            ${this._swing.down > 0.05
+              ? svg`<rect class="meter-swing down" x="4" y="${METER_HEIGHT / 2}"
+                  width="80"
+                  height="${((Math.min(1, this._swing.down / meter.scaleDown) * METER_HEIGHT) / 2).toFixed(1)}"
+                  rx="6"></rect>`
+              : nothing}`
+          : nothing}
         <line class="meter-zero" x1="1" y1="${METER_HEIGHT / 2}" x2="87"
               y2="${METER_HEIGHT / 2}"></line>
       </svg>
@@ -779,6 +862,14 @@ export class PowerOriginCard extends LitElement {
           )
         : undefined;
 
+    const drawn =
+      (geometry?.area?.length ?? 0) > 0 ||
+      (barGeometry?.bars.length ?? 0) > 0;
+    const shapeless =
+      !drawn ||
+      (geometry === undefined && barGeometry === undefined) ||
+      inDay.every((point) => (series?.solar[point.index] ?? 0) < 0.05);
+
     const nowX = geometry?.nowX ?? barGeometry?.nowX;
     const nowLabel =
       nowX !== undefined && nowX > box.padding + 34 && nowX < box.width - box.padding - 34
@@ -819,9 +910,11 @@ export class PowerOriginCard extends LitElement {
             : nothing}
         </div>
         ${this._error ? html`<div class="row-note dim">${this._error}</div>` : nothing}
-        ${geometry || barGeometry
+        ${shapeless
+          ? nothing
+          : geometry || barGeometry
           ? html`
-            <svg class="full" viewBox="0 0 ${box.width} ${box.height + 20}"
+            <svg class="full chart" viewBox="0 0 ${box.width} ${box.height + 20}"
                  role="img" aria-label="${localize("chart.title", locale)}">
               ${
                 (geometry?.tick ?? barGeometry?.tick)

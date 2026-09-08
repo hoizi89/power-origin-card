@@ -848,4 +848,24 @@ export const cardStyles = css`
 
   .bal-roof { fill: var(--sst-sun); }
   .bal-house { fill: var(--sst-house, var(--sst-muted)); opacity: 0.85; }
+
+  .ring-day.faint {
+    opacity: 0.28;
+  }
+
+  .ring-curve {
+    fill: none;
+    stroke: var(--sst-muted);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.32;
+  }
+
+  .meter-swing {
+    opacity: 0.16;
+  }
+
+  .meter-swing.up { fill: var(--sst-sun); }
+  .meter-swing.down { fill: var(--sst-grid); }
 `;
