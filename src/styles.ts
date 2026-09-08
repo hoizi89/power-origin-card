@@ -576,20 +576,6 @@ export const cardStyles = css`
     fill: var(--sst-track);
   }
 
-  .bat-pct {
-    font-size: calc(23px * var(--sst-scale));
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    fill: var(--sst-ink);
-  }
-
-  .bat-pct tspan {
-    font-family: var(--sst-mono);
-    font-weight: 400;
-    font-size: calc(11px * var(--sst-scale));
-    fill: var(--sst-muted);
-  }
-
   .today {
     margin: 2px -16px 0;
     padding: 14px 16px 15px;
@@ -928,5 +914,14 @@ export const cardStyles = css`
     font-family: var(--sst-mono);
     font-size: calc(9.5px * var(--sst-scale));
     letter-spacing: 0.06em;
+  }
+
+  /* The figure, not the picture: the bar already says how full it is. */
+  .row-pct {
+    margin-left: 10px;
+    font-size: calc(13px * var(--sst-scale));
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--sst-ink);
   }
 `;

@@ -53,6 +53,7 @@ export const DEFAULTS = {
     runtime: true,
     runtime_window: 30,
     reserve_line: true,
+    percent: true,
     extra: "none" as const
   },
   today: {
@@ -618,6 +619,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               selector: { number: { min: 0, max: 20, mode: "box" } }
             }),
             { name: "runtime", selector: { boolean: {} } },
+            { name: "percent", selector: { boolean: {} } },
             ...only((resolved) => resolved.battery_reserve > 0, {
               name: "reserve_line",
               selector: { boolean: {} }
@@ -763,6 +765,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     runtime: t("editor.runtime"),
     runtime_window: t("editor.runtime_window"),
     reserve_line: t("editor.reserve_line"),
+    percent: t("editor.percent"),
     extra: t("editor.extra"),
     money: t("editor.money"),
     breakdown: t("editor.breakdown"),
@@ -781,6 +784,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   };
 
   const helpers: Record<string, string> = {
+    percent: t("editor.help_percent"),
     reserve_line: t("editor.help_reserve_line"),
     extra: t("editor.help_extra"),
     compare: t("editor.help_compare"),

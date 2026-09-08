@@ -1197,7 +1197,16 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="row">
         <div class="row-head">
-          <span class="row-title">${localize("battery.title", locale)}</span>
+          <span class="row-title"
+            >${localize("battery.title", locale)}${config.battery.percent
+              ? html`<span class="row-pct"
+                  >${this._linked(
+                    config.entities.battery_soc,
+                    html`${formatNumber(soc, locale, 0)} %`
+                  )}</span
+                >`
+              : nothing}</span
+          >
           ${config.battery_capacity
             ? html`<span class="row-note"
                 >${formatNumber(config.battery_capacity / 1000, locale, 1)}
@@ -1264,11 +1273,11 @@ export class PowerOriginCard extends LitElement {
     const extra = this._batteryExtra(locale);
 
     // Without a casing the bar may use the width the cap would have taken.
-    const shellW = extra ? (bare ? 150 : 142) : bare ? 259 : 248;
+    const shellW = extra ? (bare ? 236 : 228) : bare ? 259 : 248;
     const innerStart = bare ? 0 : 6;
     const innerWidth = bare ? shellW : shellW - 10;
-    const top = bare ? 12 : 10;
-    const tall = bare ? 28 : 32;
+    const top = bare ? 12 : 8;
+    const tall = bare ? 28 : 36;
     const radius = bare ? 4 : 6;
 
     const reserve =
@@ -1324,16 +1333,7 @@ export class PowerOriginCard extends LitElement {
             <text class="bat-extra-k" x="340" y="${top + 26}" text-anchor="end"
               >${extra.label}</text>`
           : nothing}
-        ${(() => {
-          const id = (this._config as ResolvedConfig).entities.battery_soc;
-          const on = id && (this._hass as HomeAssistant)?.states?.[id];
-          const handlers = on ? this._tap(id!) : undefined;
-          return svg`<text class="bat-pct ${on ? "tap" : ""}"
-            x="${extra ? shellW + 20 : 340}" y="35"
-            text-anchor="${extra ? "start" : "end"}" tabindex="${on ? 0 : -1}"
-            @click=${handlers?.click} @keydown=${handlers?.key}
-            >${formatNumber(soc, locale, 0)}<tspan dx="4">%</tspan></text>`;
-        })()}
+
       </svg>`;
   }
 

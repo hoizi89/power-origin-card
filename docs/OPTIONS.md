@@ -138,6 +138,7 @@ today:
 | `battery.style` | `segments` | `segments`, `solid`, or `bar` without a casing. |
 | `battery.segments` | `0` | `0` gives one block per kilowatt hour of capacity. |
 | `battery.runtime_window` | `30` | Minutes averaged before dividing. |
+| `battery.percent` | `true` | The charge as a figure beside the heading. The bar says it too, so this is the number and not the picture. |
 | `battery.reserve_line` | `true` | A dashed line where the reserve begins, so a bar that reads full does not hide power that never comes out. Shown only when a reserve is set. |
 | `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out). |
 | `today.stats` | `[peak, autarky, export, import]` | Which four values appear at the bottom. |

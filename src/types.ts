@@ -131,6 +131,7 @@ export interface BatteryOptions {
   runtime?: boolean;
   runtime_window?: number;
   reserve_line?: boolean;
+  percent?: boolean;
   extra?: BatteryExtra;
 }
 
