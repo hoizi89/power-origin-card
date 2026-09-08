@@ -95,6 +95,10 @@ A column answers two questions, and they are two settings. **What it measures** 
 | `autarky` | the self-supplied share now |
 | `roof` | what the roof makes now, against its best today |
 
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/subjects.png" alt="The six subjects a column can take" width="700">
+
+The same moment, six times. Top: what the roof makes against its best today, what the hour earns, how much of the house is self-supplied. Bottom: where the house drew from hour by hour, the roof against the house, the house against its own average.
+
 **How it is drawn** is `ring.meter_style`, and only `grid` has a choice: `blocks` for a stepped needle, `bar` for one body. The other six each have one honest shape, so the editor does not offer a drawing it would ignore.
 
 `day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. Set `ring.columns` to `two` for a second column on the other side of the ring, with its own `ring.meter_second_shows`, so a day strip and a live needle can stand together.

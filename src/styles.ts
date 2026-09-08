@@ -113,12 +113,15 @@ export const cardStyles = css`
     flex: 0 0 auto;
   }
 
+  /* The block is content-wide, so a word that cannot wrap widens it until the
+     card clips it. Two lines are better than half a word. */
   .meter-label {
     display: flex;
     flex-direction: column;
     align-items: center;
     line-height: 1.25;
     text-align: center;
+    max-width: calc(112px * var(--sst-scale));
   }
 
   .meter-value {
@@ -135,6 +138,14 @@ export const cardStyles = css`
     color: var(--sst-muted);
   }
 
+  /* The figure the column is measured against, where the column reaches it. */
+  .meter-top {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    letter-spacing: 0.06em;
+    color: var(--sst-muted);
+  }
+
   .meter-word {
     display: inline-flex;
     align-items: center;
@@ -143,7 +154,6 @@ export const cardStyles = css`
     font-size: calc(9.5px * var(--sst-scale));
     letter-spacing: 0.08em;
     color: var(--sst-muted);
-    white-space: nowrap;
   }
 
   .meter-glyph {

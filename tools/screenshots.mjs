@@ -7,7 +7,8 @@ const HARNESS = `
 const KEYS = [
   "house", "solar", "battery_power", "battery_soc", "grid_power", "solar_today",
   "house_today", "export_today", "import_today", "forecast", "cost_today",
-  "battery_out_today", "cost_export_today", "cost_import_today", "amortisation"
+  "battery_out_today", "cost_export_today", "cost_import_today", "amortisation",
+  "price_import", "price_export"
 ];
 
 let seq = 0;
@@ -87,7 +88,9 @@ function hass(ids, s, weak) {
       [ids.battery_out_today]: entity(ids.battery_out_today, s.batteryOut, "kWh", "energy"),
       [ids.cost_export_today]: entity(ids.cost_export_today, s.moneyOut, "EUR", "monetary"),
       [ids.cost_import_today]: entity(ids.cost_import_today, s.moneyIn, "EUR", "monetary"),
-      [ids.amortisation]: entity(ids.amortisation, s.paid, "%", null)
+      [ids.amortisation]: entity(ids.amortisation, s.paid, "%", null),
+      [ids.price_import]: entity(ids.price_import, 0.29, "EUR/kWh", "monetary"),
+      [ids.price_export]: entity(ids.price_export, 0.08, "EUR/kWh", "monetary")
     },
     locale: { language: "en" },
     async callWS(message) {
@@ -201,7 +204,7 @@ const shots = {
     width: 400,
     body: `place(stage, {
       title: "Solar",
-      ring: { center: "surplus", rings: "double", meter: true, meter_style: "day",
+      ring: { center: "surplus", rings: "double", meter: true, meter_shows: "day",
               facts: "none" },
       today: ${JSON.stringify(full)}
     }, "MIDDAY", false);`
@@ -210,7 +213,7 @@ const shots = {
     width: 400,
     body: `place(stage, {
       title: "Solar",
-      ring: { center: "power", rings: "double", meter: true, meter_style: "day", facts: "none" },
+      ring: { center: "power", rings: "double", meter: true, meter_shows: "day", facts: "none" },
       battery: { extra: "given" },
       today: ${JSON.stringify(full)}
     }, "EVENING", false);`
@@ -219,7 +222,7 @@ const shots = {
     width: 400,
     body: `place(stage, {
       title: "Solar",
-      ring: { center: "power", meter: true, meter_style: "balance", facts: "none" },
+      ring: { center: "power", meter: true, meter_shows: "balance", facts: "none" },
       today: ${JSON.stringify({ ...full, origin_style: "bar" })}
     }, "GREY", true);`
   },
@@ -236,9 +239,27 @@ const shots = {
     body: `place(stage, {
       title: "", chip: "never",
       sections: { ring: true, chart: false, battery: false, today: false },
-      ring: { center: "power", meter: true, meter_style: "day", meter_second: "blocks",
-              facts: "none", size: "m" }
+      ring: { center: "power", columns: "two", meter_shows: "day",
+              meter_second_shows: "grid", facts: "none", size: "m" }
     }, "MIDDAY", false);`
+  },
+  subjects: {
+    width: 960,
+    body: `const SUBJECTS = ["roof", "money", "autarky", "day", "balance", "load"];
+        const grid = document.createElement('div');
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(3, 300px)';
+        grid.style.gap = '14px';
+        stage.append(grid);
+        for (const shows of SUBJECTS) {
+          const cell = document.createElement('div');
+          grid.append(cell);
+          place(cell, {
+            title: '', chip: 'never',
+            sections: { ring: true, chart: false, battery: false, today: false },
+            ring: { center: 'power', meter: true, meter_shows: shows, facts: 'none', size: 'm' }
+          }, 'MIDDAY', false);
+        }`
   },
   modes: {
     width: 820,

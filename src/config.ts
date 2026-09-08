@@ -523,6 +523,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           }),
+          ...only(gauge, {
+            name: "meter_scope",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "grid", label: t("editor.meter_scope_grid") },
+                  { value: "all", label: t("editor.meter_scope_all") }
+                ]
+              }
+            }
+          }),
           ...only((resolved) => resolved.ring.columns === "two", {
             name: "meter_second_shows",
             selector: {
@@ -554,18 +566,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }),
 
-          ...only(gauge, {
-            name: "meter_scope",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "grid", label: t("editor.meter_scope_grid") },
-                  { value: "all", label: t("editor.meter_scope_all") }
-                ]
-              }
-            }
-          }),
           ...only(
             (resolved) =>
               resolved.ring.meter &&
@@ -904,10 +904,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     runtime_window: t("editor.help_runtime")
   };
 
-  const paired = config?.ring.columns === "two";
-  if (paired) {
-    labels.meter_style = t("editor.column_left");
-    labels.meter_second = t("editor.column_right");
+  if (config?.ring.columns === "two") {
     labels.meter_scope = t("editor.scope_left");
     labels.meter_second_scope = t("editor.scope_right");
   }

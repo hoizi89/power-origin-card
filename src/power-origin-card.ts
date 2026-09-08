@@ -304,7 +304,14 @@ export class PowerOriginCard extends LitElement {
       <ha-card style="--sst-scale: ${config.text_scale}">
         ${config.title || showChip
           ? html`<div class="head ${config.title ? "" : "bare"} ${
-              !config.title && config.ring.facts === "none" && config.sections.ring ? "float" : ""
+              // Two columns reach the top corners, so there is no corner left
+              // for the chip to float into.
+              !config.title &&
+              config.ring.facts === "none" &&
+              config.sections.ring &&
+              config.ring.columns !== "two"
+                ? "float"
+                : ""
             }">
               ${config.title ? html`<p class="title">${config.title}</p>` : nothing}
               ${showChip
@@ -815,6 +822,9 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
+        ${peak > 0
+          ? html`<span class="meter-top">${formatPower(peak, locale)} kW</span>`
+          : nothing}
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.roof", locale)}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
