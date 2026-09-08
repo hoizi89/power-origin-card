@@ -111,6 +111,8 @@ today:
 | --- | --- | --- |
 | `text_scale` | `1` | Multiplies every type size at once. |
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
+| `tap_action` | `more-info` | What tapping a figure does, in Lovelace's own vocabulary. |
+| `chart.compare` | `false` | Draws the same weekday a week ago faintly behind today. Costs one more recorder query. |
 | `battery_capacity` | `0` | Usable capacity in Wh. Needed for kWh figures and the remaining time. |
 | `battery_reserve` | `0` | Percent held back and not counted as available. |
 | `ring.center` | `power` | Which question the ring answers — see the table above. |

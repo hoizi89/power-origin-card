@@ -19,6 +19,18 @@ export type RingCenter = "power" | "production" | "surplus" | "autarky";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
+/** The subset of Lovelace's action config this card acts on. */
+export interface ActionConfig {
+  action: "more-info" | "navigate" | "url" | "toggle" | "call-service" | "perform-action" | "none";
+  entity?: string;
+  navigation_path?: string;
+  url_path?: string;
+  service?: string;
+  perform_action?: string;
+  target?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+}
+
 export type ChipMode = "always" | "gridfree" | "never";
 export type RingStyle = "single" | "double" | "clock";
 export type ColumnCount = "none" | "one" | "two";
@@ -106,6 +118,7 @@ export interface ChartOptions {
   style?: ChartStyle;
   consumption?: boolean;
   show_forecast?: boolean;
+  compare?: boolean;
   /** Drawing height in pixels. */
   height?: number;
 }
@@ -135,6 +148,7 @@ export interface PowerOriginCardConfig {
   /** Multiplies every type size. 1.2 suits a tablet on a wall. */
   text_scale?: number;
   chip?: ChipMode;
+  tap_action?: ActionConfig;
   battery_capacity?: number;
   battery_reserve?: number;
   battery_invert?: boolean;

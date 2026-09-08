@@ -624,3 +624,42 @@ describe("the second column draws itself", () => {
     expect(root.querySelectorAll(".meter-off").length).toBeGreaterThan(0);
   });
 });
+
+describe("what a tap does", () => {
+  const tap = async (config: PowerOriginCardConfig) => {
+    const { root } = await render(config, SCENARIOS[0]);
+    const events: CustomEvent[] = [];
+    for (const name of ["hass-more-info", "ll-custom", "location-changed"]) {
+      root.host.addEventListener(name, (event) => events.push(event as CustomEvent));
+    }
+    (root.querySelector(".ring-value") as SVGElement).dispatchEvent(
+      new Event("click", { bubbles: true, composed: true })
+    );
+    return events;
+  };
+
+  it("opens the entity behind the figure by default", async () => {
+    const events = await tap(baseConfig());
+    expect(events.map((e) => e.type)).toEqual(["hass-more-info"]);
+    expect(events[0].detail.entityId).toBe(IDS.house);
+  });
+
+  it("opens a different entity when one is named", async () => {
+    const events = await tap(
+      baseConfig({ tap_action: { action: "more-info", entity: IDS.battery_soc } })
+    );
+    expect(events[0].detail.entityId).toBe(IDS.battery_soc);
+  });
+
+  it("navigates when asked to", async () => {
+    const events = await tap(
+      baseConfig({ tap_action: { action: "navigate", navigation_path: "/lovelace/energy" } })
+    );
+    expect(events.map((e) => e.type)).toContain("location-changed");
+  });
+
+  it("does nothing at all when told to", async () => {
+    const events = await tap(baseConfig({ tap_action: { action: "none" } }));
+    expect(events).toEqual([]);
+  });
+});

@@ -119,6 +119,8 @@ Any figure that comes from one entity opens that entity in Home Assistant's own 
 
 Figures the card works out itself lead nowhere, and are not made to look as though they do. The peak and the self-supplied share have no entity behind them, so they stay plain text.
 
+`tap_action` changes what a tap does — navigate somewhere, open a URL, call a service, or nothing at all — in Lovelace's own vocabulary.
+
 ---
 
 

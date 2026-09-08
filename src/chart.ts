@@ -19,6 +19,8 @@ export interface ChartGeometry {
   area: string;
   solar: string;
   house: string;
+  /** The same day a week ago, on the same scale. */
+  earlier?: string;
   nowX?: number;
   nowY?: number;
   tick?: ChartTick;
@@ -68,13 +70,15 @@ export function chartGeometry(
   solar: number[],
   house: number[],
   domain: ChartDomain,
-  box: ChartBox = DEFAULT_BOX
+  box: ChartBox = DEFAULT_BOX,
+  earlier: number[] = []
 ): ChartGeometry {
   if (timestamps.length < 2) {
     return { area: "", solar: "", house: "" };
   }
 
-  const max = Math.max(0.001, ...solar, ...house);
+  // The comparison shares the scale, or the two days cannot be compared.
+  const max = Math.max(0.001, ...solar, ...house, ...earlier);
   const xs = timestamps.map((timestamp) => scaleX(timestamp, domain, box));
 
   const solarPoints: Array<[number, number]> = solar.map((value, index) => [
@@ -93,6 +97,13 @@ export function chartGeometry(
       ? `${toPath(solarPoints)} L${last[0].toFixed(1)},${box.height} L${first[0].toFixed(1)},${box.height} Z`
       : "";
 
+  const earlierPath =
+    earlier.length > 1
+      ? toPath(
+          earlier.map((value, index) => [xs[index] ?? xs.at(-1)!, scaleY(value, max, box)])
+        )
+      : undefined;
+
   const tickValue = niceTick(max);
 
   return {
@@ -101,7 +112,8 @@ export function chartGeometry(
     house: housePoints.length > 1 ? toPath(housePoints) : "",
     nowX: last?.[0],
     nowY: last?.[1],
-    tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue, max, box) }
+    tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue, max, box) },
+    earlier: earlierPath
   };
 }
 

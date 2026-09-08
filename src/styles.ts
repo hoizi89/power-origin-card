@@ -889,4 +889,14 @@ export const cardStyles = css`
     outline-offset: 2px;
     border-radius: 3px;
   }
+
+  /* Last week, behind this week: the same hue, far enough back that it reads
+     as a memory rather than as a second measurement. */
+  .earlier-line {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.6;
+    stroke-dasharray: 3 3;
+    opacity: 0.4;
+  }
 `;

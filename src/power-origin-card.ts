@@ -67,6 +67,7 @@ export class PowerOriginCard extends LitElement {
   private _series?: DaySeries;
   private _hours?: HourShare[];
   private _swing?: { up: number; down: number };
+  private _earlier?: DaySeries;
   private _error?: string;
   private _lastFetch = 0;
   private _pending = false;
@@ -185,6 +186,7 @@ export class PowerOriginCard extends LitElement {
               divisor
             )
           : undefined;
+      await this._fetchLastWeek(hass, solarId, houseId, divisor);
       await this._fetchYearPeak(hass, solarId, houseId, divisor);
       this._error = undefined;
     } catch (error) {
@@ -498,6 +500,37 @@ export class PowerOriginCard extends LitElement {
    * Surplus climbs, grid draw sinks. A ring can show proportions but never a
    * direction, and the direction is what tells you whether to switch something on.
    */
+  /**
+   * The same weekday a week ago. A second query of a recorder that may hold
+   * years, so it only runs when the comparison is switched on.
+   */
+  private async _fetchLastWeek(
+    hass: HomeAssistant,
+    solarId: string | undefined,
+    houseId: string,
+    divisor: number
+  ): Promise<void> {
+    const config = this._config as ResolvedConfig;
+    if (!config.chart.compare || !solarId) {
+      this._earlier = undefined;
+      return;
+    }
+
+    const week = 7 * 24 * 60 * 60 * 1000;
+    const then = new Date(Date.now() - week);
+    const ids = [solarId, houseId];
+
+    const stats = await cachedStatistics(
+      ids,
+      60 * 60 * 1000,
+      () => fetchStatistics(hass, ids, then),
+      "week"
+    );
+
+    const series = buildDaySeries(stats[solarId] ?? [], stats[houseId] ?? [], divisor, then);
+    this._earlier = series;
+  }
+
   /** Whether any of the day views is switched on, and the extra series worth fetching. */
   private _needsHours(): boolean {
     const config = this._config;
@@ -612,11 +645,35 @@ export class PowerOriginCard extends LitElement {
    * figure the card works out itself is not, and stays plain.
    */
   private _moreInfo(entityId: string): void {
-    this.dispatchEvent(new CustomEvent("hass-more-info", {
-      detail: { entityId },
+    const action = (this._config as ResolvedConfig).tap_action;
+
+    if (action.action === "none") return;
+
+    if (action.action === "more-info") {
+      this.dispatchEvent(new CustomEvent("hass-more-info", {
+        detail: { entityId: action.entity ?? entityId },
+        bubbles: true,
+        composed: true
+      }));
+      return;
+    }
+
+    // Everything else is Lovelace's own vocabulary; the frontend performs it,
+    // so a navigation or a service call behaves exactly as on any other card.
+    this.dispatchEvent(new CustomEvent("ll-custom", {
+      detail: { ...action, entity: action.entity ?? entityId },
       bubbles: true,
       composed: true
     }));
+
+    if (action.action === "navigate" && action.navigation_path) {
+      history.pushState(null, "", action.navigation_path);
+      this.dispatchEvent(new CustomEvent("location-changed", { bubbles: true, composed: true }));
+    }
+
+    if (action.action === "url" && action.url_path) {
+      window.open(action.url_path, "_blank", "noreferrer");
+    }
   }
 
   private _tap(entityId: string) {
@@ -882,6 +939,19 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /** Last week's roof resampled onto as many points as today has so far. */
+  private _earlierSolar(points: number): number[] {
+    const earlier = this._earlier;
+    if (!earlier || points < 2 || earlier.solar.length < 2) return [];
+    const out: number[] = [];
+    for (let index = 0; index < points; index += 1) {
+      const at = Math.round((index / (points - 1)) * (earlier.solar.length - 1));
+      const value = earlier.solar[at];
+      out.push(Number.isFinite(value) ? value : 0);
+    }
+    return out;
+  }
+
   private _renderChart(locale: string) {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
@@ -921,7 +991,8 @@ export class PowerOriginCard extends LitElement {
             inDay.map((point) => series.solar[point.index]),
             config.chart.consumption ? inDay.map((point) => series.house[point.index]) : [],
             { start: dayStart, end: dayEnd },
-            box
+            box,
+            this._earlierSolar(inDay.length)
           )
         : undefined;
 
@@ -1010,6 +1081,9 @@ export class PowerOriginCard extends LitElement {
                               d="${geometry.area}"></path>`
                   : nothing
               }
+              ${geometry?.earlier
+                ? svg`<path class="earlier-line" d="${geometry.earlier}"></path>`
+                : nothing}
               ${geometry?.solar ? svg`<path class="prod-line" d="${geometry.solar}"></path>` : nothing}
               ${
                 barGeometry

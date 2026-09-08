@@ -11,6 +11,7 @@ export const CARD_TYPE = "power-origin-card";
 export const DEFAULTS = {
   text_scale: 1,
   chip: "always" as const,
+  tap_action: { action: "more-info" as const },
   battery_capacity: 0,
   battery_reserve: 0,
   battery_invert: false,
@@ -38,7 +39,13 @@ export const DEFAULTS = {
     inner: "icon" as const,
     clock_marks: true
   },
-  chart: { style: "area" as const, consumption: true, show_forecast: true, height: 84 },
+  chart: {
+    style: "area" as const,
+    consumption: true,
+    show_forecast: true,
+    compare: false,
+    height: 84
+  },
   battery: {
     style: "segments" as const,
     segments: 0,
@@ -91,6 +98,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     entities: { ...config.entities },
     text_scale: config.text_scale ?? DEFAULTS.text_scale,
     chip: config.chip ?? DEFAULTS.chip,
+    tap_action: config.tap_action ?? DEFAULTS.tap_action,
     battery_capacity: config.battery_capacity ?? DEFAULTS.battery_capacity,
     battery_reserve: config.battery_reserve ?? DEFAULTS.battery_reserve,
     battery_invert: config.battery_invert ?? DEFAULTS.battery_invert,
@@ -196,6 +204,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         {
           name: "text_scale",
           selector: { number: { min: 0.8, max: 2, step: 0.05, mode: "box" } }
+        },
+        {
+          name: "tap_action",
+          selector: { ui_action: { default_action: "more-info" } }
         },
         {
           name: "chip",
@@ -526,6 +538,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             ...only((resolved) => Boolean(resolved.entities.forecast), {
               name: "show_forecast",
               selector: { boolean: {} }
+            }),
+            ...only((resolved) => Boolean(resolved.entities.solar), {
+              name: "compare",
+              selector: { boolean: {} }
             })
           ]
         },
@@ -649,6 +665,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     title: t("editor.title"),
     text_scale: t("editor.text_scale"),
     chip: t("editor.chip"),
+    tap_action: t("editor.tap_action"),
     entities: t("editor.entities"),
     house: t("editor.house"),
     solar: t("editor.solar"),
@@ -692,6 +709,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     clock_marks: t("editor.clock_marks"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
+    compare: t("editor.compare"),
     height: t("editor.chart_height"),
     style: t("editor.style"),
     segments: t("editor.segments"),
@@ -714,9 +732,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   };
 
   const helpers: Record<string, string> = {
+    compare: t("editor.help_compare"),
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),
     chip: t("editor.help_chip"),
+    tap_action: t("editor.help_tap_action"),
     cost_today: t("editor.help_cost_today"),
     cost_export_today: t("editor.help_cost_sides"),
     cost_import_today: t("editor.help_cost_sides"),
