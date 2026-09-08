@@ -112,7 +112,11 @@ describe("editor coverage", () => {
     "meter",
     "meter_second",
     "battery_capacity",
-    "battery_reserve"
+    "battery_reserve",
+    // Names and meters come with the devices the dashboard hands over; they
+    // are data the list carries, not a choice to offer.
+    "names",
+    "energy"
   ]);
 
   it("offers every top-level option", () => {

@@ -104,3 +104,36 @@ describe("mergePick", () => {
     expect(filled).toEqual([]);
   });
 });
+
+describe("the devices the dashboard lists", () => {
+  const withDevices = {
+    ...PREFS,
+    device_consumption: [
+      { stat_consumption: "sensor.wp_e", stat_rate: "sensor.wp_p", name: "Lambda WP" },
+      { stat_consumption: "sensor.dish_e", stat_rate: "sensor.geschirrspuler_power" },
+      { stat_consumption: "sensor.meter_only" }
+    ]
+  };
+
+  it("takes every device with a live sensor, named as the dashboard names it", () => {
+    const pick = pickFromEnergy(withDevices);
+    expect(pick.devices).toEqual([
+      { id: "sensor.wp_p", name: "Lambda WP", energy: "sensor.wp_e" },
+      { id: "sensor.geschirrspuler_power", name: "geschirrspuler", energy: "sensor.dish_e" }
+    ]);
+  });
+
+  it("fills the device list only while it is empty", () => {
+    const empty: PowerOriginCardConfig = { type: "custom:power-origin-card", entities: { house: "sensor.h" } };
+    const filled = mergePick(empty, pickFromEnergy(withDevices));
+    expect(filled.filled).toContain("devices");
+    expect(filled.merged.devices?.list).toEqual(["sensor.wp_p", "sensor.geschirrspuler_power"]);
+    expect(filled.merged.devices?.names?.["sensor.wp_p"]).toBe("Lambda WP");
+    expect(filled.merged.devices?.energy?.["sensor.wp_p"]).toBe("sensor.wp_e");
+
+    const mine: PowerOriginCardConfig = { ...empty, devices: { list: ["sensor.mine"] } };
+    const kept = mergePick(mine, pickFromEnergy(withDevices));
+    expect(kept.filled).not.toContain("devices");
+    expect(kept.merged.devices?.list).toEqual(["sensor.mine"]);
+  });
+});

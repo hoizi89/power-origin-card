@@ -125,13 +125,31 @@ function sunEntity(): HassEntity {
   };
 }
 
+/* What the recorder averaged for the devices lately; the kettle's live reading
+   is far above its mean, which is what the window is for. */
+const DEVICE_WATTS: Record<string, number> = {
+  "sensor.desk_power": 167,
+  "sensor.nas_power": 20,
+  "sensor.fridge_power": 0,
+  "sensor.oven_power": 1800,
+  "sensor.kettle_power": 40
+};
+const DEVICE_KWH: Record<string, number> = {
+  "sensor.desk_energy": 1.4,
+  "sensor.nas_energy": 0.5,
+  "sensor.oven_energy": 2.2
+};
+
 function statistics(scenario: Scenario, ids: string[]) {
   const midnight = new Date();
   midnight.setHours(0, 0, 0, 0);
   const now = Date.now();
   const out: Record<string, Array<Record<string, unknown>>> = {};
 
+  const count = Math.floor((now - midnight.getTime()) / (5 * 60 * 1000)) + 1;
+  const known = new Set([...Object.values(IDS), ...Object.keys(DEVICE_WATTS), ...Object.keys(DEVICE_KWH)]);
   for (const id of ids) {
+    if (!known.has(id)) continue;
     const rows: Array<Record<string, unknown>> = [];
     for (let t = midnight.getTime(); t <= now; t += 5 * 60 * 1000) {
       const value =
@@ -141,8 +159,15 @@ function statistics(scenario: Scenario, ids: string[]) {
             ? scenario.grid
             : id === IDS.battery_power
               ? scenario.battery
-              : scenario.house;
-      rows.push({ start: t, mean: value, max: value * 1.1 });
+              : id in DEVICE_WATTS
+                ? DEVICE_WATTS[id]
+                : scenario.house;
+      rows.push({
+        start: t,
+        mean: value,
+        max: value * 1.1,
+        change: id in DEVICE_KWH ? DEVICE_KWH[id] / count : null
+      });
     }
     out[id] = rows;
   }
@@ -169,10 +194,24 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     [IDS.cost_import_today]: entity(IDS.cost_import_today, v(0.02), "€", "monetary"),
     [IDS.battery_out_today]: entity(IDS.battery_out_today, v(4.1), "kWh", "energy"),
     "sensor.price_import": entity("sensor.price_import", v(0.29), "€/kWh", "monetary"),
-    "sensor.price_export": entity("sensor.price_export", v(0.08), "€/kWh", "monetary")
+    "sensor.price_export": entity("sensor.price_export", v(0.08), "€/kWh", "monetary"),
+    // Three devices: one drawing, one small, one off. A fourth id is never
+    // listed, so a card asking for it learns nothing.
+    "sensor.desk_power": entity("sensor.desk_power", 167, "W", "power"),
+    "sensor.nas_power": entity("sensor.nas_power", 20, "W", "power"),
+    "sensor.fridge_power": entity("sensor.fridge_power", 0, "W", "power"),
+    "sensor.oven_power": entity("sensor.oven_power", 1800, "W", "power"),
+    "sensor.kettle_power": entity("sensor.kettle_power", 2000, "W", "power")
   };
 
   return {
+    entities: {
+      "sensor.desk_power": { area_id: "office" },
+      "sensor.nas_power": { device_id: "nas-1" },
+      "sensor.fridge_power": { area_id: "kitchen" }
+    },
+    devices: { "nas-1": { area_id: "cellar" } },
+    areas: { office: { name: "Büro" }, cellar: { name: "Keller" }, kitchen: { name: "Küche" } },
     states,
     locale: { language: "de" },
     async callWS(message: Record<string, unknown>) {

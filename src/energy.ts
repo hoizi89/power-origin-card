@@ -1,4 +1,4 @@
-import type { PowerOriginEntities } from "./types";
+import type { DevicesOptions, PowerOriginEntities } from "./types";
 
 interface EnergySource {
   type?: string;
@@ -10,14 +10,23 @@ interface EnergySource {
   power_config?: { stat_rate?: string; stat_rate_from?: string; stat_rate_to?: string };
 }
 
+interface EnergyDevice {
+  stat_consumption?: string;
+  stat_rate?: string;
+  name?: string;
+}
+
 export interface EnergyPrefs {
   energy_sources?: EnergySource[];
+  device_consumption?: EnergyDevice[];
 }
 
 export interface EnergyPick {
   entities: Partial<PowerOriginEntities>;
   /** Usable capacity in Wh, when the dashboard knows it. */
   battery_capacity?: number;
+  /** The devices with a live power sensor, as the dashboard names them. */
+  devices?: Array<{ id: string; name: string; energy?: string }>;
 }
 
 const named = (value: unknown): string | undefined =>
@@ -32,7 +41,7 @@ const named = (value: unknown): string | undefined =>
  * so those are left for the owner to pick.
  */
 export function pickFromEnergy(prefs: EnergyPrefs | undefined): EnergyPick {
-  const out: EnergyPick = { entities: {} };
+  const out: EnergyPick = { entities: {}, devices: [] };
   for (const source of prefs?.energy_sources ?? []) {
     if (source.type === "solar") {
       out.entities.solar = named(source.stat_rate) ?? out.entities.solar;
@@ -56,11 +65,29 @@ export function pickFromEnergy(prefs: EnergyPrefs | undefined): EnergyPick {
         named(source.entity_energy_price_export) ?? out.entities.price_export;
     }
   }
+  // A device the dashboard lists with a live sensor is a device worth naming;
+  // one with only a meter has nothing to say about this minute.
+  for (const device of prefs?.device_consumption ?? []) {
+    const id = named(device.stat_rate);
+    if (!id) continue;
+    const fallback = id.replace(/^sensor\./, "").replace(/_power$/, "").replace(/_/g, " ");
+    (out.devices ??= []).push({
+      id,
+      name: (named(device.name) ?? fallback).trim(),
+      energy: named(device.stat_consumption)
+    });
+  }
   return out;
 }
 
 /** Fills only what is still empty, so a deliberate choice is never overwritten. */
-export function mergePick<T extends { entities?: Partial<PowerOriginEntities>; battery_capacity?: number }>(
+export function mergePick<
+  T extends {
+    entities?: Partial<PowerOriginEntities>;
+    battery_capacity?: number;
+    devices?: DevicesOptions;
+  }
+>(
   config: T,
   pick: EnergyPick
 ): { merged: T; filled: string[] } {
@@ -75,6 +102,19 @@ export function mergePick<T extends { entities?: Partial<PowerOriginEntities>; b
   }
 
   const merged = { ...config, entities } as T;
+  // A list someone made is theirs; only an empty one is filled.
+  const devices = pick.devices ?? [];
+  if (devices.length > 0 && !(config.devices?.list?.length ?? 0)) {
+    merged.devices = {
+      ...config.devices,
+      list: devices.map((d) => d.id),
+      names: Object.fromEntries(devices.map((d) => [d.id, d.name])),
+      energy: Object.fromEntries(
+        devices.filter((d) => d.energy).map((d) => [d.id, d.energy as string])
+      )
+    };
+    filled.push("devices");
+  }
   if (pick.battery_capacity && !config.battery_capacity) {
     merged.battery_capacity = pick.battery_capacity;
     filled.push("battery_capacity");

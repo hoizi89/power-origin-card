@@ -28,7 +28,8 @@ const base = (): PowerOriginCardConfig => ({
     meter_style: "blocks",
     meter_second_style: "blocks"
   },
-  today: { money: true, origin_bar: true }
+  today: { money: true, origin_bar: true },
+  devices: { list: ["sensor.desk_power", "sensor.nas_power", "sensor.fridge_power", "sensor.oven_power"] }
 });
 
 function fields(config: PowerOriginCardConfig): Field[] {
@@ -177,6 +178,10 @@ describe("every setting the editor offers changes something", () => {
         get(config, field.path) ??
         get(resolved, field.path) ??
         get(resolved, field.path.slice(-1));
+      // A number is judged as a field: one value that lands between two readings
+      // proves nothing, and a limit above the count has nothing to cut.
+      const perValue = kind !== "number";
+      let anyChanged = false;
       for (const value of alternatives(field, current)) {
         let changed = false;
         for (const s of tried) {
@@ -185,8 +190,10 @@ describe("every setting the editor offers changes something", () => {
             break;
           }
         }
-        if (!changed) dead.push(field.path.join(".") + " = " + JSON.stringify(value));
+        anyChanged ||= changed;
+        if (!changed && perValue) dead.push(field.path.join(".") + " = " + JSON.stringify(value));
       }
+      if (!perValue && !anyChanged) dead.push(field.path.join("."));
     }
     expect(dead, "settings that draw nothing different:\n" + dead.join("\n")).toEqual([]);
   }, 120000);

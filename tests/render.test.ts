@@ -903,3 +903,87 @@ describe("the charge appears once", () => {
     expect(text).toContain("1,19 €");
   });
 });
+
+describe("where the power goes", () => {
+  const withDevices = (extra: Record<string, unknown> = {}) =>
+    baseConfig({
+      devices: { list: ["sensor.desk_power", "sensor.nas_power", "sensor.fridge_power", "sensor.ghost_power"], ...extra }
+    });
+
+  it("splits the house into the named devices and the rest", async () => {
+    const { root, text } = await render(withDevices({ style: "bar" }), SCENARIOS[0]);
+    expect(root.querySelectorAll(".wohin-seg:not(.rest)").length).toBe(1);
+    expect(root.querySelector(".wohin-seg.rest")).toBeTruthy();
+    expect(text).toContain("Rest");
+    expect(text).toContain("167 W");
+    expect(text).not.toContain("ghost");
+  });
+
+  it("shows an icon with a level for each device, dim when it is off", async () => {
+    const { root } = await render(withDevices({ style: "icons" }), SCENARIOS[0]);
+    expect(root.querySelectorAll(".dev").length).toBe(3);
+    expect(root.querySelectorAll(".dev.off").length).toBe(2);
+    expect(root.querySelectorAll(".dev ha-icon").length).toBe(3);
+  });
+
+  it("keeps the watts to itself when told", async () => {
+    const { text } = await render(withDevices({ values: false }), SCENARIOS[0]);
+    expect(text).not.toContain("167 W");
+  });
+
+  it("sums by room when asked", async () => {
+    const { text } = await render(withDevices({ group: "area", threshold: 0 }), SCENARIOS[0]);
+    expect(text).toContain("Büro");
+    expect(text).toContain("Keller");
+  });
+
+  it("does not say the house load twice", async () => {
+    const { root } = await render(withDevices(), SCENARIOS[0]);
+    // The head still names the period; it is the kilowatts that would repeat the ring.
+    expect(root.querySelector(".wohin .row-note")!.textContent).not.toContain("kW");
+    const other = await render(
+      baseConfig({ ...withDevices(), ring: { center: "autarky" } }),
+      SCENARIOS[0]
+    );
+    expect(other.root.querySelector(".wohin .row-note")!.textContent).toContain("kW");
+  });
+
+  it("draws nothing without a list", async () => {
+    const { root } = await render(baseConfig(), SCENARIOS[0]);
+    expect(root.querySelector(".wohin")).toBeNull();
+  });
+});
+
+describe("where the power goes, over time", () => {
+  const list = ["sensor.desk_power", "sensor.nas_power", "sensor.fridge_power", "sensor.kettle_power"];
+
+  it("shows the mean over the window, not the kettle of this second", async () => {
+    const { text } = await render(baseConfig({ devices: { list } }), SCENARIOS[0]);
+    expect(text).toContain("40 W");
+    expect(text).not.toContain("2,00 kW");
+    expect(text).toContain("\u00d8 15 min");
+  });
+
+  it("names the window it averages over", async () => {
+    const { text } = await render(baseConfig({ devices: { list, window: 30 } }), SCENARIOS[0]);
+    expect(text).toContain("\u00d8 30 min");
+  });
+
+  it("reads the day from the meters, and leaves out a device without one", async () => {
+    const { text } = await render(
+      baseConfig({
+        devices: {
+          list,
+          mode: "today",
+          energy: { "sensor.desk_power": "sensor.desk_energy", "sensor.nas_power": "sensor.nas_energy" }
+        }
+      }),
+      SCENARIOS[0]
+    );
+    expect(text).toContain("heute");
+    expect(text).toContain("1,4 kWh");
+    expect(text).toContain("0,5 kWh");
+    expect(text).not.toContain("fridge");
+    expect(text).not.toContain("167 W");
+  });
+});

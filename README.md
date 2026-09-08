@@ -123,6 +123,22 @@ Everything but the low and high is worked out from readings the card already hol
 
 ---
 
+## Where the power goes
+
+The ring says where the house's power comes from. This block says where it goes.
+
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/devices.png" alt="The house load split by device: a bar with icons, and an icon row with levels" width="700">
+
+Left, a bar: the house load now, split by device, with the part no device accounts for as *rest* — which is often the most interesting number on it. Right, the same as icons with a level each; what is off goes dim. Names and watts appear on tap.
+
+**You configure nothing.** Home Assistant's Energy dashboard already lists your devices with a live power sensor each; the editor's *Take what the Energy dashboard knows* button adopts them, names included. The card never searches your sensors on its own — that list holds phase readings, switches at 0.0 and a fitness tracker's watts per kilo, and none of those are devices.
+
+Two periods, one setting: **now**, averaged over a window (fifteen minutes by default) so a kettle does not light up as a hog, or **today**, read from each device's meter since midnight. Grouping by **room** sums the devices standing in one, from the device registry. Anything under a threshold folds into the rest, and at most a handful are named — both adjustable.
+
+Consumers are the house, and the house has no colour on this card. The block is told apart by brightness alone, so it stays quiet beside the sun, the battery and the grid.
+
+---
+
 ## Where the money comes from
 
 The card has no idea what you pay, so the money comes from sensors. There are two ways to give it to them.

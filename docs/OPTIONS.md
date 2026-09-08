@@ -234,3 +234,30 @@ power-origin-house-color: "#171a24"
 
 ---
 
+## Devices
+
+```yaml
+sections:
+  devices: true
+devices:
+  list: [sensor.heat_pump_power, sensor.dishwasher_power]   # live power sensors; the adopt button fills this
+  mode: now                      # now | today — today needs the meters the Energy dashboard knows
+  window: 15                     # minutes averaged for "now"
+  style: both                    # both | bar | icons
+  values: true                   # print the watts
+  group: device                  # device | area
+  limit: 5                       # how many are named
+  threshold: 25                  # watts below which a device folds into the rest
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `devices.list` | `[]` | The live power sensors, one per device. The editor's adopt button takes them from the Energy dashboard's device list. |
+| `devices.mode` | `now` | `now` averages each sensor over the window; `today` sums each device's meter since midnight. Offered only once meters are known. |
+| `devices.window` | `15` | Minutes the live readings are averaged over. |
+| `devices.style` | `both` | `both` a bar carrying icons, `bar` a plain bar, `icons` an icon per device with a level. |
+| `devices.values` | `true` | Print watts (or kWh) beside the names. |
+| `devices.group` | `device` | `area` sums devices by the room they stand in. |
+| `devices.limit` | `5` | How many devices get a name; the others fold into the rest. |
+| `devices.threshold` | `25` | Watts below which a device is not named. Shown for `now` only. |
+| `devices.names`, `devices.energy` | | Written by the adopt button: the dashboard's name and meter for each sensor. Data, not settings. |

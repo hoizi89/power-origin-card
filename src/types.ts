@@ -13,6 +13,10 @@ export interface HomeAssistant {
   themes?: unknown;
   callWS<T>(message: Record<string, unknown>): Promise<T>;
   callApi<T>(method: string, path: string): Promise<T>;
+  /** The registries the frontend carries, for the room a device stands in. */
+  entities?: Record<string, { area_id?: string | null; device_id?: string | null }>;
+  devices?: Record<string, { area_id?: string | null }>;
+  areas?: Record<string, { name: string }>;
 }
 
 export type RingCenter = "power" | "production" | "surplus" | "autarky";
@@ -99,6 +103,7 @@ export interface SectionToggles {
   chart?: boolean;
   battery?: boolean;
   today?: boolean;
+  devices?: boolean;
 }
 
 export interface RingOptions {
@@ -169,6 +174,31 @@ export interface BatteryOptions {
   extra?: BatteryExtra;
 }
 
+export type DevicesStyle = "icons" | "bar" | "both";
+export type DevicesGroup = "device" | "area";
+export type DevicesMode = "now" | "today";
+
+export interface DevicesOptions {
+  /** Live power sensors, one per device. */
+  list?: string[];
+  /** What the Energy dashboard calls each one, by entity. */
+  names?: Record<string, string>;
+  /** This minute, averaged over the window, or the day since midnight. */
+  mode?: DevicesMode;
+  /** Minutes the live reading is averaged over, so a kettle does not count. */
+  window?: number;
+  /** The meter behind each power sensor, by entity, for the day's total. */
+  energy?: Record<string, string>;
+  style?: DevicesStyle;
+  /** Print the watts beside the names. */
+  values?: boolean;
+  group?: DevicesGroup;
+  /** How many are named; the rest fold together. */
+  limit?: number;
+  /** Below this many watts a device is not worth a name. */
+  threshold?: number;
+}
+
 export interface TodayOptions {
   money?: boolean;
   /** A slim bar splitting the day's consumption by where it came from. */
@@ -197,6 +227,7 @@ export interface PowerOriginCardConfig {
   chart?: ChartOptions;
   battery?: BatteryOptions;
   today?: TodayOptions;
+  devices?: DevicesOptions;
   entities: PowerOriginEntities;
 }
 
@@ -208,6 +239,7 @@ export interface ResolvedConfig extends Required<Omit<PowerOriginCardConfig, "ti
   chart: Required<ChartOptions>;
   battery: Required<BatteryOptions>;
   today: Required<TodayOptions> & { stats_chosen: boolean };
+  devices: Required<DevicesOptions>;
 }
 
 export interface StatisticPoint {

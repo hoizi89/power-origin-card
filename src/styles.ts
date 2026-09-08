@@ -954,4 +954,92 @@ export const cardStyles = css`
     font-weight: 400;
     fill: var(--sst-muted);
   }
+
+  /* Where the power goes: the house split by device, in the house's own
+     colour. Brightness tells the segments apart; no hue is spent here. */
+  .wohin-bar {
+    display: flex;
+    gap: 2px;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--sst-track);
+    margin-top: 2px;
+  }
+  .wohin.both .wohin-bar {
+    height: 20px;
+  }
+  .wohin-seg {
+    position: relative;
+    background: var(--sst-ink);
+    transition: width 0.6s ease;
+  }
+  .wohin-seg.rest {
+    background: transparent;
+  }
+  .wohin-seg ha-icon {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 14px;
+    height: 14px;
+    --mdc-icon-size: 14px;
+    color: var(--ha-card-background, #1a1e2b);
+  }
+  .wohin-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 8px;
+    font-family: var(--sst-mono);
+    font-size: calc(10.5px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+  .wohin-keys b {
+    color: var(--sst-ink);
+    font-weight: 500;
+  }
+  .wohin-keys .rest {
+    opacity: 0.6;
+  }
+  .wohin-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+    margin-top: 6px;
+  }
+  .dev {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--sst-ink);
+    --mdc-icon-size: 20px;
+  }
+  .dev .lvl {
+    display: block;
+    width: 16px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--sst-track);
+    position: relative;
+    overflow: hidden;
+  }
+  .dev .lvl b {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: block;
+    background: var(--sst-ink);
+  }
+  .dev small {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+  .dev.off {
+    opacity: 0.32;
+  }
 `;

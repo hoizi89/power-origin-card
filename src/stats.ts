@@ -164,3 +164,59 @@ export function extremes(rows: StatisticPoint[]): { low: number; high: number } 
   }
   return low === undefined || high === undefined ? undefined : { low, high };
 }
+
+type Recent = Record<string, Array<{ mean?: number | null; change?: number | null }> | undefined>;
+const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+
+/**
+ * What each sensor averaged over the last few minutes, in its own unit. A
+ * device that draws for a while shows; a kettle that ran two minutes ago is
+ * mostly gone from a fifteen-minute mean, which is the point.
+ */
+export async function fetchRecentMeans(
+  hass: HomeAssistant,
+  ids: string[],
+  minutes: number,
+  now = new Date()
+): Promise<Record<string, number | undefined>> {
+  const wanted = ids.filter(Boolean);
+  if (wanted.length === 0) return {};
+  const response = await hass.callWS<Recent>({
+    type: "recorder/statistics_during_period",
+    start_time: new Date(now.getTime() - Math.max(1, minutes) * 60000).toISOString(),
+    end_time: now.toISOString(),
+    statistic_ids: wanted,
+    period: "5minute",
+    types: ["mean"]
+  });
+  const out: Record<string, number | undefined> = {};
+  for (const id of wanted) {
+    const means = (response?.[id] ?? []).map((row) => row.mean).filter(finite);
+    out[id] = means.length ? means.reduce((a, b) => a + b, 0) / means.length : undefined;
+  }
+  return out;
+}
+
+/** How much each meter grew since midnight, in its own unit. */
+export async function fetchTodayChange(
+  hass: HomeAssistant,
+  ids: string[],
+  now = new Date()
+): Promise<Record<string, number | undefined>> {
+  const wanted = ids.filter(Boolean);
+  if (wanted.length === 0) return {};
+  const response = await hass.callWS<Recent>({
+    type: "recorder/statistics_during_period",
+    start_time: startOfToday(now).toISOString(),
+    end_time: now.toISOString(),
+    statistic_ids: wanted,
+    period: "day",
+    types: ["change"]
+  });
+  const out: Record<string, number | undefined> = {};
+  for (const id of wanted) {
+    const changes = (response?.[id] ?? []).map((row) => row.change).filter(finite);
+    out[id] = changes.length ? changes.reduce((a, b) => a + b, 0) : undefined;
+  }
+  return out;
+}

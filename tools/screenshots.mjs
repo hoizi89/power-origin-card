@@ -143,6 +143,26 @@ const page = (body, width) => `<title>0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<script>
+  /* Home Assistant provides ha-icon; the capture page stands in for it with
+     the same Material Design icons, fetched by name. */
+  customElements.define("ha-icon", class extends HTMLElement {
+    static get observedAttributes() { return ["icon"]; }
+    attributeChangedCallback() { this.load(); }
+    connectedCallback() { this.load(); }
+    async load() {
+      const name = (this.getAttribute("icon") || "").replace(/^mdi:/, "");
+      if (!name || this.dataset.loaded === name) return;
+      this.dataset.loaded = name;
+      const r = await fetch("https://cdn.jsdelivr.net/npm/@mdi/svg@7.4.47/svg/" + name + ".svg");
+      if (!r.ok) return;
+      this.innerHTML = await r.text();
+      const svg = this.querySelector("svg");
+      if (svg) { svg.style.width = "var(--mdc-icon-size, 24px)"; svg.style.height = "var(--mdc-icon-size, 24px)"; svg.style.fill = "currentColor"; svg.style.display = "block"; }
+      this.style.display = "inline-block";
+    }
+  });
+</script>
 <style>
   :root {
     color-scheme: dark;
@@ -262,14 +282,32 @@ const shots = {
       today: ${JSON.stringify(full)}
     }, 'MIDDAY', false);`
   },
-  swing: {
-    width: 300,
-    body: `place(stage, {
-          title: '', chip: 'never',
-          sections: { ring: true, chart: false, battery: false, today: false },
-          ring: { center: 'power', meter: true, meter_shows: 'grid',
-                  meter_today: true, facts: 'none', size: 'm' }
-        }, 'MIDDAY', false);`
+  devices: {
+    width: 860,
+    body: `const DEV = [
+      ["sensor.wp_power", "Wärmepumpe", 1840], ["sensor.dish_power", "Geschirrspüler", 1120],
+      ["sensor.desk_power", "Büro Schreibtisch", 167], ["sensor.nas_power", "NAS", 20],
+      ["sensor.lights_power", "Alle Lichter", 12], ["sensor.wash_power", "Waschmaschine", 0],
+      ["sensor.fridge_power", "Kühlschrank", 0]
+    ];
+    const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(2, 400px)"; row.style.gap = "16px";
+    stage.append(row);
+    for (const style of ["both", "icons"]) {
+      const cell = document.createElement("div"); row.append(cell);
+      const ids = freshIds();
+      const el = document.createElement("power-origin-card");
+      el.setConfig({
+        type: "custom:power-origin-card", title: "", chip: "never",
+        entities: { ...ids },
+        sections: { ring: false, chart: false, battery: false, today: false, devices: true },
+        devices: { list: DEV.map((d) => d[0]), names: Object.fromEntries(DEV.map((d) => [d[0], d[1]])), style, values: style === "both" }
+      });
+      const h = hass(ids, { ...MIDDAY, house: 3420 }, false);
+      for (const [id, , w] of DEV) h.states[id] = entity(id, w, "W", "power");
+      el.hass = h;
+      cell.append(el);
+    }`
   },
   modes: {
     width: 820,

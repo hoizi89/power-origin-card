@@ -12,6 +12,8 @@ import {
   type Flow
 } from "./flow";
 import { pickFromEnergy, type EnergyPrefs } from "./energy";
+import { byArea, iconFor, rankDevices, type DeviceReading } from "./devices";
+import { fetchRecentMeans, fetchTodayChange } from "./stats";
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
@@ -72,6 +74,8 @@ export class PowerOriginCard extends LitElement {
   private _socRange?: { low: number; high: number };
   private _error?: string;
   private _lastFetch = 0;
+  private _deviceMeans?: Record<string, number | undefined>;
+  private _deviceToday?: Record<string, number | undefined>;
   private _pending = false;
   private _yearPeak?: number;
   private _peakFetched = 0;
@@ -149,11 +153,13 @@ export class PowerOriginCard extends LitElement {
         config.ring.meter_second_scale === 0 ||
         config.ring.meter_style === "roof" ||
         config.ring.meter_second === "roof");
+    const devicesNeed = config.sections.devices && config.devices.list.length > 0;
     if (
       !config.sections.chart &&
       !config.battery.runtime &&
       !meterNeedsScale &&
-      !this._needsPeak()
+      !this._needsPeak() &&
+      !devicesNeed
     ) {
       return;
     }
@@ -213,6 +219,7 @@ export class PowerOriginCard extends LitElement {
           : undefined;
       await this._fetchLastWeek(hass, solarId, houseId, divisor);
       await this._fetchYearPeak(hass, solarId, houseId, divisor);
+      await this._fetchDevices(hass, config);
       this._error = undefined;
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
@@ -330,6 +337,7 @@ export class PowerOriginCard extends LitElement {
         ${config.sections.chart ? this._renderChart(locale) : nothing}
         ${config.sections.battery ? this._renderBattery(locale) : nothing}
         ${config.sections.today ? this._renderToday(flow, locale) : nothing}
+        ${config.sections.devices ? this._renderDevices(locale) : nothing}
       </ha-card>
     `;
   }
@@ -1606,6 +1614,162 @@ export class PowerOriginCard extends LitElement {
     if (parts.length === 0) return nothing;
     const [first, ...rest] = parts;
     return html`${first}${rest.length ? html`<span class="dim"> · ${rest.join(" · ")}</span>` : nothing}`;
+  }
+
+  /** The devices' recent means, or their meters' growth since midnight. */
+  private async _fetchDevices(hass: HomeAssistant, config: ResolvedConfig): Promise<void> {
+    if (!config.sections.devices || config.devices.list.length === 0) return;
+    if (config.devices.mode === "today") {
+      this._deviceToday = await fetchTodayChange(hass, Object.values(config.devices.energy));
+      return;
+    }
+    this._deviceMeans = await fetchRecentMeans(
+      hass,
+      [...config.devices.list, config.entities.house],
+      config.devices.window
+    );
+  }
+
+  /**
+   * Where the house's power goes this minute. The ring says where it comes
+   * from; this is the other half of the same question, in the same shape as
+   * the day's origin bar. Consumers are the house, so they wear no colour.
+   */
+  private _renderDevices(locale: string) {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const ids = config.devices.list;
+    if (ids.length === 0) return nothing;
+
+    const wattsOf = (id: string | undefined): number | undefined => {
+      if (!id) return undefined;
+      const state = hass.states?.[id];
+      const value = numberOf(state);
+      if (value === undefined) return undefined;
+      return state?.attributes?.unit_of_measurement === "kW" ? value * 1000 : value;
+    };
+    const areaOf = (id: string): string | undefined => {
+      const entry = hass.entities?.[id];
+      const areaId =
+        entry?.area_id ?? (entry?.device_id ? hass.devices?.[entry.device_id]?.area_id : undefined);
+      return areaId ? hass.areas?.[areaId]?.name : undefined;
+    };
+
+    const today = config.devices.mode === "today";
+    const unitOfId = (id: string | undefined) =>
+      id ? (hass.states?.[id]?.attributes?.unit_of_measurement as string | undefined) : undefined;
+    // The mean over the window, and the live reading until the recorder answers.
+    const meanWatts = (id: string | undefined): number | undefined => {
+      if (!id) return undefined;
+      const mean = this._deviceMeans?.[id];
+      if (mean === undefined) return wattsOf(id);
+      return unitOfId(id) === "kW" ? mean * 1000 : mean;
+    };
+    const kwhOf = (id: string): number | undefined => {
+      const meter = config.devices.energy[id];
+      const grown = meter ? this._deviceToday?.[meter] : undefined;
+      if (grown === undefined) return undefined;
+      return unitOfId(meter) === "Wh" ? grown / 1000 : grown;
+    };
+
+    let readings: DeviceReading[] = ids.map((id) => {
+      const name =
+        config.devices.names[id] ?? (hass.states?.[id]?.attributes?.friendly_name as string) ?? id;
+      const watts = today ? kwhOf(id) : meanWatts(id);
+      return { id, name, watts, icon: iconFor(name, id), area: areaOf(id) };
+    });
+    const rooms = config.devices.group === "area";
+    if (rooms) readings = byArea(readings, localize("devices.nowhere", locale));
+
+    const houseToday = numberOf(stateOf(hass, config.entities.house_today));
+    const house = today
+      ? houseToday === undefined ? undefined : unitOfId(config.entities.house_today) === "Wh" ? houseToday / 1000 : houseToday
+      : meanWatts(config.entities.house);
+    const ranking = rankDevices(readings, house, {
+      limit: config.devices.limit,
+      // A day is measured in kilowatt hours; a tenth of one is not worth a name.
+      threshold: today ? 0.1 : config.devices.threshold
+    });
+    if (ranking.named.length === 0 && ranking.small.length === 0) return nothing;
+
+    const style = config.devices.style;
+    const values = config.devices.values;
+    const w = (x: number) =>
+      today
+        ? `${formatEnergy(x, locale)} kWh`
+        : x >= 1000
+          ? `${formatPower(x / 1000, locale)} kW`
+          : `${formatNumber(x, locale, 0)} W`;
+    const period = today
+      ? localize("devices.today", locale)
+      : `\u00d8 ${formatNumber(config.devices.window, locale, 0)} min`;
+    const tap = (r: DeviceReading, content: unknown) => (rooms ? content : this._linked(r.id, content));
+    // The ring's centre is the house load already; the head repeats nothing.
+    const houseShown = house !== undefined && !(config.sections.ring && config.ring.center === "power");
+
+    const bar = style !== "icons" && house
+      ? html`<div class="wohin-bar">
+          ${ranking.named.map(
+            (r, i) => html`<span class="wohin-seg"
+              style="width: ${((100 * (r.watts ?? 0)) / house).toFixed(2)}%; opacity: ${(1 - i * 0.15).toFixed(2)}"
+              title="${r.name} ${w(r.watts ?? 0)}"
+              >${style === "both" && (r.watts ?? 0) / house > 0.06
+                ? html`<ha-icon icon="${r.icon}"></ha-icon>`
+                : nothing}</span
+            >`
+          )}
+          ${ranking.rest
+            ? html`<span class="wohin-seg rest" style="width: ${((100 * ranking.rest) / house).toFixed(2)}%"></span>`
+            : nothing}
+        </div>`
+      : nothing;
+
+    const keys = style !== "icons"
+      ? html`<div class="wohin-keys">
+          ${ranking.named.map((r) =>
+            tap(r, html`<span>${r.name}${values ? html` <b>${w(r.watts ?? 0)}</b>` : nothing}</span>`)
+          )}
+          ${ranking.rest
+            ? html`<span class="rest">${localize("devices.rest", locale)}${values
+                ? html` <b>${w(ranking.rest)}</b>`
+                : nothing}</span>`
+            : nothing}
+        </div>`
+      : nothing;
+
+    const top = ranking.named[0]?.watts || 1;
+    const icons = style === "icons"
+      ? html`<div class="wohin-icons">
+          ${[...ranking.named, ...ranking.small].map((r) => {
+            const on = (r.watts ?? 0) >= (today ? 0.1 : config.devices.threshold);
+            return tap(
+              r,
+              html`<span class="dev ${on ? "" : "off"}" title="${r.name} ${w(r.watts ?? 0)}"
+                ><ha-icon icon="${r.icon}"></ha-icon
+                ><i class="lvl"><b style="height: ${Math.round((100 * (r.watts ?? 0)) / top)}%"></b></i
+                >${values && on ? html`<small>${w(r.watts ?? 0)}</small>` : nothing}</span
+              >`
+            );
+          })}
+        </div>`
+      : nothing;
+
+    return html`
+      <div class="row wohin ${style}">
+        <div class="row-head">
+          <span class="row-title">${localize("devices.title", locale)}</span>
+          <span class="row-note"
+            ><span class="dim">${period}</span>
+            ${houseShown
+              ? today
+                ? html`${formatEnergy(house, locale)} <span class="unit">kWh</span>`
+                : html`${formatPower(house / 1000, locale)} <span class="unit">kW</span>`
+              : nothing}</span
+          >
+        </div>
+        ${bar}${keys}${icons}
+      </div>
+    `;
   }
 
   private _renderToday(flow: Flow, locale: string) {

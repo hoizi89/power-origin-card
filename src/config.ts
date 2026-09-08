@@ -19,7 +19,8 @@ export const DEFAULTS = {
   battery_reserve: 0,
   battery_invert: false,
   grid_invert: false,
-  sections: { ring: true, chart: true, battery: true, today: true },
+  sections: { ring: true, chart: true, battery: true, today: true,
+    devices: true },
   ring: {
     center: "power" as const,
     center_dark: "power" as const,
@@ -71,6 +72,18 @@ export const DEFAULTS = {
     capacity: 0,
     reserve: 0,
     extra: "none" as const
+  },
+  devices: {
+    list: [] as string[],
+    names: {} as Record<string, string>,
+    mode: "now" as const,
+    window: 15,
+    energy: {} as Record<string, string>,
+    style: "both" as const,
+    values: true,
+    group: "device" as const,
+    limit: 5,
+    threshold: 25
   },
   today: {
     money: true,
@@ -188,6 +201,18 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       ...config.battery,
       capacity: config.battery?.capacity ?? config.battery_capacity ?? DEFAULTS.battery.capacity,
       reserve: config.battery?.reserve ?? config.battery_reserve ?? DEFAULTS.battery.reserve
+    },
+    devices: {
+      list: config.devices?.list ?? DEFAULTS.devices.list,
+      names: { ...DEFAULTS.devices.names, ...config.devices?.names },
+      mode: config.devices?.mode ?? DEFAULTS.devices.mode,
+      window: config.devices?.window ?? DEFAULTS.devices.window,
+      energy: { ...DEFAULTS.devices.energy, ...config.devices?.energy },
+      style: config.devices?.style ?? DEFAULTS.devices.style,
+      values: config.devices?.values ?? DEFAULTS.devices.values,
+      group: config.devices?.group ?? DEFAULTS.devices.group,
+      limit: config.devices?.limit ?? DEFAULTS.devices.limit,
+      threshold: config.devices?.threshold ?? DEFAULTS.devices.threshold
     },
     today: {
       money: config.today?.money ?? DEFAULTS.today.money,
@@ -574,7 +599,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             { name: "ring", selector: { boolean: {} } },
             { name: "chart", selector: { boolean: {} } },
             { name: "battery", selector: { boolean: {} } },
-            { name: "today", selector: { boolean: {} } }
+            { name: "today", selector: { boolean: {} } },
+            { name: "devices", selector: { boolean: {} } }
           ]
         }
       ]
@@ -828,6 +854,89 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     }
     ),
     ...only(
+      (resolved) => resolved.sections.devices,
+      {
+        type: "expandable",
+        name: "devices",
+        title: t("editor.devices_settings"),
+        icon: "mdi:power-plug-outline",
+        schema: [
+          {
+            name: "list",
+            selector: {
+              entity: { multiple: true, filter: { domain: "sensor", device_class: "power" } }
+            }
+          },
+          // The day's total needs the meters, which only the dashboard knows;
+          // until they are known there is one period, and no choice to offer.
+          ...only(
+            (resolved) =>
+              resolved.devices.list.length > 0 && Object.keys(resolved.devices.energy).length > 0,
+            {
+              name: "mode",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "now", label: t("editor.mode_now") },
+                    { value: "today", label: t("editor.mode_today") }
+                  ]
+                }
+              }
+            }
+          ),
+          ...only(
+            (resolved) => resolved.devices.list.length > 0 && resolved.devices.mode === "now",
+            { name: "window", selector: { number: { min: 1, max: 180, mode: "box" } } }
+          ),
+          ...only(
+            (resolved) => resolved.devices.list.length > 0,
+            {
+              name: "style",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "both", label: t("editor.devices_both") },
+                    { value: "bar", label: t("editor.devices_bar") },
+                    { value: "icons", label: t("editor.devices_icons") }
+                  ]
+                }
+              }
+            },
+            {
+              type: "grid",
+              schema: [
+                { name: "values", selector: { boolean: {} } },
+                {
+                  name: "group",
+                  selector: {
+                    select: {
+                      mode: "dropdown",
+                      options: [
+                        { value: "device", label: t("editor.group_device") },
+                        { value: "area", label: t("editor.group_area") }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              type: "grid",
+              schema: [
+                { name: "limit", selector: { number: { min: 1, max: 12, mode: "box" } } },
+                ...only((resolved) => resolved.devices.mode === "now", {
+                  name: "threshold",
+                  selector: { number: { min: 0, max: 2000, step: 5, mode: "box" } }
+                })
+              ]
+            }
+          )
+        ]
+      }
+    ),
+    ...only(
       (resolved) => resolved.sections.today,
       {
       type: "expandable",
@@ -920,6 +1029,14 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     layout: t("editor.layout"),
     caption: t("editor.caption"),
     columns: t("editor.columns"),
+    devices: t("editor.section_devices"),
+    list: t("editor.list"),
+    mode: t("editor.mode"),
+    window: t("editor.window"),
+    values: t("editor.values"),
+    group: t("editor.group"),
+    limit: t("editor.limit"),
+    threshold: t("editor.threshold"),
     meter_scale: t("editor.meter_scale"),
     meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
@@ -985,6 +1102,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),
     meter_marks: t("editor.help_meter_marks"),
+    list: t("editor.help_list"),
+    mode: t("editor.help_mode"),
+    window: t("editor.help_window"),
+    group: t("editor.help_group"),
+    threshold: t("editor.help_threshold"),
     meter_top: t("editor.help_meter_top"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
