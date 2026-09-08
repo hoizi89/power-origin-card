@@ -1306,12 +1306,13 @@ export class PowerOriginCard extends LitElement {
           ? "fill-grid"
           : "fill-leaf";
 
+    const extra = this._batteryExtra(locale);
+
     return html`
       <div class="row">
         <div class="row-head">
           <span class="row-title"
-            >${localize("battery.title", locale)}${config.battery.percent &&
-            config.battery.extra !== "none"
+            >${localize("battery.title", locale)}${config.battery.percent && extra
               ? html`<span class="row-pct"
                   >${this._linked(
                     config.entities.battery_soc,
@@ -1327,7 +1328,7 @@ export class PowerOriginCard extends LitElement {
               >`
             : nothing}
         </div>
-        ${this._renderBatterySvg(soc, tone, locale)}
+        ${this._renderBatterySvg(soc, tone, locale, extra)}
         <div class="row-note">${this._renderBatteryNote(view, locale)}</div>
       </div>
     `;
@@ -1363,7 +1364,7 @@ export class PowerOriginCard extends LitElement {
         const price = numberOf(stateOf(hass, config.entities.price_import));
         if (given === undefined || price === undefined) return undefined;
         return {
-          value: formatMoney(given * price, locale),
+          value: `${formatMoney(given * price, locale)} \u20ac`,
           label: localize("battery.saved", locale)
         };
       }
@@ -1379,16 +1380,19 @@ export class PowerOriginCard extends LitElement {
     }
   }
 
-  private _renderBatterySvg(soc: number, tone: string, locale: string) {
+  private _renderBatterySvg(
+    soc: number,
+    tone: string,
+    locale: string,
+    extra: { value: string; label: string } | undefined
+  ) {
     const config = this._config as ResolvedConfig;
     const bare = config.battery.style === "bar";
-
-    const extra = this._batteryExtra(locale);
 
     // Without a casing the bar may use the width the cap would have taken.
     // Whatever stands to the right takes its room from the bar, and only
     // one thing ever does.
-    const aside = extra ? 112 : config.battery.percent ? 84 : 0;
+    const aside = extra ? 100 : config.battery.percent ? 66 : 0;
     const shellW = (bare ? 259 : 248) - aside;
     const innerStart = bare ? 0 : 6;
     const innerWidth = bare ? shellW : shellW - 10;

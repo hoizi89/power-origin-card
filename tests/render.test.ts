@@ -788,3 +788,42 @@ describe("the three priced and relative columns", () => {
     expect(text).toContain("Autarkie");
   });
 });
+
+describe("the charge appears once", () => {
+  const percents = (root: ShadowRoot) =>
+    (root.textContent ?? "").match(/100s*%/g)?.length ?? 0;
+
+  it("stands beside the bar when nothing else does", async () => {
+    const { root } = await render(baseConfig({ battery_capacity: 13100 }), SCENARIOS[0]);
+    expect(root.querySelector(".bat-pct")).toBeTruthy();
+    expect(root.querySelector(".row-pct")).toBeNull();
+  });
+
+  it("moves to the heading when a second figure takes the right", async () => {
+    const { root } = await render(
+      baseConfig({ battery_capacity: 13100, battery: { extra: "given" } }),
+      SCENARIOS[0]
+    );
+    expect(root.querySelector(".row-pct")).toBeTruthy();
+    expect(root.querySelector(".bat-pct")).toBeNull();
+  });
+
+  it("does not appear twice when the second figure cannot be worked out", async () => {
+    // The setting is on, the price is missing: the right stays free, so the
+    // charge must stay there rather than also climbing into the heading.
+    const config = baseConfig({ battery_capacity: 13100, battery: { extra: "saved" } });
+    delete config.entities.price_import;
+    const { root } = await render(config, SCENARIOS[0]);
+    expect(root.querySelector(".row-pct")).toBeNull();
+    expect(root.querySelector(".bat-pct")).toBeTruthy();
+  });
+
+  it("carries its currency", async () => {
+    const { text } = await render(
+      baseConfig({ battery_capacity: 13100, battery: { extra: "saved" } }),
+      SCENARIOS[0]
+    );
+    // 4.1 kWh out at 29 cents.
+    expect(text).toContain("1,19 €");
+  });
+});
