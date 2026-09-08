@@ -668,8 +668,10 @@ describe("which end of the column is which", () => {
   it("marks both ends, and makes room for the marks", async () => {
     const { root } = await render(baseConfig({ ring: { meter: true } }), SCENARIOS[0]);
     expect(root.querySelectorAll(".meter-mark").length).toBe(2);
-    // The band is added to the window, never taken out of the track.
-    expect(root.querySelector("svg.meter")!.getAttribute("viewBox")).toBe("-8 -18 104 236");
+    // The band is added to the window, never taken out of the track. The width
+    // must not move with it: the column is drawn to a fixed one, so a wider box
+    // shrinks everything in it and the two columns stop matching.
+    expect(root.querySelector("svg.meter")!.getAttribute("viewBox")).toBe("0 -18 88 236");
   });
 
   it("gives the height back when they are switched off", async () => {

@@ -941,8 +941,10 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
+      <!-- The box keeps its width: it is drawn to a fixed one, so widening it
+           would shrink the column instead of making room. -->
       <svg class="meter" role="img" aria-label="${label}"
-           viewBox="${config.ring.meter_marks ? `-8 -18 104 ${METER_HEIGHT + 36}` : `0 0 88 ${METER_HEIGHT}`}">
+           viewBox="${config.ring.meter_marks ? `0 -18 88 ${METER_HEIGHT + 36}` : `0 0 88 ${METER_HEIGHT}`}">
         ${config.ring.meter_marks
           ? svg`
             <path class="meter-mark" d="M38,-6 L44,-13 L50,-6"></path>

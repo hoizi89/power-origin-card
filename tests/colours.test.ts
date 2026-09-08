@@ -29,6 +29,8 @@ describe("one participant, one colour", () => {
       ".meter-band.grid", // the column: export, continuous
       ".meter-on.import", // the column: import, stepped
       ".meter-band.import", // the column: import, continuous
+      ".meter-swing.up", // the column: how far it swung out today
+      ".meter-swing.down", // and how far in
       ".day-band.grid", // the day strip
       ".clock-hour.grid" // the clock face
     ]) {

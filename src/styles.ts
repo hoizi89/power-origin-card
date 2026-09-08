@@ -861,7 +861,9 @@ export const cardStyles = css`
     opacity: 0.16;
   }
 
-  .meter-swing.up { fill: var(--sst-sun); }
+  /* Both ways across the meter, so both wear the grid. The direction is the
+     half of the track it sits in. */
+  .meter-swing.up { fill: var(--sst-grid); }
   .meter-swing.down { fill: var(--sst-grid); }
 
   .clock-mark {
