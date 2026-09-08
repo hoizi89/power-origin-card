@@ -143,7 +143,9 @@ export class PowerOriginCard extends LitElement {
     const hass = this._hass;
     const config = this._config;
     if (!hass || !config || this._pending || !this.isConnected) return;
-    const meterNeedsScale = config.ring.meter && config.ring.meter_scale === 0;
+    const meterNeedsScale =
+      config.ring.meter &&
+      (config.ring.meter_scale === 0 || config.ring.meter_second_scale === 0);
     if (
       !config.sections.chart &&
       !config.battery.runtime &&
@@ -900,6 +902,18 @@ export class PowerOriginCard extends LitElement {
     // battery without the two saying the same thing twice.
     const scope = override ? config.ring.meter_second_scope : config.ring.meter_scope;
     const withBattery = scope === "all";
+
+    // Every setting that shapes a needle belongs to the needle it shapes, and
+    // the two columns are two needles.
+    const second = Boolean(override);
+    const scale = second ? config.ring.meter_second_scale : config.ring.meter_scale;
+    const scaleDraw = second
+      ? config.ring.meter_second_scale_draw
+      : config.ring.meter_scale_draw;
+    const target = second ? config.ring.meter_second_target : config.ring.meter_target;
+    const steps = second ? config.ring.meter_second_steps : config.ring.meter_steps;
+    const marks = second ? config.ring.meter_second_marks : config.ring.meter_marks;
+    const extremes = second ? config.ring.meter_second_today : config.ring.meter_today;
     const meter = meterGeometry(
       {
         toBattery: withBattery ? flow.toBattery : 0,
@@ -907,12 +921,12 @@ export class PowerOriginCard extends LitElement {
         fromGrid: flow.fromGrid,
         fromBattery: withBattery ? flow.fromBattery : 0
       },
-      config.ring.meter_scale,
+      scale,
       this._yearPeak ?? this._series?.solarPeak ?? 0,
-      config.ring.meter_target,
-      config.ring.meter_scale_draw,
+      target,
+      scaleDraw,
       0,
-      config.ring.meter_steps
+      steps
     );
 
     const label = `${localize("flow.to_grid", locale)} ${formatPower(flow.toGrid, locale)} kW, ` +
@@ -954,8 +968,8 @@ export class PowerOriginCard extends LitElement {
       <!-- The box keeps its width: it is drawn to a fixed one, so widening it
            would shrink the column instead of making room. -->
       <svg class="meter" role="img" aria-label="${label}"
-           viewBox="${config.ring.meter_marks ? `0 -18 88 ${METER_HEIGHT + 36}` : `0 0 88 ${METER_HEIGHT}`}">
-        ${config.ring.meter_marks
+           viewBox="${marks ? `0 -18 88 ${METER_HEIGHT + 36}` : `0 0 88 ${METER_HEIGHT}`}">
+        ${marks
           ? svg`
             <path class="meter-mark" d="M38,-6 L44,-13 L50,-6"></path>
             <path class="meter-mark" d="M38,${METER_HEIGHT + 6} L44,${METER_HEIGHT + 13} L50,${METER_HEIGHT + 6}"></path>`
@@ -1017,7 +1031,7 @@ export class PowerOriginCard extends LitElement {
                   </g>`
                 )}`
         }
-        ${config.ring.meter_today && this._swing
+        ${extremes && this._swing
           ? svg`
             ${this._swing.up > 0.05
               ? svg`<rect class="meter-swing up" x="4"

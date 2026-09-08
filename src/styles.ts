@@ -858,7 +858,7 @@ export const cardStyles = css`
   }
 
   .meter-swing {
-    opacity: 0.16;
+    opacity: 0.32;
   }
 
   /* Both ways across the meter, so both wear the grid. The direction is the

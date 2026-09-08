@@ -127,6 +127,7 @@ today:
 | `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Only `grid` has a choice, so this is shown only then. |
 | `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
 | `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |
+| `ring.meter_second_scale` | `0` | The right column has its own of every setting that shapes a needle: `meter_second_scale`, `meter_second_scale_draw`, `meter_second_target`, `meter_second_steps`, `meter_second_marks`, `meter_second_today`. Each means for the right column what the one without `second` means for the left. |
 | `ring.meter_second` | | Written from the two fields above; kept so a card configured before the split still reads. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |
 | `ring.rings` | `single` | One ring, two rings, or the clock. |

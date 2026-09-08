@@ -36,6 +36,12 @@ export const DEFAULTS = {
     meter_style: "blocks" as const,
     meter_today: false,
     meter_marks: true,
+    meter_second_scale: 0,
+    meter_second_scale_draw: 0,
+    meter_second_target: 0,
+    meter_second_steps: 6,
+    meter_second_marks: true,
+    meter_second_today: false,
     meter_second_shows: "day" as const,
     meter_second_style: "blocks" as const,
     meter_second: "none" as const,
@@ -270,22 +276,205 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     resolved.ring.meter &&
     (resolved.ring.meter_style === "blocks" || resolved.ring.meter_style === "bar");
 
-  /**
-   * The shaping settings belong to the ring, not to one side of it, so they
-   * can act as soon as either column is a needle.
-   */
-  const needle = (resolved: ResolvedConfig) =>
+  /** The right column is a needle of its own, with settings of its own. */
+  const secondGauge = (resolved: ResolvedConfig) =>
     resolved.ring.meter &&
-    [resolved.ring.meter_style, resolved.ring.meter_second].some(
-      (style) => style === "blocks" || style === "bar"
-    );
+    (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar");
 
   const scaled = (resolved: ResolvedConfig) =>
-    needle(resolved) ||
-    (resolved.ring.meter &&
-      [resolved.ring.meter_style, resolved.ring.meter_second].some(
-        (style) => style === "balance"
-      ));
+    gauge(resolved) || resolved.ring.meter_style === "balance";
+
+  const secondScaled = (resolved: ResolvedConfig) =>
+    secondGauge(resolved) ||
+    (resolved.ring.meter && resolved.ring.meter_second === "balance");
+
+  const leftColumn = [
+              ...only((resolved) => resolved.ring.meter, {
+                name: "meter_shows",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "grid", label: t("editor.shows_grid") },
+                      { value: "day", label: t("editor.meter_day") },
+                      { value: "balance", label: t("editor.meter_balance") },
+                      { value: "money", label: t("editor.meter_money") },
+                      { value: "load", label: t("editor.meter_load") },
+                      { value: "autarky", label: t("editor.meter_autarky") },
+                      { value: "roof", label: t("editor.meter_roof") }
+                    ]
+                  }
+                }
+              }),
+              ...only((resolved) => resolved.ring.meter && resolved.ring.meter_shows === "grid", {
+                name: "meter_style",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "blocks", label: t("editor.meter_blocks") },
+                      { value: "bar", label: t("editor.meter_bar") }
+                    ]
+                  }
+                }
+              }),
+              ...only(gauge, {
+                name: "meter_scope",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "grid", label: t("editor.meter_scope_grid") },
+                      { value: "all", label: t("editor.meter_scope_all") }
+                    ]
+                  }
+                }
+              })
+  ];
+
+  const rightColumn = [
+              ...only((resolved) => resolved.ring.meter, {
+                name: "meter_second_shows",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "grid", label: t("editor.shows_grid") },
+                      { value: "day", label: t("editor.meter_day") },
+                      { value: "balance", label: t("editor.meter_balance") },
+                      { value: "money", label: t("editor.meter_money") },
+                      { value: "load", label: t("editor.meter_load") },
+                      { value: "autarky", label: t("editor.meter_autarky") },
+                      { value: "roof", label: t("editor.meter_roof") }
+                    ]
+                  }
+                }
+              }),
+              ...only((resolved) => resolved.ring.meter_second_shows === "grid", {
+                name: "meter_second_style",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "blocks", label: t("editor.meter_blocks") },
+                      { value: "bar", label: t("editor.meter_bar") }
+                    ]
+                  }
+                }
+              }),
+
+              ...only(
+                (resolved) =>
+                  resolved.ring.meter &&
+                  (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
+                {
+                  name: "meter_second_scope",
+                  selector: {
+                    select: {
+                      mode: "dropdown",
+                      options: [
+                        { value: "grid", label: t("editor.meter_scope_grid") },
+                        { value: "all", label: t("editor.meter_scope_all") }
+                      ]
+                    }
+                  }
+                }
+              ),          ...only(scaled, {
+                type: "grid",
+                schema: [
+                  {
+                    name: "meter_scale",
+                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+                  },
+                  ...only(gauge, {
+                    name: "meter_scale_draw",
+                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+                  })
+                ]
+              }),
+              ...only(gauge, {
+                type: "grid",
+                schema: [
+                  {
+                    name: "meter_target",
+                    selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
+                  }
+                ]
+              }),
+              ...only(
+                (resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks",
+                {
+                  name: "meter_steps",
+                  selector: { number: { min: 3, max: 14, mode: "box" } }
+                }
+              ),
+              ...only(gauge, {
+                type: "grid",
+                schema: [
+                  { name: "meter_marks", selector: { boolean: {} } },
+                  { name: "meter_today", selector: { boolean: {} } }
+                ]
+              }),
+              ...only(secondScaled, {
+                type: "grid",
+                schema: [
+                  {
+                    name: "meter_second_scale",
+                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+                  },
+                  ...only(secondGauge, {
+                    name: "meter_second_scale_draw",
+                    selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
+                  })
+                ]
+              }),
+              ...only(secondGauge, {
+                type: "grid",
+                schema: [
+                  {
+                    name: "meter_second_target",
+                    selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
+                  }
+                ]
+              }),
+              ...only(
+                (resolved) => resolved.ring.meter && resolved.ring.meter_second === "blocks",
+                {
+                  name: "meter_second_steps",
+                  selector: { number: { min: 3, max: 14, mode: "box" } }
+                }
+              ),
+              ...only(secondGauge, {
+                type: "grid",
+                schema: [
+                  { name: "meter_second_marks", selector: { boolean: {} } },
+                  { name: "meter_second_today", selector: { boolean: {} } }
+                ]
+              })
+  ];
+
+  /*
+   * With two columns each gets a section of its own. The title carries the
+   * side, so every field inside can say plainly what it does instead of
+   * repeating left or right on each line.
+   */
+  const paired = !config || config.ring.columns === "two";
+  const columnSections = paired
+    ? [
+        {
+          type: "expandable",
+          title: t("editor.column_left"),
+          icon: "mdi:format-horizontal-align-left",
+          schema: leftColumn
+        },
+        {
+          type: "expandable",
+          title: t("editor.column_right"),
+          icon: "mdi:format-horizontal-align-right",
+          schema: rightColumn
+        }
+      ]
+    : leftColumn;
 
   const schema = [
     {
@@ -511,134 +700,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           },
-          ...only((resolved) => resolved.ring.meter, {
-            name: "meter_shows",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "grid", label: t("editor.shows_grid") },
-                  { value: "day", label: t("editor.meter_day") },
-                  { value: "balance", label: t("editor.meter_balance") },
-                  { value: "money", label: t("editor.meter_money") },
-                  { value: "load", label: t("editor.meter_load") },
-                  { value: "autarky", label: t("editor.meter_autarky") },
-                  { value: "roof", label: t("editor.meter_roof") }
-                ]
-              }
-            }
-          }),
-          ...only((resolved) => resolved.ring.meter && resolved.ring.meter_shows === "grid", {
-            name: "meter_style",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "blocks", label: t("editor.meter_blocks") },
-                  { value: "bar", label: t("editor.meter_bar") }
-                ]
-              }
-            }
-          }),
-          ...only(gauge, {
-            name: "meter_scope",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "grid", label: t("editor.meter_scope_grid") },
-                  { value: "all", label: t("editor.meter_scope_all") }
-                ]
-              }
-            }
-          }),
-          ...only((resolved) => resolved.ring.columns === "two", {
-            name: "meter_second_shows",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "grid", label: t("editor.shows_grid") },
-                  { value: "day", label: t("editor.meter_day") },
-                  { value: "balance", label: t("editor.meter_balance") },
-                  { value: "money", label: t("editor.meter_money") },
-                  { value: "load", label: t("editor.meter_load") },
-                  { value: "autarky", label: t("editor.meter_autarky") },
-                  { value: "roof", label: t("editor.meter_roof") }
-                ]
-              }
-            }
-          }),
-          ...only((resolved) =>
-            resolved.ring.columns === "two" && resolved.ring.meter_second_shows === "grid", {
-            name: "meter_second_style",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "blocks", label: t("editor.meter_blocks") },
-                  { value: "bar", label: t("editor.meter_bar") }
-                ]
-              }
-            }
-          }),
-
-          ...only(
-            (resolved) =>
-              resolved.ring.meter &&
-              (resolved.ring.meter_second === "blocks" || resolved.ring.meter_second === "bar"),
-            {
-              name: "meter_second_scope",
-              selector: {
-                select: {
-                  mode: "dropdown",
-                  options: [
-                    { value: "grid", label: t("editor.meter_scope_grid") },
-                    { value: "all", label: t("editor.meter_scope_all") }
-                  ]
-                }
-              }
-            }
-          ),          ...only(scaled, {
-            type: "grid",
-            schema: [
-              {
-                name: "meter_scale",
-                selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-              },
-              ...only(needle, {
-                name: "meter_scale_draw",
-                selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } }
-              })
-            ]
-          }),
-          ...only(needle, {
-            type: "grid",
-            schema: [
-              {
-                name: "meter_target",
-                selector: { number: { min: 0, max: 50, step: 0.1, mode: "box" } }
-              }
-            ]
-          }),
-          ...only(
-            (resolved) =>
-              resolved.ring.meter &&
-              [resolved.ring.meter_style, resolved.ring.meter_second].some(
-                (style) => style === "blocks"
-              ),
-            {
-              name: "meter_steps",
-              selector: { number: { min: 3, max: 14, mode: "box" } }
-            }
-          ),
-          ...only(needle, {
-            type: "grid",
-            schema: [
-              { name: "meter_marks", selector: { boolean: {} } },
-              { name: "meter_today", selector: { boolean: {} } }
-            ]
-          })
+          ...columnSections
         ]
       }
     ),
@@ -925,9 +987,27 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     runtime_window: t("editor.help_runtime")
   };
 
-  if (config?.ring.columns === "two") {
-    labels.meter_scope = t("editor.scope_left");
-    labels.meter_second_scope = t("editor.scope_right");
+  for (const name of ["scale", "scale_draw", "target", "steps", "marks", "today"]) {
+    labels["meter_second_" + name] = labels["meter_" + name];
+    const help = helpers["meter_" + name];
+    if (help) helpers["meter_second_" + name] = help;
+  }
+  labels.meter_second_shows = labels.meter_shows;
+  labels.meter_second_style = labels.meter_style;
+  labels.meter_second_scope = labels.meter_scope;
+  helpers.meter_second_shows = helpers.meter_shows;
+  helpers.meter_second_scope = helpers.meter_scope;
+  helpers.meter_second_style = helpers.meter_style;
+
+  for (const name of [
+    "scale",
+    "scale_draw",
+    "target",
+    "marks",
+    "today"
+  ]) {
+    const help = helpers["meter_" + name];
+    if (help) helpers["meter_second_" + name] = help;
   }
 
   return {

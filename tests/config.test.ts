@@ -197,7 +197,7 @@ describe("editor coverage", () => {
     expect(JSON.stringify(priced.schema)).not.toContain("meter_style");
   });
 
-  it("offers the needle settings when either column is a needle", () => {
+  it("gives each column the settings that shape it, and only those", () => {
     const form = (ring: Record<string, unknown>) =>
       JSON.stringify(
         getConfigForm("de", {
@@ -207,10 +207,18 @@ describe("editor coverage", () => {
         }).schema
       );
 
-    // The needle is on the right, so the settings that shape it still apply.
+    // The needle is on the right, so the right settings appear and the left
+    // ones, which would shape a roof column, do not.
     const right = form({ columns: "two", meter_shows: "roof", meter_second_shows: "grid" });
-    expect(right).toContain("meter_marks");
-    expect(right).toContain("meter_steps");
+    expect(right).toContain("meter_second_marks");
+    expect(right).toContain("meter_second_steps");
+    expect(right).not.toContain("\"meter_marks\"");
+    expect(right).not.toContain("\"meter_steps\"");
+
+    // And the other way round.
+    const left = form({ columns: "two", meter_shows: "grid", meter_second_shows: "roof" });
+    expect(left).toContain("\"meter_marks\"");
+    expect(left).not.toContain("meter_second_marks");
 
     // Neither column is a needle, so none of them can do anything.
     const none = form({ columns: "two", meter_shows: "roof", meter_second_shows: "autarky" });
@@ -222,6 +230,54 @@ describe("editor coverage", () => {
     const form = getConfigForm("de");
     for (const name of ["meter_marks", "meter_today", "meter_scale", "meter_scale_draw"]) {
       expect(form.computeHelper({ name }), name).toBeTruthy();
+    }
+  });
+
+  it("gives each column a section of its own, and one when there is one", () => {
+    const titles = (ring: Record<string, unknown>) => {
+      const found: string[] = [];
+      const walk = (items: Array<Record<string, unknown>>) => {
+        for (const item of items) {
+          if (item.type === "expandable" && typeof item.title === "string") {
+            found.push(item.title);
+          }
+          if (Array.isArray(item.schema)) walk(item.schema as Array<Record<string, unknown>>);
+        }
+      };
+      walk(
+        getConfigForm("de", {
+          type: "custom:power-origin-card",
+          entities: { house: "sensor.h" },
+          ring
+        }).schema as Array<Record<string, unknown>>
+      );
+      return found;
+    };
+
+    const two = titles({ columns: "two", meter_shows: "grid", meter_second_shows: "grid" });
+    expect(two).toContain("Die linke Säule");
+    expect(two).toContain("Die rechte Säule");
+
+    // One column has no side to distinguish, so it needs no section.
+    const one = titles({ columns: "one", meter_shows: "grid" });
+    expect(one).not.toContain("Die linke Säule");
+  });
+
+  it("asks the same question the same way on both sides", () => {
+    const form = getConfigForm("de", {
+      type: "custom:power-origin-card",
+      entities: { house: "sensor.h" },
+      ring: { columns: "two", meter_shows: "grid", meter_second_shows: "grid" }
+    });
+    for (const [left, right] of [
+      ["meter_shows", "meter_second_shows"],
+      ["meter_style", "meter_second_style"],
+      ["meter_scope", "meter_second_scope"],
+      ["meter_scale", "meter_second_scale"],
+      ["meter_steps", "meter_second_steps"]
+    ]) {
+      expect(form.computeLabel({ name: right }), right).toBe(form.computeLabel({ name: left }));
+      expect(form.computeHelper({ name: right }), right).toBe(form.computeHelper({ name: left }));
     }
   });
 

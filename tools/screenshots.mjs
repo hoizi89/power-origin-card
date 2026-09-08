@@ -262,6 +262,15 @@ const shots = {
       today: ${JSON.stringify(full)}
     }, 'MIDDAY', false);`
   },
+  swing: {
+    width: 300,
+    body: `place(stage, {
+          title: '', chip: 'never',
+          sections: { ring: true, chart: false, battery: false, today: false },
+          ring: { center: 'power', meter: true, meter_shows: 'grid',
+                  meter_today: true, facts: 'none', size: 'm' }
+        }, 'MIDDAY', false);`
+  },
   modes: {
     width: 820,
     body: `const row = document.createElement("div");
