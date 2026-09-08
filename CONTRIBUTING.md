@@ -19,11 +19,13 @@ The built file is a single ES module with no dependencies, so a copy is a deploy
 cp dist/power-origin-card.js /path/to/config/www/community/power-origin-card/
 ```
 
+HACS installs plugins into exactly that directory and serves them from `/hacsfiles/power-origin-card/`, so a card installed through HACS and a card copied by hand are the same file. Developing on top of a HACS install works: the copy overwrites what HACS put there, and the next HACS update puts the released build back.
+
 Then **bump the version on the Lovelace resource**, or the browser keeps the old file and you will spend an hour debugging a change that never arrived:
 
-**Settings → Dashboards → ⋮ → Resources → `/local/community/power-origin-card/power-origin-card.js?v=…`**
+**Settings → Dashboards → ⋮ → Resources**, and change the query string on the entry — `?hacstag=…` for a HACS install, `?v=…` for a hand-added one. Any new value works; a timestamp is easiest. This step has been forgotten often enough to be worth its own paragraph.
 
-Change the `?v=` to anything new. A timestamp works. This step has been forgotten often enough to be worth its own paragraph.
+Only ever have **one** resource pointing at the card. Two — say a leftover `/local/…` beside the HACS one — load the module twice, and the second `customElements.define` throws.
 
 ## The readme pictures
 
