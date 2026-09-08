@@ -776,7 +776,7 @@ describe("the three priced and relative columns", () => {
     );
     expect(root.querySelector(".meter-block")).toBeTruthy();
     // The fixture holds the house steady, so now is an ordinary hour.
-    expect(text).toContain("wie sonst");
+    expect(text).toContain("gewöhnliche Stunde");
   });
 
   it("fills from nothing to everything, with no middle", async () => {
