@@ -8,8 +8,6 @@
 
 If the card earns its place on your wall, a coffee keeps the night shifts going.
 
-**Auf Deutsch:** Power Origin ist eine Karte für Home Assistant, die zeigt, woher der Strom im Haus gerade kommt, wie der Tag lief und was er gebracht hat. Der Editor und die Karte sprechen Deutsch, sobald Home Assistant auf Deutsch steht; diese Seite bleibt auf Englisch, damit sie für alle lesbar ist. Fragen und Wünsche gern auf Deutsch in den [Issues](https://github.com/hoizi89/power-origin-card/issues).
-
 The ring splits the house load into its sources. Sun gold, battery green, grid blue — the colour always names the participant that is not the house, everywhere on the card. If you would rather see red the moment the house draws from the grid, one switch (`ring.import_red`) makes the grid wear red instead of blue for exactly as long as that lasts — on the ring, the column and the bar alike. Beside it a column with a middle: surplus climbs, grid draw sinks.
 
 Three rules it is built on:
