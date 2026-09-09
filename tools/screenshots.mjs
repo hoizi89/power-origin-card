@@ -562,9 +562,12 @@ shots["money"] = {
       const h = hass(ids, MIDDAY, false);
       const base = h.callWS;
       h.callWS = async (m) => {
-        if (m.type === "recorder/statistics_during_period" && m.period === "month") {
-          const out = {}; const first = new Date(m.start_time);
-          for (const id of m.statistic_ids) out[id] = Array.from({ length: 12 }, (_, i) => { const d = new Date(first); d.setMonth(first.getMonth() + i); return { start: d.toISOString(), change: id === ids.cost_today ? -(40 + 70 * Math.max(0, Math.sin(((d.getMonth() - 1) / 12) * Math.PI))) * (i === 11 ? 0.3 : 1) : 0 }; });
+        if (m.type === "recorder/statistics_during_period" && m.period === "day") {
+          const out = {}; const first = new Date(m.start_time); first.setHours(0, 0, 0, 0);
+          for (const id of m.statistic_ids) { out[id] = []; for (let i = 0; i < 400; i++) { const d = new Date(first); d.setDate(first.getDate() + i); if (d > new Date()) break;
+            const season = 0.4 + 0.6 * Math.max(0, Math.sin(((d.getMonth() - 1) / 12) * Math.PI));
+            const v = id === ids.cost_import_today ? 0.9 * (1.3 - season) : id === ids.cost_export_today ? 3.2 * season : 0;
+            out[id].push({ start: d.toISOString(), change: v, max: v }); } }
           return out;
         }
         return base(m);

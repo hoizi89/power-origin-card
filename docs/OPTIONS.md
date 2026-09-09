@@ -116,7 +116,7 @@ today:
 | --- | --- | --- |
 | `text_scale` | `1` | Multiplies every type size at once. |
 | `shape` | `standard` | The card's shape: `standard` as it is; `wide` with the ring and its columns on the left and the day, the battery and the rest on the right, for a panel; `compact` as one row — the ring small, three figures (roof, grid, battery) and the chip. |
-| `wide_from` | `640` | From this many pixels of card width the wide shape takes hold; narrower it stacks as usual. `0` is always wide. |
+| `wide_from` | `640` | From this many pixels of card width the wide shape takes hold; narrower it stacks as usual, and below 560 px it stacks in any case, since two columns need the room. |
 | `night_layout` | `same` | `quiet` once the sun is down: the columns, the week, the tiles and the devices step aside, and the ring, the battery and one line about the day remain. Pairs with `night_dim`. |
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
 | `chip_shows` | `state` | What the chip says: `state` (grid-free or from grid) or `autarky` — the day's self-supplied share from the daily meters, green from 80 %, the grid's colour below. |
@@ -177,7 +177,7 @@ today:
 | `today.month` | `false` | The month so far, small under the day's balance, from twelve months of the money sensors (the balance, the two sides, or the two energies priced). One query an hour. |
 | `today.split` | `false` | The day's money split into what was not bought (the house's own share, priced) and what was sold, as a two-colour bar. Needs the daily house and import meters and the import price. |
 | `today.payoff_year` | `false` | Beside the paid-off share, the year the system will have paid for itself at this year's pace, with a bar and the figures. Needs the paid-off sensor and `today.investment`. |
-| `today.investment` | `0` | What the system cost, in euros; only used for the year. |
+| `today.investment` | `0` | What the system cost, in euros; only used for the year. Left at 0, the card reads it off the paid-off sensor when that carries the figure as an attribute (`investment`, `cost`, `anschaffung`, `kosten`, `total`, `price`). |
 
 Options that cannot take effect in the current mode are **not shown in the editor at all** — no switch that does nothing.
 
@@ -284,7 +284,7 @@ devices:
 | `devices.list` | `[]` | The live power sensors, one per device. The editor's adopt button takes them from the Energy dashboard's device list. |
 | `devices.mode` | `now` | `now` averages each sensor over the window; `today` sums each device's meter since midnight. Offered only once meters are known. |
 | `devices.window` | `15` | Minutes the live readings are averaged over. |
-| `devices.style` | `both` | `both` a bar carrying icons, `bar` a plain bar, `icons` an icon per device with a level, `tiles` one tile per device — icon, name and watts, the biggest first, the quiet ones dim. |
+| `devices.style` | `both` | `both` a bar with the names below carrying their icons, `bar` a plain bar, `icons` an icon per device with a level, `tiles` one tile per device — icon, name and watts, the biggest first, the quiet ones dim. |
 | `devices.top` | `false` | The biggest device as a row of its own above the list, with how long it has been drawing (from its last three hours, five minutes at a time) and what it cost today (its meter times the import price). It leaves the list below, so it never stands there twice. |
 | `devices.spark` | `false` | A line per device for the last hour beside its name: the fridge's rhythm, the heat pump's ramp, the kettle's spike. Turns the name list into rows. |
 | `devices.icons` | `{}` | An icon chosen per device, by entity — in the editor one field per device under *Icons*, written as `icon:<entity>` keys. A chosen icon beats the one set on the entity, which beats the one read off the name. |

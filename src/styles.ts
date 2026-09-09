@@ -1371,15 +1371,6 @@ export const cardStyles = css`
   .wohin-seg.rest {
     background: transparent;
   }
-  .wohin-seg ha-icon {
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    width: 14px;
-    height: 14px;
-    --mdc-icon-size: 14px;
-    color: var(--ha-card-background, #1a1e2b);
-  }
   .wohin-keys {
     display: flex;
     flex-wrap: wrap;
@@ -1387,6 +1378,15 @@ export const cardStyles = css`
     margin-top: 8px;
     font-family: var(--sst-mono);
     font-size: calc(10.5px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+  .wohin-keys span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .wohin-keys ha-icon {
+    --mdc-icon-size: 14px;
     color: var(--sst-muted);
   }
   .wohin-keys b {
@@ -1411,11 +1411,12 @@ export const cardStyles = css`
     color: var(--sst-ink);
     --mdc-icon-size: 20px;
   }
+  /* The level is a short bar under the icon, so the icon stays an icon. */
   .dev .lvl {
     display: block;
-    width: 16px;
-    height: 22px;
-    border-radius: 3px;
+    width: 28px;
+    height: 4px;
+    border-radius: 2px;
     background: var(--sst-track);
     position: relative;
     overflow: hidden;
@@ -1423,7 +1424,7 @@ export const cardStyles = css`
   .dev .lvl b {
     position: absolute;
     left: 0;
-    right: 0;
+    top: 0;
     bottom: 0;
     display: block;
     background: var(--sst-ink);

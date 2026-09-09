@@ -608,6 +608,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       ]
     : leftColumn;
 
+  /* The top of the form, in rows that read as pairs: what the card is
+     called and how big; the chip and what it says; a tap and the shape;
+     the night; and last the three switches for the corner. */
   const schema = [
     {
       type: "grid",
@@ -616,11 +619,12 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         {
           name: "text_scale",
           selector: { number: { min: 0.8, max: 2, step: 0.05, mode: "box" } }
-        },
-        {
-          name: "tap_action",
-          selector: { ui_action: { default_action: "more-info" } }
-        },
+        }
+      ]
+    },
+    {
+      type: "grid",
+      schema: [
         {
           name: "chip",
           selector: {
@@ -633,12 +637,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      type: "grid",
-      schema: [
+        },
         ...only((resolved) => resolved.chip !== "never", {
           name: "chip_shows",
           selector: {
@@ -650,25 +649,16 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        }),
-        ...only((resolved) => Boolean(resolved.entities.grid_power), {
-          name: "chip_alarm",
-          selector: { boolean: {} }
-        }),
-        ...only((resolved) => Boolean(resolved.entities.price_import), {
-          name: "head_price",
-          selector: { boolean: {} }
-        }),
-        // The day chart already draws the sun's day; the line is for a card without it.
-        ...only((resolved) => !resolved.sections.chart, {
-          name: "head_sunbar",
-          selector: { boolean: {} }
         })
       ]
     },
     {
       type: "grid",
       schema: [
+        {
+          name: "tap_action",
+          selector: { ui_action: { default_action: "more-info" } }
+        },
         {
           name: "shape",
           selector: {
@@ -685,7 +675,12 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         ...only((resolved) => resolved.shape === "wide", {
           name: "wide_from",
           selector: { number: { min: 0, max: 2000, step: 20, mode: "box", unit_of_measurement: "px" } }
-        }),
+        })
+      ]
+    },
+    {
+      type: "grid",
+      schema: [
         {
           name: "night_layout",
           selector: {
@@ -697,7 +692,26 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        }
+        },
+        { name: "night_dim", selector: { number: { min: 0, max: 50, step: 5, mode: "slider" } } }
+      ]
+    },
+    {
+      type: "grid",
+      schema: [
+        ...only((resolved) => Boolean(resolved.entities.grid_power), {
+          name: "chip_alarm",
+          selector: { boolean: {} }
+        }),
+        ...only((resolved) => Boolean(resolved.entities.price_import), {
+          name: "head_price",
+          selector: { boolean: {} }
+        }),
+        // The day chart already draws the sun's day; the line is for a card without it.
+        ...only((resolved) => !resolved.sections.chart, {
+          name: "head_sunbar",
+          selector: { boolean: {} }
+        })
       ]
     },
     {
@@ -1268,7 +1282,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             money(resolved) && resolved.today.money && Boolean(resolved.entities.amortisation),
           {
             name: "investment",
-            selector: { number: { min: 0, max: 200000, step: 100, mode: "box", unit_of_measurement: "€" } }
+            selector: { number: { min: 0, max: 200000, step: 100, mode: "box" } }
           }
         ),
         ...only(
@@ -1298,7 +1312,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       ]
     }
     ),
-    { name: "night_dim", selector: { number: { min: 0, max: 50, step: 5, mode: "slider" } } },
   ];
 
   const labels: Record<string, string> = {

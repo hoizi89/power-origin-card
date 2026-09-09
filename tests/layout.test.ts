@@ -25,9 +25,11 @@ type Card = HTMLElement & {
   updateComplete: Promise<unknown>;
 };
 
-async function mount(cfg: PowerOriginCardConfig, scenario: Scenario) {
+async function mount(cfg: PowerOriginCardConfig, scenario: Scenario, width = 900) {
   clearStatisticsCache();
   const element = document.createElement(CARD_TYPE) as Card;
+  // A test document has no width of its own; the card measures what it is told.
+  Object.defineProperty(element, "clientWidth", { value: width, configurable: true });
   element.setConfig(cfg);
   document.body.append(element);
   element.hass = makeHass(scenario);
@@ -70,6 +72,11 @@ describe("wide", () => {
     const { root } = await mount(config({ shape: "wide", wide_from: 5000 }), day);
     expect(root.querySelector("ha-card")?.classList.contains("wide")).toBe(false);
     expect(root.querySelector(".side")).toBeNull();
+  });
+
+  it("never goes wide in a card too narrow for two columns, whatever is asked", async () => {
+    const { root } = await mount(config({ shape: "wide", wide_from: 0 }), day, 420);
+    expect(root.querySelector("ha-card")?.classList.contains("wide")).toBe(false);
   });
 });
 

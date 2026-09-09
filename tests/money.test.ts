@@ -26,7 +26,11 @@ function withPaid(hass: HomeAssistant): HomeAssistant {
     ...hass,
     states: {
       ...hass.states,
-      "sensor.paid": { entity_id: "sensor.paid", state: "31", attributes: { unit_of_measurement: "%" } }
+      "sensor.paid": {
+        entity_id: "sensor.paid",
+        state: "31",
+        attributes: { unit_of_measurement: "%", installation_cost: "18000.00€", total_savings: "5580.00€" }
+      }
     }
   };
 }
@@ -92,9 +96,9 @@ describe("the year it is paid off", () => {
     expect(text()).toContain("im Jahr");
   });
 
-  it("gives no year without the cost of the system", async () => {
+  it("reads the cost of the system off the paid-off sensor when it carries it", async () => {
     const { root, text } = await mount(config({ payoff_year: true }), day);
-    expect(root.querySelector(".payoff")).toBeNull();
-    expect(text()).not.toMatch(/31 % · 20\d\d/);
+    expect(root.querySelector(".payoff")).toBeTruthy();
+    expect(text().replace(/\s+/g, " ")).toContain("von 18.000 €");
   });
 });

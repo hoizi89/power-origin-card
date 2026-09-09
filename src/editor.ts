@@ -1,7 +1,5 @@
 import { LitElement, css, html, nothing } from "lit";
 import { getConfigForm, resolveConfig } from "./config";
-import { mergePick, pickFromEnergy, type EnergyPrefs } from "./energy";
-import { localize } from "./localize";
 import type { HomeAssistant, PowerOriginCardConfig } from "./types";
 import { localeOf } from "./values";
 
@@ -26,59 +24,28 @@ export async function ensureHaFormLoaded(): Promise<void> {
   }
 }
 
+/**
+ * The form alone. What the Energy dashboard knows is taken the moment the
+ * card is added, so the editor has nothing to adopt and shows no button for it.
+ */
 export class PowerOriginCardEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
-    _config: { state: true },
-    _offer: { state: true }
+    _config: { state: true }
   };
 
   hass?: HomeAssistant;
   private _config?: PowerOriginCardConfig;
-  private _offer: string[] = [];
-  private _prefs?: EnergyPrefs;
 
   static styles = css`
     :host {
       display: block;
-    }
-
-    .adopt {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 0 0 16px;
-    }
-
-    .note {
-      font-size: 12.5px;
-      color: var(--secondary-text-color);
-      margin: -8px 0 16px;
     }
   `;
 
   setConfig(config: PowerOriginCardConfig): void {
     this.form().assertConfig(config);
     this._config = config;
-    void this._measureOffer();
-  }
-
-  /**
-   * What the Energy dashboard could still contribute. The card takes it on
-   * its own when it is added, so most of the time the answer is nothing —
-   * and then there is no reason to show a button.
-   */
-  private async _measureOffer(): Promise<void> {
-    if (!this.hass || !this._config) return;
-    try {
-      this._prefs ??= await this.hass.callWS<EnergyPrefs>({
-        type: "energy/get_prefs"
-      });
-      this._offer = mergePick(this._config, pickFromEnergy(this._prefs)).filled;
-    } catch {
-      this._offer = [];
-    }
   }
 
   private form() {
@@ -93,17 +60,6 @@ export class PowerOriginCardEditor extends LitElement {
     // otherwise every unset switch reads as off while its block is on screen.
     const data = resolveConfig(this._config);
     return html`
-      ${this._offer.length === 0
-        ? nothing
-        : html`<div class="adopt">
-            <ha-button @click=${this._adopt}
-              >${localize("editor.adopt", localeOf(this.hass))}</ha-button
-            >
-            <span class="note"
-              >${localize("editor.adopt_offer", localeOf(this.hass))}
-              ${this._offer.length}</span
-            >
-          </div>`}
       <ha-form
         .hass=${this.hass}
         .data=${data}
@@ -113,34 +69,6 @@ export class PowerOriginCardEditor extends LitElement {
         @value-changed=${this._valueChanged}
       ></ha-form>
     `;
-  }
-
-  /**
-   * Home Assistant's own Energy dashboard already knows most of this. Taking
-   * it from there turns sixteen pickers into one, and only the fields that
-   * are still empty are touched.
-   */
-  private async _adopt(): Promise<void> {
-    if (!this.hass || !this._config) return;
-    try {
-      const prefs = await this.hass.callWS<EnergyPrefs>({ type: "energy/get_prefs" });
-      const { merged, filled } = mergePick(this._config, pickFromEnergy(prefs));
-      if (filled.length === 0) {
-        this._offer = [];
-        return;
-      }
-      this._config = merged;
-      this._offer = [];
-      this.dispatchEvent(
-        new CustomEvent("config-changed", {
-          bubbles: true,
-          composed: true,
-          detail: { config: merged }
-        })
-      );
-    } catch {
-      this._offer = [];
-    }
   }
 
   private _valueChanged(event: CustomEvent): void {

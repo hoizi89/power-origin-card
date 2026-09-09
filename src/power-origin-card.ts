@@ -19,7 +19,7 @@ import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, extremes, fetchStatistics, startOfToday } from "./stats";
+import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, startOfToday } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -278,7 +278,9 @@ export class PowerOriginCard extends LitElement {
   private _measure(): void {
     const config = this._config;
     if (!config || config.shape !== "wide") return;
-    const on = config.wide_from <= 0 || this.clientWidth >= config.wide_from;
+    // Two columns need room whatever is asked; below this they overlap.
+    const FLOOR = 560;
+    const on = this.clientWidth >= Math.max(FLOOR, config.wide_from);
     if (on !== this._wideOn) this._wideOn = on;
   }
 
@@ -540,13 +542,20 @@ export class PowerOriginCard extends LitElement {
     this._moneyFetched = Date.now();
 
     const e = config.entities;
-    const ids = (
-      e.cost_today
-        ? [e.cost_today]
-        : e.cost_export_today || e.cost_import_today
-          ? [e.cost_export_today, e.cost_import_today]
-          : [e.export_today, e.import_today]
-    ).filter((id): id is string => Boolean(id));
+    // The money is read day by day and added up into months, because the
+    // daily sensors most people have reset at midnight, and a month's change
+    // of such a sensor is nonsense. A signed balance cannot be read that way
+    // at all, so the two sides are preferred; a balance only counts when it
+    // only ever climbs.
+    const classOf = (id: string | undefined) => stateOf(hass, id)?.attributes?.state_class;
+    const balanceOk = e.cost_today && classOf(e.cost_today) === "total_increasing";
+    const ids = [
+      balanceOk ? e.cost_today : undefined,
+      e.cost_export_today,
+      e.cost_import_today,
+      e.export_today,
+      e.import_today
+    ].filter((id): id is string => Boolean(id));
     if (ids.length === 0) return;
 
     const start = new Date();
@@ -563,41 +572,58 @@ export class PowerOriginCard extends LitElement {
           start_time: start.toISOString(),
           end_time: new Date().toISOString(),
           statistic_ids: ids,
-          period: "month",
-          types: ["change"]
+          period: "day",
+          types: ["change", "max"]
         }) as never,
-      "money-months"
+      "money-days"
     )) as unknown as Rows;
 
     const buy = numberOf(stateOf(hass, e.price_import)) ?? 0;
     const sell = numberOf(stateOf(hass, e.price_export)) ?? 0;
-    const change = (id: string | undefined, month: number): number | undefined => {
-      if (!id) return undefined;
-      const row = (rows?.[id] ?? []).find((r) => {
-        const at = new Date(Date.parse(String(r.start)));
-        const want = new Date(month);
-        return at.getFullYear() === want.getFullYear() && at.getMonth() === want.getMonth();
-      });
-      const value = Number(row?.change);
-      if (!Number.isFinite(value)) return undefined;
-      return unitOf(stateOf(hass, id)).toLowerCase() === "wh" ? value / 1000 : value;
+    const has = (id: string | undefined) => Boolean(id) && (rows?.[id as string] ?? []).length > 0;
+    const source = balanceOk && has(e.cost_today)
+      ? "balance"
+      : has(e.cost_export_today) || has(e.cost_import_today)
+        ? "sides"
+        : has(e.export_today) || has(e.import_today)
+          ? "energy"
+          : undefined;
+    if (!source) {
+      this._moneyMonths = [];
+      return;
+    }
+    // Every day of every sensor, keyed by its month.
+    const byMonth = (id: string | undefined): Map<number, number> => {
+      const out = new Map<number, number>();
+      if (!id) return out;
+      const wh = unitOf(stateOf(hass, id)).toLowerCase() === "wh";
+      for (const row of rows?.[id] ?? []) {
+        const at = new Date(Date.parse(String(row.start)));
+        if (!Number.isFinite(at.getTime())) continue;
+        const value = dayTotal(row, classOf(id));
+        if (value === undefined) continue;
+        const month = new Date(at.getFullYear(), at.getMonth(), 1).getTime();
+        out.set(month, (out.get(month) ?? 0) + (wh ? value / 1000 : value));
+      }
+      return out;
     };
     const months: Array<{ start: number; balance: number }> = [];
+    const balanceOf = byMonth(source === "balance" ? e.cost_today : undefined);
+    const outOf = byMonth(source === "sides" ? e.cost_export_today : source === "energy" ? e.export_today : undefined);
+    const innOf = byMonth(source === "sides" ? e.cost_import_today : source === "energy" ? e.import_today : undefined);
     for (let index = 0; index < 12; index += 1) {
       const at = new Date(start);
       at.setMonth(start.getMonth() + index);
       const month = at.getTime();
       let balance: number | undefined;
-      if (e.cost_today) {
-        balance = change(e.cost_today, month);
-      } else if (e.cost_export_today || e.cost_import_today) {
-        const out = change(e.cost_export_today, month);
-        const inn = change(e.cost_import_today, month);
-        if (out !== undefined || inn !== undefined) balance = (inn ?? 0) - (out ?? 0);
+      if (source === "balance") {
+        balance = balanceOf.get(month);
       } else {
-        const out = change(e.export_today, month);
-        const inn = change(e.import_today, month);
-        if (out !== undefined || inn !== undefined) balance = (inn ?? 0) * buy - (out ?? 0) * sell;
+        const out = outOf.get(month);
+        const inn = innOf.get(month);
+        if (out !== undefined || inn !== undefined) {
+          balance = source === "sides" ? (inn ?? 0) - (out ?? 0) : (inn ?? 0) * buy - (out ?? 0) * sell;
+        }
       }
       if (balance !== undefined) months.push({ start: month, balance });
     }
@@ -633,7 +659,7 @@ export class PowerOriginCard extends LitElement {
           end_time: new Date().toISOString(),
           statistic_ids: ids,
           period: "day",
-          types: ["change"]
+          types: ["change", "max"]
         }) as never,
       "week-days"
     )) as unknown as Rows;
@@ -645,9 +671,9 @@ export class PowerOriginCard extends LitElement {
         const at = new Date(day);
         return start.getFullYear() === at.getFullYear() && start.getMonth() === at.getMonth() && start.getDate() === at.getDate();
       });
-      const change = Number(row?.change);
-      if (!Number.isFinite(change)) return undefined;
-      return unitOf(stateOf(hass, id)).toLowerCase() === "wh" ? change / 1000 : change;
+      const value = dayTotal(row, stateOf(hass, id)?.attributes?.state_class);
+      if (value === undefined) return undefined;
+      return unitOf(stateOf(hass, id)).toLowerCase() === "wh" ? value / 1000 : value;
     };
     const week: WeekDay[] = [];
     for (let index = 0; index < 7; index += 1) {
@@ -3136,10 +3162,7 @@ export class PowerOriginCard extends LitElement {
             (r, i) => html`<span class="wohin-seg"
               style="width: ${((100 * (r.watts ?? 0)) / house).toFixed(2)}%; opacity: ${(1 - i * 0.15).toFixed(2)}"
               title="${r.name} ${w(r.watts ?? 0)}"
-              >${style === "both" && (r.watts ?? 0) / house > 0.06
-                ? html`<ha-icon icon="${r.icon}"></ha-icon>`
-                : nothing}</span
-            >`
+            ></span>`
           )}
           ${ranking.rest
             ? html`<span class="wohin-seg rest" style="width: ${((100 * ranking.rest) / house).toFixed(2)}%"></span>`
@@ -3172,7 +3195,9 @@ export class PowerOriginCard extends LitElement {
             ${listed.map((r) =>
               tap(
                 r,
-                html`<span class="${rooms ? "room" : ""}" @click=${openRoom(r)}>${r.name}${values
+                html`<span class="${rooms ? "room" : ""}" @click=${openRoom(r)}>${style === "both"
+                    ? html`<ha-icon icon="${r.icon}"></ha-icon>`
+                    : nothing}${r.name}${values
                   ? html` <b>${w(r.watts ?? 0)}</b>`
                   : nothing}</span>${members(r)}`
               )
@@ -3193,7 +3218,7 @@ export class PowerOriginCard extends LitElement {
               r,
               html`<span class="dev ${on ? "" : "off"}" title="${r.name} ${w(r.watts ?? 0)}"
                 ><ha-icon icon="${r.icon}"></ha-icon
-                ><i class="lvl"><b style="height: ${Math.round((100 * (r.watts ?? 0)) / top)}%"></b></i
+                ><i class="lvl"><b style="width: ${Math.round((100 * (r.watts ?? 0)) / top)}%"></b></i
                 >${values && on ? html`<small>${w(r.watts ?? 0)}</small>` : nothing}</span
               >`
             );
@@ -3414,7 +3439,23 @@ export class PowerOriginCard extends LitElement {
     const earnedYear = months.reduce((sum, m) => sum + Math.max(0, -m.balance), 0);
     const covered = months.length ? (now.getTime() - months[0].start) / (24 * 3600000) : 0;
     const pace = covered > 30 ? (earnedYear / covered) * 365 : undefined;
-    const investment = config.today.investment;
+    // What the system cost: written here, or carried by the paid-off sensor
+    // itself, since whatever computes the share knows the whole.
+    const paidAttributes = stateOf(hass, config.entities.amortisation)?.attributes ?? {};
+    // "18000.00€" is a figure with a coat on.
+    const figure = (value: unknown): number => {
+      const cleaned = String(value ?? "").replace(/[^0-9.,-]/g, "");
+      const dotted = cleaned.includes(",") && !cleaned.includes(".") ? cleaned.replace(",", ".") : cleaned.replace(/,/g, "");
+      return Number(dotted);
+    };
+    const carried = Object.entries(paidAttributes).find(
+      ([key, value]) =>
+        /invest|anschaff|installation|kosten|cost|price|preis/i.test(key) &&
+        !/saving|erspar|remaining|rest/i.test(key) &&
+        Number.isFinite(figure(value)) &&
+        figure(value) > 0
+    );
+    const investment = config.today.investment || (carried ? figure(carried[1]) : 0);
     const payoffYear =
       config.today.payoff_year && paidOff !== undefined && investment > 0 && pace !== undefined && pace > 0
         ? new Date(now.getTime() + ((investment * (1 - paidOff / 100)) / pace) * 365 * 24 * 3600000).getFullYear()

@@ -172,19 +172,28 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
       for (let day = first.getTime(), index = 0; day <= now; index += 1) {
         const at = new Date(day);
         const factor = 0.55 + 0.45 * Math.abs(Math.sin(index * 1.3));
+        const change =
+          id === IDS.solar_today
+            ? scenario.solarToday * factor
+            : id === IDS.house_today
+              ? scenario.houseToday
+              : id === IDS.import_today
+                ? scenario.importToday * (1.5 - factor)
+                : id === IDS.export_today
+                  ? scenario.exportToday * factor
+                  : id === IDS.cost_export_today
+                    ? 1.2 * factor
+                    : id === IDS.cost_import_today
+                      ? 0.02 * (1.5 - factor)
+                      : id in DEVICE_KWH
+                        ? DEVICE_KWH[id]
+                        : null;
+        // The fixtures' meters reset at midnight, so the day's high water mark is the day.
         rows.push({
           start: at.toISOString(),
           mean: id === IDS.solar ? scenario.pv * factor : scenario.house,
-          change:
-            id === IDS.solar_today
-              ? scenario.solarToday * factor
-              : id === IDS.house_today
-                ? scenario.houseToday
-                : id === IDS.import_today
-                  ? scenario.importToday * (1.5 - factor)
-                  : id in DEVICE_KWH
-                    ? DEVICE_KWH[id]
-                    : null
+          change,
+          max: change
         });
         at.setDate(at.getDate() + 1);
         day = at.getTime();

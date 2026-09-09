@@ -242,6 +242,25 @@ export function runMinutes(
   return since === undefined ? undefined : Math.max(0, Math.round((now - since) / 60000));
 }
 
+/**
+ * What a meter did in one day, from the recorder's day row. A meter that
+ * only ever climbs (`total_increasing`) has its resets understood by the
+ * recorder, so the change is the day. A meter that resets at midnight
+ * without saying so (`total`) shows the reset as a fall, and its change is
+ * today less yesterday; its high water mark is the day.
+ */
+export function dayTotal(
+  row: Record<string, unknown> | undefined,
+  stateClass: unknown
+): number | undefined {
+  if (!row) return undefined;
+  const change = Number(row.change);
+  const max = Number(row.max);
+  if (stateClass === "total_increasing") return Number.isFinite(change) ? change : undefined;
+  if (Number.isFinite(max)) return Math.max(0, max);
+  return Number.isFinite(change) ? change : undefined;
+}
+
 /** How much each meter grew since midnight, in its own unit. */
 export async function fetchTodayChange(
   hass: HomeAssistant,
