@@ -162,7 +162,8 @@ today:
 | `battery.percent` | `true` | The charge as a figure beside the heading. The bar says it too, so this is the number and not the picture. |
 | `battery.reserve_line` | `true` | A dashed line where the reserve begins, so a bar that reads full does not hide power that never comes out. Shown only when a reserve is set. |
 | `battery.sunrise_mark` | `false` | A sun under the bar where the charge will stand at sunrise, worked out from today's average load; the cells the night will use stand back. Shown while the battery carries the house. |
-| `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house). |
+| `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house), `flow` (what went in and out today, with the cycles; needs `battery_in_today` and `battery_out_today`). |
+| `battery.curve` | `false` | The charge as a small curve under the bar: at night since sunset and dashed on to where it will stand at sunrise, by day since midnight and dashed on to full while charging. The reserve is a floor line. Costs the same query as `range`. |
 | `today.stats` | `[peak, autarky, export, import]` | Which four values appear at the bottom. |
 
 Options that cannot take effect in the current mode are **not shown in the editor at all** — no switch that does nothing.

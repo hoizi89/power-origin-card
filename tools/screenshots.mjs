@@ -479,6 +479,38 @@ shots["today"] = {
     }`
 };
 
+shots["battery-block"] = {
+  width: 2 * 400 + 16,
+  pre: `globalThis.__night = true; globalThis.__at = "22:30";`,
+  body: `const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(2, 400px)"; row.style.gap = "16px";
+    stage.append(row);
+    for (const cfg of [
+      { battery: { curve: true, extra: "sunrise", sunrise_mark: true } },
+      { battery: { curve: true, extra: "flow" } }
+    ]) {
+      const cell = document.createElement("div"); row.append(cell);
+      const ids = freshIds();
+      const el = document.createElement("power-origin-card");
+      el.setConfig({ type: "custom:power-origin-card", title: "", chip: "never", battery_capacity: 13100, battery_reserve: 15,
+        entities: { ...ids, battery_in_today: "sensor.bat_in" },
+        sections: { ring: false, chart: false, battery: true, today: false }, ...cfg });
+      const h = hass(ids, EVENING, false);
+      h.states["sensor.bat_in"] = entity("sensor.bat_in", 9.8, "kWh", "energy");
+      const base = h.callWS;
+      h.callWS = async (m) => {
+        const out = await base(m);
+        if (m.type === "recorder/statistics_during_period" && out[ids.battery_soc]) {
+          out[ids.battery_soc] = out[ids.battery_soc].map((r) => { const hr = new Date(r.start).getHours() + new Date(r.start).getMinutes() / 60;
+            const soc = hr < 7 ? 40 - hr * 3 : hr < 15 ? 20 + (hr - 7) * 10 : Math.max(71, 100 - (hr - 15) * 4); return { ...r, mean: Math.min(100, soc), max: soc }; });
+        }
+        return out;
+      };
+      el.hass = h;
+      cell.append(el);
+    }`
+};
+
 for (const [name, shot] of Object.entries(shots)) {
   fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }

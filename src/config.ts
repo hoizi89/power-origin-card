@@ -82,7 +82,8 @@ export const DEFAULTS = {
     capacity: 0,
     reserve: 0,
     extra: "none" as const,
-    sunrise_mark: false
+    sunrise_mark: false,
+    curve: false
   },
   devices: {
     list: [] as string[],
@@ -629,7 +630,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           ]
         },
         { type: "grid", schema: [entityField("price_import"), entityField("price_export")] },
-        entityField("battery_out_today", "energy"),
+        {
+          type: "grid",
+          schema: [entityField("battery_out_today", "energy"), entityField("battery_in_today", "energy")]
+        },
         entityField("amortisation"),
         {
           type: "grid",
@@ -941,7 +945,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             ...only(
               (resolved) => cellTimed(resolved) && resolved.battery_capacity > 0,
               { name: "sunrise_mark", selector: { boolean: {} } }
-            )
+            ),
+            ...only(cell, { name: "curve", selector: { boolean: {} } })
           ]
         },
         {
@@ -955,7 +960,12 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 { value: "cycles", label: t("editor.extra_cycles") },
                 { value: "saved", label: t("editor.extra_saved") },
                 { value: "given", label: t("editor.extra_given") },
-                { value: "sunrise", label: t("editor.extra_sunrise") }
+                { value: "sunrise", label: t("editor.extra_sunrise") },
+                ...only(
+                  (resolved) =>
+                    Boolean(resolved.entities.battery_in_today && resolved.entities.battery_out_today),
+                  { value: "flow", label: t("editor.extra_flow") }
+                )
               ]
             }
           }
@@ -1196,6 +1206,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     origin_bar: t("editor.origin_bar"),
     origin_style: t("editor.origin_style"),
     battery_out_today: t("editor.battery_out_today"),
+    battery_in_today: t("editor.battery_in_today"),
+    curve: t("editor.curve"),
     amortisation: t("editor.amortisation"),
     // The entity picker and the today switch share a name; the switch is the
     // one that needs the longer wording, so it wins where both could apply.
@@ -1243,6 +1255,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     forecast_bars: t("editor.help_forecast_bars"),
     layers: t("editor.help_layers"),
     best_day: t("editor.help_best_day"),
+    curve: t("editor.help_curve"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
     mode: t("editor.help_mode"),

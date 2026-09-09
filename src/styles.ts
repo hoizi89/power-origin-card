@@ -1079,6 +1079,38 @@ export const cardStyles = css`
     opacity: 0.6;
   }
 
+  /* The charge over the night: what happened as a line, what will happen
+     dashed, and the floor of the reserve to read both against. */
+  .bat-curve {
+    fill: none;
+    stroke: var(--sst-leaf);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .bat-curve.ahead {
+    stroke-dasharray: 3 3;
+    opacity: 0.6;
+  }
+
+  .bat-curve-floor {
+    stroke: var(--sst-hairline);
+    stroke-width: 1;
+  }
+
+  .bat-curve-now {
+    stroke: var(--sst-muted);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+  }
+
+  .bat-curve-label {
+    font-family: var(--sst-mono);
+    font-size: calc(9px * var(--sst-scale));
+    fill: var(--sst-muted);
+  }
+
   .bat-sunrise {
     stroke: var(--sst-ink);
     stroke-width: 1.4;

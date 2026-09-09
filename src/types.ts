@@ -24,7 +24,7 @@ export type RingCenter = "power" | "production" | "surplus" | "autarky" | "money
 export type RingCenterDark = "power" | "autarky" | "runtime" | "money";
 export type RingNight = "same" | "countdown";
 export type RingTap = "entity" | "cycle";
-export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given" | "sunrise";
+export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given" | "sunrise" | "flow";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
@@ -111,6 +111,8 @@ export interface PowerOriginEntities {
   price_export?: string;
   /** Energy taken out of the battery today, in kWh. Splits the day bar in three. */
   battery_out_today?: string;
+  /** Energy put into the battery today, in kWh; with the one above, the day's flow. */
+  battery_in_today?: string;
   /** How far the system has paid for itself, in percent. */
   amortisation?: string;
 }
@@ -221,6 +223,8 @@ export interface BatteryOptions {
   extra?: BatteryExtra;
   /** A sun under the bar where the charge will stand at sunrise. */
   sunrise_mark?: boolean;
+  /** The charge over the night, or the day, as a small curve under the bar, with where it is heading. */
+  curve?: boolean;
 }
 
 export type DevicesStyle = "icons" | "bar" | "both";

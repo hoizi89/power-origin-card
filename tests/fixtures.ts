@@ -17,6 +17,7 @@ export const IDS = {
   cost_export_today: "sensor.cost_export_today",
   cost_import_today: "sensor.cost_import_today",
   battery_out_today: "sensor.battery_out_today",
+  battery_in_today: "sensor.battery_in_today",
   price_import: "sensor.price_import"
 };
 
@@ -218,9 +219,11 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
             ? scenario.grid
             : id === IDS.battery_power
               ? scenario.battery
-              : id in DEVICE_WATTS
-                ? DEVICE_WATTS[id]
-                : scenario.house;
+              : id === IDS.battery_soc
+                ? Math.min(100, Math.max(0, scenario.soc + 8 * Math.sin(t / 3600000)))
+                : id in DEVICE_WATTS
+                  ? DEVICE_WATTS[id]
+                  : scenario.house;
       rows.push({
         start: t,
         mean: value,
@@ -261,6 +264,7 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     [IDS.cost_export_today]: entity(IDS.cost_export_today, v(1.2), "€", "monetary"),
     [IDS.cost_import_today]: entity(IDS.cost_import_today, v(0.02), "€", "monetary"),
     [IDS.battery_out_today]: entity(IDS.battery_out_today, v(4.1), "kWh", "energy"),
+    [IDS.battery_in_today]: entity(IDS.battery_in_today, v(7.9), "kWh", "energy"),
     "sensor.price_import": entity("sensor.price_import", v(0.29), "€/kWh", "monetary"),
     "sensor.price_export": entity("sensor.price_export", v(0.08), "€/kWh", "monetary"),
     // Three devices: one drawing, one small, one off. A fourth id is never

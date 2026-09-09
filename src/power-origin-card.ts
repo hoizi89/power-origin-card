@@ -29,6 +29,7 @@ import type {
   ResolvedConfig,
   PowerOriginCardConfig,
   RingCenter,
+  StatisticPoint,
   TodayStat,
   WeekDay
 } from "./types";
@@ -77,6 +78,8 @@ export class PowerOriginCard extends LitElement {
   private _swing?: { up: number; down: number };
   private _earlier?: DaySeries;
   private _socRange?: { low: number; high: number };
+  /** The charge through the day so far, for the curve under the bar. */
+  private _socRows?: StatisticPoint[];
   private _error?: string;
   private _lastFetch = 0;
   private _deviceMeans?: Record<string, number | undefined>;
@@ -278,6 +281,7 @@ export class PowerOriginCard extends LitElement {
     if (
       !config.sections.chart &&
       !config.battery.runtime &&
+      !(config.sections.battery && config.battery.curve) &&
       !meterNeedsScale &&
       !this._needsPeak() &&
       !this._needsHours() &&
@@ -298,7 +302,10 @@ export class PowerOriginCard extends LitElement {
       // them, and a second request would cost another recorder scan.
       const gridId = this._needsHours() ? config.entities.grid_power : undefined;
       const cellId = this._needsHours() ? config.entities.battery_power : undefined;
-      const socId = config.battery.extra === "range" ? config.entities.battery_soc : undefined;
+      const socId =
+        config.battery.extra === "range" || (config.sections.battery && config.battery.curve)
+          ? config.entities.battery_soc
+          : undefined;
       const ids = [solarId, houseId, gridId, cellId, socId].filter(Boolean) as string[];
       const stats = await cachedStatistics(
         ids,
@@ -316,6 +323,7 @@ export class PowerOriginCard extends LitElement {
       );
       // A percentage, so it is read as it comes.
       this._socRange = socId ? extremes(stats[socId] ?? []) : undefined;
+      this._socRows = socId ? stats[socId] : undefined;
 
       if (gridId && stats[gridId]?.length) {
         let up = 0;
@@ -2313,8 +2321,82 @@ export class PowerOriginCard extends LitElement {
             : nothing}
         </div>
         ${this._renderBatterySvg(soc, tone, locale, extra)}
+        ${config.battery.curve ? this._renderBatteryCurve(soc, view, locale) : nothing}
         <div class="row-note">${this._renderBatteryNote(view, locale)}</div>
       </div>
+    `;
+  }
+
+  /**
+   * The charge as a curve: at night from sunset, dashed on to where it will
+   * stand at sunrise; by day from midnight, dashed on to full. The bar says
+   * how full; this says whether the curve meets the sun before the floor.
+   */
+  private _renderBatteryCurve(soc: number, view: BatteryView, locale: string) {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const rows = (this._socRows ?? []).filter(
+      (row) => row.mean !== undefined && row.mean !== null && Number.isFinite(row.mean)
+    );
+    if (rows.length < 2) return nothing;
+
+    const now = Date.now();
+    const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
+    const night = sunDown ? this._nightSoFar() : undefined;
+    let from: number;
+    let to: number;
+    let ahead: { at: number; pct: number } | undefined;
+    if (night) {
+      const total = night.hoursLeft / (1 - night.done);
+      from = now - night.done * total * 3600000;
+      to = now + night.hoursLeft * 3600000;
+      const dawn = this._socAtSunrise();
+      if (dawn) ahead = { at: to, pct: dawn.at };
+    } else {
+      from = startOfToday().getTime();
+      to = now;
+      if (view.mode === "charging" && view.at) {
+        ahead = { at: view.at.getTime(), pct: 100 };
+        to = view.at.getTime();
+      }
+    }
+    if (to <= from) return nothing;
+
+    const W = 340;
+    const H = 52;
+    const TOP = 6;
+    const FLOOR = 42;
+    const x = (t: number) => ((Math.min(to, Math.max(from, t)) - from) / (to - from)) * W;
+    const y = (pct: number) => FLOOR - (Math.min(100, Math.max(0, pct)) / 100) * (FLOOR - TOP);
+    const seen = rows.filter((row) => row.start >= from && row.start <= now);
+    const points: Array<[number, number]> = seen.map((row) => [x(row.start), y(row.mean as number)]);
+    points.push([x(now), y(soc)]);
+    const path = points
+      .map(([px, py], index) => `${index === 0 ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`)
+      .join(" ");
+    const reserveY = config.battery_reserve > 0 ? y(config.battery_reserve) : undefined;
+    const first = seen[0]?.mean ?? soc;
+    // The second figure beside the bar may already say where the charge ends up.
+    const endSaid = config.battery.extra === "sunrise" && night;
+
+    return html`
+      <svg class="full" viewBox="0 0 ${W} ${H}" role="img" aria-label="${localize("battery.title", locale)}">
+        ${reserveY !== undefined
+          ? svg`<line class="bat-curve-floor" x1="0" x2="${W}" y1="${reserveY.toFixed(1)}" y2="${reserveY.toFixed(1)}"></line>`
+          : nothing}
+        <path class="bat-curve" d="${path}"></path>
+        ${ahead
+          ? svg`<path class="bat-curve ahead"
+              d="M${x(now).toFixed(1)},${y(soc).toFixed(1)} L${x(ahead.at).toFixed(1)},${y(ahead.pct).toFixed(1)}"></path>`
+          : nothing}
+        ${ahead
+          ? svg`<line class="bat-curve-now" x1="${x(now).toFixed(1)}" x2="${x(now).toFixed(1)}" y1="${TOP}" y2="${FLOOR}"></line>`
+          : nothing}
+        <text class="bat-curve-label" x="0" y="${H - 1}">${formatClock(new Date(from), locale)} · ${formatNumber(first as number, locale, 0)} %</text>
+        <text class="bat-curve-label" x="${W}" y="${H - 1}" text-anchor="end">${formatClock(new Date(to), locale)}${
+          ahead && !endSaid ? ` · ${formatNumber(ahead.pct, locale, 0)} %` : ""
+        }</text>
+      </svg>
     `;
   }
 
@@ -2365,6 +2447,18 @@ export class PowerOriginCard extends LitElement {
         return {
           value: `${formatEnergy(given, locale)} kWh`,
           label: localize("battery.given", locale)
+        };
+      }
+      case "flow": {
+        const charged = energyKwh(stateOf(hass, config.entities.battery_in_today));
+        if (charged === undefined || given === undefined) return undefined;
+        const usable = config.battery_capacity / 1000;
+        return {
+          value: `↑${formatEnergy(charged, locale)} ↓${formatEnergy(given, locale)} kWh`,
+          label:
+            usable > 0
+              ? `${formatNumber(given / usable, locale, 1)} ${localize("battery.cycles", locale)}`
+              : localize("battery.flow", locale)
         };
       }
       default:
