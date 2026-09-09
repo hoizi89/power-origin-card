@@ -4,7 +4,7 @@
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/card.png" alt="Midday: two rings, the day beside them, and what the day earned" width="430">
 
-[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFB020?style=flat-square&labelColor=1A1E2B)](https://buymeacoffee.com/p8w8767bbcl)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFB020?style=flat-square&labelColor=1A1E2B)](https://buymeacoffee.com/hoizi89)
 
 If the card earns its place on your wall, a coffee keeps the night shifts going.
 
@@ -244,4 +244,4 @@ MIT
 
 ## Support
 
-Power Origin is free and stays free. If it earns its place on your wall, you can [buy me a coffee](https://buymeacoffee.com/p8w8767bbcl) — that is what keeps the night shifts going. Bug reports and ideas are just as welcome, in the [issues](https://github.com/hoizi89/power-origin-card/issues), in English or German.
+Power Origin is free and stays free. If it earns its place on your wall, you can [buy me a coffee](https://buymeacoffee.com/hoizi89) — that is what keeps the night shifts going. Bug reports and ideas are just as welcome, in the [issues](https://github.com/hoizi89/power-origin-card/issues), in English or German.
