@@ -1115,7 +1115,9 @@ describe("the night, said once", () => {
 
   it("does not let the centre and the battery note both say how long", async () => {
     const { text } = await render(baseConfig({ ring: { center: "power", center_dark: "runtime" } }), evening());
-    expect(text.match(/Reicht bis/g)?.length ?? 0).toBe(1);
+    // The centre carries the time under a short word; the note keeps the energy.
+    expect(text.match(/Reicht bis/g)?.length ?? 0).toBe(0);
+    expect(text).toMatch(/\bbis \d/);
     expect(text).toContain("kWh übrig");
   });
 

@@ -4,6 +4,20 @@ const here = new URL(".", import.meta.url).pathname.replace(/^\//, "");
 const bundle = fs.readFileSync(here + "../dist/power-origin-card.js", "utf8");
 
 const HARNESS = `
+/* A capture may set globalThis.__at = "22:30" before the card loads; the
+   clock then reads that time today, and the day’s statistics run up to it. */
+(() => {
+  const Real = Date;
+  const at = globalThis.__at;
+  if (!at) return;
+  const [h, m] = at.split(":").map(Number);
+  const target = new Real(); target.setHours(h, m, 0, 0);
+  const offset = target.getTime() - Real.now();
+  globalThis.Date = class extends Real {
+    constructor(...args) { if (args.length) super(...args); else super(Real.now() + offset); }
+    static now() { return Real.now() + offset; }
+  };
+})();
 const KEYS = [
   "house", "solar", "battery_power", "battery_soc", "grid_power", "solar_today",
   "house_today", "export_today", "import_today", "forecast", "cost_today",

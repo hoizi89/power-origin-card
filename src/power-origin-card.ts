@@ -447,7 +447,7 @@ export class PowerOriginCard extends LitElement {
     const caption = !config.ring.caption
       ? undefined
       : timeLeft
-        ? `${localize("battery.lasts_until", locale)} ${formatClock(timeLeft.at, locale)}`
+        ? `${localize("ring.caption_until", locale)} ${formatClock(timeLeft.at, locale)}`
         : localize(captionKey, locale);
 
     // The outer ring answers the same question over the whole day, in the same
