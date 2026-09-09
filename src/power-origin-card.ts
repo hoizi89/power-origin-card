@@ -1889,8 +1889,8 @@ export class PowerOriginCard extends LitElement {
           : "bal-track";
 
     // The hours stand in the left margin, so the column gives up a little width.
-    const X = 24;
-    const W = 56;
+    const X = 28;
+    const W = 52;
     const body =
       drawn === "blocks"
         ? svg`${[...ticks.map((tick) => tick.y), H].map((to, index, all) => {
@@ -1949,10 +1949,10 @@ export class PowerOriginCard extends LitElement {
             : nothing}
           ${body}
           ${ticks.map(
-            (tick) => svg`<line class="night-tick" x1="${tick.hour % 4 === 0 ? 17 : 20}" x2="${X - 1}"
+            (tick) => svg`<line class="night-tick" x1="${tick.hour % 4 === 0 ? 21 : 24}" x2="${X - 1}"
               y1="${tick.y.toFixed(1)}" y2="${tick.y.toFixed(1)}"></line>
               ${tick.hour % 4 === 0
-                ? svg`<text class="night-hour" x="15" y="${(tick.y + 3).toFixed(1)}"
+                ? svg`<text class="night-hour" x="19" y="${(tick.y + 4).toFixed(1)}"
                     text-anchor="end">${String(tick.hour).padStart(2, "0")}</text>`
                 : nothing}`
           )}
@@ -2922,10 +2922,10 @@ export class PowerOriginCard extends LitElement {
           );
 
     return html`
-      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${dawn ? 62 : 54}" role="img"
+      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${dawn ? 66 : 54}" role="img"
            aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
         ${dawnX !== undefined
-          ? svg`<g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 12}) scale(0.72)">
+          ? svg`<g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 16}) scale(0.72)">
                   <circle cx="0" cy="0" r="2.7"></circle>
                   <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
                            M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3

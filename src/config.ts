@@ -155,11 +155,15 @@ function resolveColumns(config: PowerOriginCardConfig) {
       : (ring.meter_style as MeterShows));
   // A needle is blocks unless told otherwise; a column that fills from one
   // end is one body unless told otherwise, so nothing is redrawn unasked.
-  const drawn = isDrawn(ring.meter_style)
-    ? ring.meter_style
-    : shows === "grid"
-      ? DEFAULTS.ring.meter_style
-      : "bar";
+  // The editor writes the drawing to its own key; a card written before that
+  // carried it in meter_style, which still reads.
+  const drawn = isDrawn(ring.meter_drawn)
+    ? ring.meter_drawn
+    : isDrawn(ring.meter_style)
+      ? ring.meter_style
+      : shows === "grid"
+        ? DEFAULTS.ring.meter_style
+        : "bar";
 
   const secondShows =
     ring.meter_second_shows ??
@@ -168,13 +172,15 @@ function resolveColumns(config: PowerOriginCardConfig) {
       : isDrawn(second)
         ? "grid"
         : (second as MeterShows));
-  const secondDrawn = isDrawn(ring.meter_second_style)
-    ? ring.meter_second_style
-    : isDrawn(second)
-      ? second
-      : secondShows === "grid"
-        ? DEFAULTS.ring.meter_second_style
-        : "bar";
+  const secondDrawn = isDrawn(ring.meter_second_drawn)
+    ? ring.meter_second_drawn
+    : isDrawn(ring.meter_second_style)
+      ? ring.meter_second_style
+      : isDrawn(second)
+        ? second
+        : secondShows === "grid"
+          ? DEFAULTS.ring.meter_second_style
+          : "bar";
 
   return {
     columns,
@@ -437,7 +443,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 selector: { boolean: {} }
               }),
               ...only((resolved) => resolved.ring.meter && drawable(resolved.ring.meter_shows), {
-                name: "meter_style",
+                name: "meter_drawn",
                 selector: {
                   select: {
                     mode: "dropdown",
@@ -515,7 +521,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 selector: { boolean: {} }
               }),
               ...only((resolved) => drawable(resolved.ring.meter_second_shows), {
-                name: "meter_second_style",
+                name: "meter_second_drawn",
                 selector: {
                   select: {
                     mode: "dropdown",
@@ -1433,6 +1439,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_second_dark: t("editor.meter_dark"),
     night_dim: t("editor.night_dim"),
     meter_style: t("editor.meter_style"),
+    meter_drawn: t("editor.meter_style"),
+    meter_second_drawn: t("editor.meter_style"),
     meter_today: t("editor.meter_today"),
     meter_marks: t("editor.meter_marks"),
     meter_top: t("editor.meter_top"),
@@ -1561,6 +1569,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   helpers.meter_second_shows = helpers.meter_shows;
   helpers.meter_second_scope = helpers.meter_scope;
   helpers.meter_second_style = helpers.meter_style;
+  helpers.meter_drawn = helpers.meter_style;
+  helpers.meter_second_drawn = helpers.meter_style;
 
   for (const name of [
     "scale",

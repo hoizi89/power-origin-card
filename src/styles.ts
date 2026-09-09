@@ -1670,7 +1670,7 @@ export const cardStyles = css`
   }
   .night-hour {
     font-family: var(--sst-mono);
-    font-size: 8.5px;
+    font-size: 11px;
     fill: var(--sst-muted);
   }
 

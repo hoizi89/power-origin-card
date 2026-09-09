@@ -111,6 +111,10 @@ describe("editor coverage", () => {
   const DERIVED = new Set([
     "meter",
     "meter_second",
+    // The drawing is offered as meter_drawn; meter_style is where older cards
+    // kept it, and the resolved subject-or-drawing the card reads.
+    "meter_style",
+    "meter_second_style",
     "battery_capacity",
     "battery_reserve",
     // Names and meters come with the devices the dashboard hands over; they
@@ -191,14 +195,14 @@ describe("editor coverage", () => {
       entities: { house: "sensor.h" },
       ring: { meter_shows: "grid" }
     });
-    expect(JSON.stringify(grid.schema)).toContain("meter_style");
+    expect(JSON.stringify(grid.schema)).toContain("meter_drawn");
 
     const priced = getConfigForm("de", {
       type: "custom:power-origin-card",
       entities: { house: "sensor.h" },
       ring: { meter_shows: "money" }
     });
-    expect(JSON.stringify(priced.schema)).not.toContain("meter_style");
+    expect(JSON.stringify(priced.schema)).not.toContain("meter_drawn");
   });
 
   it("gives each column the settings that shape it, and only those", () => {
@@ -275,7 +279,7 @@ describe("editor coverage", () => {
     });
     for (const [left, right] of [
       ["meter_shows", "meter_second_shows"],
-      ["meter_style", "meter_second_style"],
+      ["meter_drawn", "meter_second_drawn"],
       ["meter_scope", "meter_second_scope"],
       ["meter_scale", "meter_second_scale"],
       ["meter_steps", "meter_second_steps"]
@@ -328,7 +332,7 @@ describe("editor coverage", () => {
     expect(both["Die rechte Säule"]).toEqual([
       "meter_second_shows",
       "meter_second_top",
-      "meter_second_style",
+      "meter_second_drawn",
       "meter_second_dark"
     ]);
     expect(both["Die linke Säule"]).toContain("meter_marks");
