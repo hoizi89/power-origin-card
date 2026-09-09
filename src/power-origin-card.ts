@@ -67,7 +67,8 @@ export class PowerOriginCard extends LitElement {
     _error: { state: true },
     _cycleAt: { state: true },
     _weekPick: { state: true },
-    _openArea: { state: true }
+    _openArea: { state: true },
+    _wideOn: { state: true }
   };
 
   static styles = cardStyles;
@@ -89,6 +90,9 @@ export class PowerOriginCard extends LitElement {
   private _deviceSeries?: Record<string, Array<{ start: number; mean: number }>>;
   /** The room a tap opened in the devices block. */
   private _openArea?: string;
+  /** Whether the card is wide enough for the wide layout right now. */
+  private _wideOn = false;
+  private _resize?: ResizeObserver;
   private _pending = false;
   private _yearPeak?: number;
   /** The best day of the year, one mean per hour in kW, and its yield. */
@@ -153,6 +157,7 @@ export class PowerOriginCard extends LitElement {
     this._config = resolveConfig(config);
     this._lastFetch = 0;
     this._cycleAt = undefined;
+    this._measure();
     if (this._config.ring.tap === "cycle") {
       try {
         const kept = localStorage.getItem(this._cycleKey());
@@ -262,11 +267,25 @@ export class PowerOriginCard extends LitElement {
     // hass may have arrived before the element was in the document, and the
     // fetch declines to run while it is not — so it is picked up here.
     void this._maybeFetch();
+    // The wide layout waits for room; the card measures itself for it.
+    if (typeof ResizeObserver !== "undefined" && !this._resize) {
+      this._resize = new ResizeObserver(() => this._measure());
+      this._resize.observe(this);
+    }
+    this._measure();
+  }
+
+  private _measure(): void {
+    const config = this._config;
+    if (!config || config.shape !== "wide") return;
+    const on = config.wide_from <= 0 || this.clientWidth >= config.wide_from;
+    if (on !== this._wideOn) this._wideOn = on;
   }
 
   getCardSize(): number {
     const sections = this._config?.sections;
     if (!sections) return 8;
+    if (this._config?.shape === "compact") return 3;
     return (
       1 +
       (sections.ring ? 4 : 0) +
@@ -729,8 +748,8 @@ export class PowerOriginCard extends LitElement {
            kilowatts wear the same colour wherever they appear. -->
       <ha-card style="--sst-scale: ${config.text_scale}; --sst-night: ${(1 - config.night_dim / 100).toFixed(2)}"
         class="${(config.ring.import_red && flow.fromGrid > 0) || (config.ring.import_switch && alarm) ? "import-alarm" : ""} ${
-          config.night_dim > 0 && sunDown ? "night" : ""
-        }">
+          config.shape === "wide" && this._wideOn ? "wide" : ""
+        } ${config.night_dim > 0 && sunDown ? "night" : ""}">
         ${config.title || showChip || price !== undefined
           ? html`<div class="head ${config.title || price !== undefined ? "" : "bare"} ${
               // Two columns reach the top corners, so there is no corner left
@@ -750,13 +769,60 @@ export class PowerOriginCard extends LitElement {
             </div>`
           : nothing}
         ${config.head_sunbar && !config.sections.chart ? this._renderSunbar(sunDown, locale) : nothing}
-        ${config.sections.ring ? this._renderRing(flow, locale, config.ring.import_switch && alarm) : nothing}
-        ${config.sections.chart ? this._renderChart(locale) : nothing}
-        ${config.sections.week ? this._renderWeek(locale) : nothing}
-        ${config.sections.battery ? this._renderBattery(locale) : nothing}
-        ${config.sections.today ? this._renderToday(flow, locale) : nothing}
-        ${config.sections.devices ? this._renderDevices(locale) : nothing}
+        ${config.shape === "compact"
+          ? this._renderCompact(flow, locale, config.ring.import_switch && alarm)
+          : (() => {
+              // Quiet night: what has nothing to say once the sun is down steps aside.
+              const quiet = config.night_layout === "quiet" && sunDown;
+              const ring = config.sections.ring
+                ? this._renderRing(flow, locale, config.ring.import_switch && alarm, quiet)
+                : nothing;
+              const rest = html`
+                ${config.sections.chart ? this._renderChart(locale, quiet) : nothing}
+                ${config.sections.week && !quiet ? this._renderWeek(locale) : nothing}
+                ${config.sections.battery ? this._renderBattery(locale) : nothing}
+                ${config.sections.today && !quiet ? this._renderToday(flow, locale) : nothing}
+                ${config.sections.devices && !quiet ? this._renderDevices(locale) : nothing}`;
+              return config.shape === "wide" && this._wideOn
+                ? html`<div class="side">${ring}</div><div class="main">${rest}</div>`
+                : html`${ring}${rest}`;
+            })()}
       </ha-card>
+    `;
+  }
+
+  /**
+   * One row: the ring small, three figures beside it, the chip at the end.
+   * For an overview page where the card only has to say all is well.
+   */
+  private _renderCompact(flow: Flow, locale: string, alarm: boolean) {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const soc = numberOf(stateOf(hass, config.entities.battery_soc));
+    const exporting = flow.toGrid >= flow.fromGrid;
+    const tile = (key: string, value: string, unit: string, tone: string) => html`
+      <div class="stat">
+        <span class="stat-k">${localize(key, locale)}</span>
+        <span class="stat-v ${tone}">${value} <small>${unit}</small></span>
+      </div>`;
+    return html`
+      <div class="compact">
+        ${this._renderRing(flow, locale, alarm, true)}
+        <div class="compact-stats">
+          ${config.entities.solar
+            ? tile("compact.roof", formatPower(flow.production, locale), "kW", "sun")
+            : nothing}
+          ${config.entities.grid_power || config.entities.solar
+            ? tile(
+                exporting ? "flow.to_grid" : "flow.from_grid",
+                formatPower(exporting ? flow.toGrid : flow.fromGrid, locale),
+                "kW",
+                exporting ? "sun" : "grid"
+              )
+            : nothing}
+          ${soc !== undefined ? tile("battery.title", formatNumber(soc, locale, 0), "%", "leaf") : nothing}
+        </div>
+      </div>
     `;
   }
 
@@ -799,6 +865,8 @@ export class PowerOriginCard extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.clearTimeout(this._importTimer);
+    this._resize?.disconnect();
+    this._resize = undefined;
   }
 
   /**
@@ -841,7 +909,7 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
-  private _renderRing(flow: Flow, locale: string, alarm = false) {
+  private _renderRing(flow: Flow, locale: string, alarm = false, bare = false) {
     const config = this._config as ResolvedConfig;
     const hass = this._hass as HomeAssistant;
     // A ring about production says nothing before sunrise, so both production
@@ -1004,8 +1072,8 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="ring-block ${config.ring.layout}">
-        <div class="ring-group size-${config.ring.size} ${config.ring.facts === "none" ? "solo" : ""}">
-        ${this._renderMeter(flow, locale, leftSubject)}
+        <div class="ring-group size-${bare ? "s" : config.ring.size} ${config.ring.facts === "none" || bare ? "solo" : ""}">
+        ${bare ? nothing : this._renderMeter(flow, locale, leftSubject)}
         <svg class="ring ${showSurplus ? "surplus" : ""} ${cycle ? "cycle" : ""}"
              viewBox="${farMarks ? "-14 -14 228 228" : "0 0 200 200"}"
              role="${cycle ? "button" : "img"}" aria-label="${value} ${unit}"
@@ -1134,12 +1202,12 @@ export class PowerOriginCard extends LitElement {
             : nothing}
 
         </svg>
-        ${config.ring.meter_second === "none"
+        ${config.ring.meter_second === "none" || bare
           ? nothing
           : this._renderMeter(flow, locale, rightSubject, true)}
         </div>
-        ${config.ring.columns === "scale" ? this._renderScale(flow, locale) : nothing}
-        ${this._renderLegend(flow, locale)}
+        ${config.ring.columns === "scale" && !bare ? this._renderScale(flow, locale) : nothing}
+        ${bare ? nothing : this._renderLegend(flow, locale)}
       </div>
     `;
   }
@@ -2138,7 +2206,7 @@ export class PowerOriginCard extends LitElement {
     return out;
   }
 
-  private _renderChart(locale: string) {
+  private _renderChart(locale: string, summaryOnly = false) {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
     const series = this._series;
@@ -2270,7 +2338,7 @@ export class PowerOriginCard extends LitElement {
               )}
         </div>
         ${this._error ? html`<div class="row-note dim">${this._error}</div>` : nothing}
-        ${shapeless
+        ${shapeless || summaryOnly
           ? nothing
           : geometry || barGeometry
           ? html`

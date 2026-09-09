@@ -139,7 +139,10 @@ const NEEDS_A_MOVING_HISTORY = new Set([
   // The switch waits two minutes of draw before it shows; columns.test.ts and
   // head.test.ts move the clock.
   "ring.import_switch",
-  "chip_alarm"
+  "chip_alarm",
+  // The wide shape waits for room, which a test document never has;
+  // layout.test.ts asks for it from zero pixels and from far too many.
+  "shape"
 ]);
 
 describe("every setting the editor offers changes something", () => {

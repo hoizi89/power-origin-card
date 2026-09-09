@@ -296,6 +296,12 @@ export interface PowerOriginCardConfig {
   head_price?: boolean;
   /** A line under the heading from sunrise to sunset with the sun on it; the night at night. */
   head_sunbar?: boolean;
+  /** The card's shape: as it is, side by side for a wide panel, or one row. */
+  shape?: "standard" | "wide" | "compact";
+  /** From this many pixels the wide layout takes hold; 0 always. */
+  wide_from?: number;
+  /** Once the sun is down: as it is, or quiet — the columns, the tiles and the devices go. */
+  night_layout?: "same" | "quiet";
   tap_action?: ActionConfig;
   battery_capacity?: number;
   battery_reserve?: number;

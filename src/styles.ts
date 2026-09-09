@@ -1741,4 +1741,90 @@ export const cardStyles = css`
   ha-card.night > :not(.head) {
     opacity: var(--sst-night, 1);
   }
+
+  /* Wide: the ring keeps the left, the day takes the right. The inset panel
+     no longer bleeds to the card's edges, since it has a column to sit in. */
+  ha-card.wide {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.5fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 24px;
+    padding-bottom: 16px;
+  }
+
+  ha-card.wide > .head,
+  ha-card.wide > .sunbar {
+    grid-column: 1 / -1;
+  }
+
+  ha-card.wide > .side {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  ha-card.wide > .main {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  ha-card.wide .main > .row:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  ha-card.wide .today {
+    margin: 0;
+    border-radius: 10px;
+    border-top: 0;
+  }
+
+  /* Compact: one row that says "all is well" and leaves the rest to a tap. */
+  .compact {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 16px;
+  }
+
+  .compact .ring-block {
+    flex: 0 0 auto;
+  }
+
+  .compact .ring {
+    max-width: 96px;
+    min-width: 88px;
+  }
+
+  .compact .ring-value {
+    font-size: calc(30px * var(--sst-scale));
+  }
+
+  .compact-stats {
+    flex: 1;
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .compact-stats .stat-v {
+    white-space: nowrap;
+  }
+
+  .compact-stats .stat-v.sun {
+    color: var(--sst-sun);
+  }
+
+  .compact-stats .stat-v.grid {
+    color: var(--sst-grid);
+  }
+
+  .compact-stats .stat-v.leaf {
+    color: var(--sst-leaf);
+  }
 `;

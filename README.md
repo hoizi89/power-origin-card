@@ -107,6 +107,10 @@ Four more: `battery` is the battery as a store — what it holds on the scale of
 
 **How it is drawn** is `ring.meter_style`, and only `grid` and `night` have a choice: `blocks` for a stepped needle or one block per hour, `bar` for one body. The others each have one honest shape, so the editor does not offer a drawing it would ignore.
 
+## Three shapes, and a quiet night
+
+The card has three shapes (`shape`): as it is; `wide`, with the ring and its columns on the left and the day, the battery and the rest on the right, for a tablet on the wall — it takes hold from `wide_from` pixels and stacks as usual below that; and `compact`, one row with the ring small, three figures and the chip, for an overview page where the card only has to say all is well. And once the sun is down, `night_layout: quiet` lets everything that has nothing to say at night step aside: the columns, the tiles, the devices and the week go, and the ring, the battery and one line about the day remain.
+
 ## The corner
 
 The chip in the corner can say the day's self-supplied share instead of the state (`chip_shows: autarky`), and it can turn red with the kilowatts once the house has drawn from the grid for two minutes (`chip_alarm`), letting go five minutes after the draw ends. Beside the title, `head_price` puts this hour's import price, green under the day's mean and red over it. Without the day chart, `head_sunbar` draws the sun's day as a line under the heading, and the night at night.

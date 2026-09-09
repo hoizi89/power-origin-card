@@ -586,6 +586,31 @@ shots["head"] = {
   ).replace('place(cell, { title: "", chip: "never", ...cfg }', 'place(cell, { ...cfg }')
 };
 
+shots["shapes"] = {
+  width: 900,
+  body: `const col = document.createElement("div");
+    col.style.display = "flex"; col.style.flexDirection = "column"; col.style.gap = "16px";
+    stage.append(col);
+    const wide = document.createElement("div"); wide.style.width = "900px"; col.append(wide);
+    place(wide, { title: "Solar", shape: "wide", wide_from: 600,
+      ring: { center: "power", columns: "two", meter_shows: "grid", meter_second_shows: "roof", facts: "none" },
+      today: ${JSON.stringify(full)} }, "MIDDAY", false);
+    const row = document.createElement("div"); row.style.display = "grid"; row.style.gridTemplateColumns = "440px 440px"; row.style.gap = "20px"; col.append(row);
+    const a = document.createElement("div"); row.append(a);
+    place(a, { title: "Solar", shape: "compact", ring: { center: "power" } }, "MIDDAY", false);
+    const b = document.createElement("div"); row.append(b);
+    b.innerHTML = "";
+    const ids = freshIds();
+    const el = document.createElement("power-origin-card");
+    el.setConfig({ type: "custom:power-origin-card", title: "Solar", battery_capacity: 13100, battery_reserve: 15, entities: { ...ids },
+      night_layout: "quiet", night_dim: 25, ring: { center: "power", columns: "two", meter_shows: "grid", meter_second_shows: "roof", facts: "none", night: "countdown" },
+      battery: { sunrise_mark: true, extra: "sunrise" }, today: ${JSON.stringify(full)} });
+    globalThis.__night = true;
+    el.hass = hass(ids, EVENING, false);
+    globalThis.__night = false;
+    b.append(el);`
+};
+
 for (const [name, shot] of Object.entries(shots)) {
   fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }

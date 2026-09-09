@@ -19,6 +19,9 @@ export const DEFAULTS = {
   chip_alarm: false,
   head_price: false,
   head_sunbar: false,
+  shape: "standard" as const,
+  wide_from: 640,
+  night_layout: "same" as const,
   tap_action: { action: "more-info" as const },
   battery_capacity: 0,
   battery_reserve: 0,
@@ -196,6 +199,9 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     chip_alarm: config.chip_alarm ?? DEFAULTS.chip_alarm,
     head_price: config.head_price ?? DEFAULTS.head_price,
     head_sunbar: config.head_sunbar ?? DEFAULTS.head_sunbar,
+    shape: config.shape ?? DEFAULTS.shape,
+    wide_from: config.wide_from ?? DEFAULTS.wide_from,
+    night_layout: config.night_layout ?? DEFAULTS.night_layout,
     tap_action: config.tap_action ?? DEFAULTS.tap_action,
     // The two used to sit at the top level. They belong to the battery and
     // live there now; a card written before that still reads.
@@ -656,6 +662,40 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           name: "head_sunbar",
           selector: { boolean: {} }
         })
+      ]
+    },
+    {
+      type: "grid",
+      schema: [
+        {
+          name: "shape",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "standard", label: t("editor.layout_standard") },
+                { value: "wide", label: t("editor.layout_wide") },
+                { value: "compact", label: t("editor.layout_compact") }
+              ]
+            }
+          }
+        },
+        ...only((resolved) => resolved.shape === "wide", {
+          name: "wide_from",
+          selector: { number: { min: 0, max: 2000, step: 20, mode: "box", unit_of_measurement: "px" } }
+        }),
+        {
+          name: "night_layout",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "same", label: t("editor.same") },
+                { value: "quiet", label: t("editor.night_quiet") }
+              ]
+            }
+          }
+        }
       ]
     },
     {
@@ -1251,6 +1291,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     chip_alarm: t("editor.chip_alarm"),
     head_price: t("editor.head_price"),
     head_sunbar: t("editor.head_sunbar"),
+    wide_from: t("editor.wide_from"),
+    night_layout: t("editor.night_layout"),
     tap_action: t("editor.tap_action"),
     entities: t("editor.entities"),
     house: t("editor.house"),
@@ -1343,6 +1385,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     // The entity picker and the today switch share a name; the switch is the
     // one that needs the longer wording, so it wins where both could apply.
     ...(current?.today ? { amortisation: t("editor.amortisation_corner") } : {}),
+    shape: t("editor.card_layout"),
     stats: t("editor.stats"),
     battery_capacity: t("editor.capacity"),
     battery_reserve: t("editor.reserve"),
@@ -1361,6 +1404,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     chip_alarm: t("editor.help_chip_alarm"),
     head_price: t("editor.help_head_price"),
     head_sunbar: t("editor.help_head_sunbar"),
+    wide_from: t("editor.help_wide_from"),
+    night_layout: t("editor.help_night_layout"),
     tap_action: t("editor.help_tap_action"),
     cost_today: t("editor.help_cost_today"),
     cost_export_today: t("editor.help_cost_sides"),
