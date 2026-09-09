@@ -78,6 +78,54 @@ describe("the night as a column", () => {
   });
 });
 
+describe("the night's ends", () => {
+  it("names the charge expected at sunrise when the battery reaches it", async () => {
+    const { root, text } = await mount(
+      config({ battery_capacity: 50000, ring: { meter: true, meter_shows: "night" } }),
+      evening
+    );
+    expect(root.querySelector(".night-short")).toBeNull();
+    expect(text()).toMatch(/\d+ % bei Sonnenaufgang/);
+  });
+
+  it("leaves the figure to the battery block when that already says it", async () => {
+    const { text } = await mount(
+      config({ battery_capacity: 50000, ring: { meter: true, meter_shows: "night" }, battery: { extra: "sunrise" } }),
+      evening
+    );
+    expect(text().match(/% bei Sonnenaufgang/g)?.length ?? 0).toBe(0);
+    expect(text()).toContain("reicht bis Sonnenaufgang");
+  });
+
+  it("gives the rest of the night to the grid when the battery is empty", async () => {
+    const reserve = SCENARIOS.find((s) => s.name === "reserve at night")!;
+    const { root, text } = await mount(config({ ring: { meter: true, meter_shows: "night" } }), reserve);
+    expect(root.querySelector(".night-short")).toBeTruthy();
+    expect(root.querySelector(".night-reach")).toBeNull();
+    expect(text()).toContain("Netz bis Sonnenaufgang");
+  });
+});
+
+describe("blocks for the columns that fill from one end", () => {
+  it("draws the roof, the battery and the share in cells when asked, one body otherwise", async () => {
+    for (const shows of ["roof", "battery", "autarky"] as const) {
+      const blocks = await mount(config({ ring: { meter: true, meter_shows: shows, meter_style: "blocks", meter_steps: 8 } }), day);
+      expect(blocks.root.querySelectorAll(".meter .meter-off").length, shows).toBe(8);
+      expect(blocks.root.querySelectorAll(".meter .col-cell").length, shows).toBeGreaterThan(0);
+      const bar = await mount(config({ ring: { meter: true, meter_shows: shows, meter_style: "bar" } }), day);
+      expect(bar.root.querySelectorAll(".meter .meter-off").length, shows).toBe(0);
+    }
+  });
+
+  it("holds back the reserve cells of the battery", async () => {
+    const { root } = await mount(
+      config({ ring: { meter: true, meter_shows: "battery", meter_style: "blocks", meter_steps: 10 } }),
+      day
+    );
+    expect(root.querySelectorAll(".col-cell.held").length).toBe(1);
+  });
+});
+
 describe("a column that says nothing", () => {
   it("leaves the ring the room", async () => {
     const { root } = await mount(config({ ring: { meter: true, meter_shows: "none" } }), day);

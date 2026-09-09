@@ -1176,8 +1176,8 @@ export const cardStyles = css`
     fill: none;
     stroke: var(--sst-sun);
     stroke-width: 1.4;
-    stroke-dasharray: 1.5 3;
-    opacity: 0.4;
+    stroke-dasharray: 2 2.5;
+    opacity: 0.6;
   }
 
   /* Who carried each hour, under the day: the grid at the foot, the battery

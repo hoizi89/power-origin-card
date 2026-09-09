@@ -153,7 +153,13 @@ function resolveColumns(config: PowerOriginCardConfig) {
     (isDrawn(ring.meter_style ?? DEFAULTS.ring.meter_style)
       ? "grid"
       : (ring.meter_style as MeterShows));
-  const drawn = isDrawn(ring.meter_style) ? ring.meter_style : DEFAULTS.ring.meter_style;
+  // A needle is blocks unless told otherwise; a column that fills from one
+  // end is one body unless told otherwise, so nothing is redrawn unasked.
+  const drawn = isDrawn(ring.meter_style)
+    ? ring.meter_style
+    : shows === "grid"
+      ? DEFAULTS.ring.meter_style
+      : "bar";
 
   const secondShows =
     ring.meter_second_shows ??
@@ -166,7 +172,9 @@ function resolveColumns(config: PowerOriginCardConfig) {
     ? ring.meter_second_style
     : isDrawn(second)
       ? second
-      : DEFAULTS.ring.meter_second_style;
+      : secondShows === "grid"
+        ? DEFAULTS.ring.meter_second_style
+        : "bar";
 
   return {
     columns,
@@ -400,8 +408,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     { value: "none", label: t("editor.meter_none") }
   ];
   const darkSubjects = [{ value: "same", label: t("editor.same") }, ...subjects];
-  /** Only the grid and the night have a choice of drawing. */
-  const drawable = (shows: string) => shows === "grid" || shows === "night";
+  /** A column that fills from one end can be blocks or one body; the rest have one shape. */
+  const drawable = (shows: string) =>
+    ["grid", "night", "roof", "battery", "autarky"].includes(shows);
   /** A column with a mark above it: the roof's best, or the battery's size. */
   const topped = (shows: string) => shows === "roof" || shows === "battery";
 
@@ -461,7 +470,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 ]
               }),
               ...only(
-                (resolved) => resolved.ring.meter && resolved.ring.meter_style === "blocks",
+                (resolved) =>
+                  resolved.ring.meter &&
+                  resolved.ring.meter_drawn === "blocks" &&
+                  drawable(resolved.ring.meter_shows),
                 {
                   name: "meter_steps",
                   selector: { number: { min: 3, max: 14, mode: "box" } }
@@ -542,7 +554,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 ]
               }),
               ...only(
-                (resolved) => resolved.ring.meter && resolved.ring.meter_second === "blocks",
+                (resolved) =>
+                  resolved.ring.meter &&
+                  resolved.ring.meter_second_drawn === "blocks" &&
+                  drawable(resolved.ring.meter_second_shows),
                 {
                   name: "meter_second_steps",
                   selector: { number: { min: 3, max: 14, mode: "box" } }
@@ -1080,16 +1095,29 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               selector: { boolean: {} }
             }),
             ...only(
-              (resolved) => cellTimed(resolved) && resolved.battery_capacity > 0,
-              { name: "sunrise_mark", selector: { boolean: {} } }
-            ),
-            ...only(cell, { name: "curve", selector: { boolean: {} } }),
-            ...only(
               (resolved) => cellTimed(resolved) && resolved.battery.style !== "solid",
               { name: "animate", selector: { boolean: {} } }
             )
           ]
         },
+        // What the bar says about the night sits together, since it is one thought.
+        ...only(cell, {
+          type: "expandable",
+          title: t("editor.battery_night"),
+          icon: "mdi:weather-night",
+          schema: [
+            {
+              type: "grid",
+              schema: [
+                ...only(
+                  (resolved) => cellTimed(resolved) && resolved.battery_capacity > 0,
+                  { name: "sunrise_mark", selector: { boolean: {} } }
+                ),
+                { name: "curve", selector: { boolean: {} } }
+              ]
+            }
+          ]
+        }),
         {
           name: "extra",
           selector: {

@@ -958,8 +958,13 @@ export class PowerOriginCard extends LitElement {
         : this._subjectFor(config.ring.meter_second, config.ring.meter_second_dark, night);
     // Lasting draw puts the grid where it can be seen: the right column, or the only one.
     if (alarm && config.ring.meter) {
-      if (config.ring.meter_second !== "none") rightSubject = config.ring.meter_second_drawn;
-      else leftSubject = config.ring.meter_drawn;
+      // A column that was not the grid becomes the grid's needle in blocks.
+      if (config.ring.meter_second !== "none") {
+        rightSubject =
+          config.ring.meter_second_shows === "grid" ? config.ring.meter_second_drawn : "blocks";
+      } else {
+        leftSubject = config.ring.meter_shows === "grid" ? config.ring.meter_drawn : "blocks";
+      }
     }
 
     // A kilowatt is not a decision; a euro an hour is, and on a moving tariff
@@ -1622,8 +1627,10 @@ export class PowerOriginCard extends LitElement {
   }
 
   /** No middle to speak of: it fills from nothing to everything. */
-  private _renderAutarkyMeter(flow: Flow, locale: string) {
+  private _renderAutarkyMeter(flow: Flow, locale: string, second = false) {
     const config = this._config as ResolvedConfig;
+    const drawn = second ? config.ring.meter_second_drawn : config.ring.meter_drawn;
+    const steps = second ? config.ring.meter_second_steps : config.ring.meter_steps;
     const share = Math.min(1, Math.max(0, flow.autarky));
     const height = METER_HEIGHT * share;
     // Graded, the column says at a glance who carries the house.
@@ -1639,9 +1646,12 @@ export class PowerOriginCard extends LitElement {
       <div class="meter-block">
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.autarky", locale)}">
+          ${drawn === "blocks"
+            ? this._cells(share, grade ? `fill-share-${grade}` : "fill-leaf", steps)
+            : svg`
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
           <rect class="bat-fill ${grade ? `fill-share-${grade}` : "fill-leaf"}" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
-                width="72" height="${height.toFixed(1)}" rx="6"></rect>
+                width="72" height="${height.toFixed(1)}" rx="6"></rect>`}
         </svg>
         <div class="meter-label ${grade ? `share-${grade}` : "up"}">
           <span class="meter-value">${formatNumber(flow.autarky * 100, locale, 0)} <small>%</small></span>
@@ -1671,6 +1681,8 @@ export class PowerOriginCard extends LitElement {
     if (!config.entities.solar) return nothing;
 
     const showPeak = second ? config.ring.meter_second_top : config.ring.meter_top;
+    const drawn = second ? config.ring.meter_second_drawn : config.ring.meter_drawn;
+    const steps = second ? config.ring.meter_second_steps : config.ring.meter_steps;
 
     // The column reaches what the system can do, so that today's best can
     // stand inside it as a shadow and now as the light on top: three readings
@@ -1689,6 +1701,9 @@ export class PowerOriginCard extends LitElement {
           : nothing}
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.roof", locale)}">
+          ${drawn === "blocks"
+            ? this._cells(shareNow, "fill-sun", steps, { shadow: sharePeak })
+            : svg`
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
           ${shadow > height
             ? svg`<rect class="bat-fill fill-sun held roof-best" x="8"
@@ -1696,7 +1711,7 @@ export class PowerOriginCard extends LitElement {
                     height="${shadow.toFixed(1)}" rx="6"></rect>`
             : nothing}
           <rect class="bat-fill fill-sun" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
-                width="72" height="${height.toFixed(1)}" rx="6"></rect>
+                width="72" height="${height.toFixed(1)}" rx="6"></rect>`}
         </svg>
         <div class="meter-label up">
           <span class="meter-value">${formatPower(flow.production, locale)} <small>kW</small></span>
@@ -1736,6 +1751,41 @@ export class PowerOriginCard extends LitElement {
   }
 
   /**
+   * A column of cells filling from the foot, for a share of a whole: the
+   * same shape the grid column has, so a card can be all blocks or all bars.
+   * A shadow fills further, faintly, for the best the column has reached.
+   */
+  private _cells(
+    share: number,
+    fill: string,
+    steps: number,
+    options: { shadow?: number; heldBelow?: number; x?: number; width?: number } = {}
+  ) {
+    const n = Math.min(14, Math.max(3, Math.round(steps)));
+    const gap = 2.6;
+    const h = (METER_HEIGHT - gap * (n - 1)) / n;
+    const x = options.x ?? 8;
+    const width = options.width ?? 72;
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    return svg`${Array.from({ length: n }, (_, i) => {
+      const y = METER_HEIGHT - (i + 1) * h - i * gap;
+      const part = clamp(share * n - i);
+      const shadow = options.shadow === undefined ? 0 : clamp(options.shadow * n - i);
+      const held = options.heldBelow !== undefined && (i + 1) / n <= options.heldBelow + 1e-6;
+      return svg`
+        <rect class="meter-off" x="${x}" y="${y.toFixed(1)}" width="${width}" height="${h.toFixed(1)}" rx="3"></rect>
+        ${shadow > part
+          ? svg`<rect class="bat-fill ${fill} held roof-best" x="${x}" y="${(y + h * (1 - shadow)).toFixed(1)}"
+                  width="${width}" height="${(h * shadow).toFixed(1)}" rx="3"></rect>`
+          : nothing}
+        ${part > 0
+          ? svg`<rect class="bat-fill col-cell ${fill} ${held ? "held" : ""}" x="${x}"
+                  y="${(y + h * (1 - part)).toFixed(1)}" width="${width}" height="${(h * part).toFixed(1)}" rx="3"></rect>`
+          : nothing}`;
+    })}`;
+  }
+
+  /**
    * The battery as a store: what it holds on a scale of its own size, the
    * reserve at the foot as power that never comes out, and at night a dashed
    * line where the charge will stand at sunrise. The block says the same in
@@ -1749,6 +1799,8 @@ export class PowerOriginCard extends LitElement {
     if (soc === undefined || capacityKwh <= 0) return nothing;
 
     const showTop = second ? config.ring.meter_second_top : config.ring.meter_top;
+    const drawn = second ? config.ring.meter_second_drawn : config.ring.meter_drawn;
+    const steps = second ? config.ring.meter_second_steps : config.ring.meter_steps;
     const share = Math.min(1, Math.max(0, soc / 100));
     const reserve = Math.min(share, Math.max(0, config.battery_reserve / 100));
     const held = capacityKwh * Math.max(0, share - reserve);
@@ -1762,6 +1814,9 @@ export class PowerOriginCard extends LitElement {
           : nothing}
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
+          ${drawn === "blocks"
+            ? this._cells(share, "fill-leaf", steps, { heldBelow: reserve })
+            : svg`
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
           ${share > reserve
             ? svg`<rect class="bat-fill fill-leaf" x="8" y="${(METER_HEIGHT * (1 - share)).toFixed(1)}"
@@ -1771,7 +1826,7 @@ export class PowerOriginCard extends LitElement {
             ? svg`<rect class="bat-fill fill-leaf held" x="8"
                     y="${(METER_HEIGHT * (1 - reserve)).toFixed(1)}" width="72"
                     height="${(METER_HEIGHT * reserve).toFixed(1)}" rx="6"></rect>`
-            : nothing}
+            : nothing}`}
           ${dawnY !== undefined
             ? svg`<line class="range-mark" x1="4" x2="84" y1="${dawnY.toFixed(1)}" y2="${dawnY.toFixed(1)}"></line>`
             : nothing}
@@ -1804,12 +1859,18 @@ export class PowerOriginCard extends LitElement {
     const set = Date.now() - night.done * total * 3600000;
     const nowY = H * night.done;
     const lasts = this._batteryTime();
+    // An empty battery is a night on the grid, and the column says so.
+    const facts = config.entities.battery_soc ? this._batteryFacts() : undefined;
+    const empty = facts?.usableKwh !== undefined && facts.usableKwh <= 0.05;
     const reach = lasts ? Math.min(lasts.hours, night.hoursLeft) : 0;
     const endY = nowY + (H * reach) / total;
-    const short = lasts ? lasts.hours < night.hoursLeft : undefined;
+    const short = lasts ? lasts.hours < night.hoursLeft : empty ? true : undefined;
     const load = this._series?.houseAverage ?? flow.house;
     const gapKwh = lasts && short ? (night.hoursLeft - lasts.hours) * load : undefined;
     const marks = second ? config.ring.meter_second_marks : config.ring.meter_marks;
+    // Reaching the sun is one thing; with how much is the next, unless the
+    // battery block already says it beside the bar.
+    const dawn = lasts && !short && config.battery.extra !== "sunrise" ? this._socAtSunrise() : undefined;
 
     // The hours the night crosses, for the ticks along the left edge.
     const first = new Date(set);
@@ -1823,7 +1884,7 @@ export class PowerOriginCard extends LitElement {
     const state = (from: number, to: number): string =>
       to <= nowY ? "night-past" : lasts && from >= nowY && to <= endY + 0.5
         ? "night-reach"
-        : lasts && short && from >= endY - 0.5
+        : (lasts || empty) && short && from >= endY - 0.5
           ? "night-short"
           : "bal-track";
 
@@ -1845,7 +1906,7 @@ export class PowerOriginCard extends LitElement {
             ? svg`<rect class="night-reach" x="${X}" y="${nowY.toFixed(1)}" width="${W}"
                     height="${(endY - nowY).toFixed(1)}" rx="4"></rect>`
             : nothing}
-          ${lasts && short
+          ${(lasts || empty) && short
             ? svg`<rect class="night-short" x="${X}" y="${endY.toFixed(1)}" width="${W}"
                     height="${(H - endY).toFixed(1)}" rx="6"></rect>`
             : nothing}`;
@@ -1861,7 +1922,11 @@ export class PowerOriginCard extends LitElement {
       }
       word = short
         ? `${localize("meter.range_gap", locale)} ${formatEnergy(gapKwh as number, locale)} kWh`
-        : localize("meter.range_reaches", locale);
+        : dawn
+          ? `${formatNumber(dawn.at, locale, 0)} % ${localize("meter.at_sunrise", locale)}`
+          : localize("meter.range_reaches", locale);
+    } else if (empty) {
+      word = localize("meter.grid_until_sun", locale);
     } else if (!countdownShown) {
       value = formatDuration(night.hoursLeft, locale);
       word = localize("ring.to_sun", locale);
@@ -1894,6 +1959,7 @@ export class PowerOriginCard extends LitElement {
           <line class="night-now" x1="${X - 4}" x2="${X + W + 4}" y1="${nowY.toFixed(1)}" y2="${nowY.toFixed(1)}"></line>
         </svg>
         <div class="meter-label ${short ? "down" : lasts ? "leaf" : "idle"}">
+          ${dawn ? html`<span class="meter-top">☼</span>` : nothing}
           ${value ? html`<span class="meter-value">${value}</span>` : nothing}
           <span class="meter-word">${word}</span>
         </div>
@@ -1970,7 +2036,7 @@ export class PowerOriginCard extends LitElement {
     if (style === "balance") return this._renderBalance(flow, locale);
     if (style === "money") return this._renderMoneyMeter(flow, locale);
     if (style === "load") return this._renderLoadMeter(flow, locale);
-    if (style === "autarky") return this._renderAutarkyMeter(flow, locale);
+    if (style === "autarky") return this._renderAutarkyMeter(flow, locale, second);
     if (style === "roof") return this._renderRoofMeter(flow, locale, second);
     if (style === "battery") return this._renderBatteryColumn(locale, second);
     if (style === "night") {
