@@ -87,6 +87,11 @@ It only ever fills fields that are still empty, so a choice you made is never ov
 
 Inside the ring, `ring.inner: battery` draws the charge as a thin ring in the battery's colour. Once the sun is down, `ring.night: countdown` turns the outer band into the night itself — from sunset to sunrise, filled as far as it has come — and the word under the figure counts down to the sun.
 
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/ring-day.png" alt="The day as a clock outside with the charge inside, the hour priced, and a tap that steps the centre on" width="700">
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/ring-night.png" alt="The night around the ring, the battery's time in the centre, and the sunrise mark on the bar" width="700">
+
+Left to right, by day: the day as a clock outside with the charge as a ring inside and the dots of a tap that steps the centre on; the hour priced; two rings with the charge inside. By night: the night around the ring counting down to the sun; the same with the battery's time in the centre; the battery bar with a sun where the charge will stand at sunrise.
+
 A column answers two questions, and they are two settings. **What it measures** is `ring.meter_shows`:
 
 | | |
@@ -103,7 +108,12 @@ A column answers two questions, and they are two settings. **What it measures** 
 
 The same moment, six times. Top: what the roof makes against its best today, what the hour earns, how much of the house is self-supplied. Bottom: where the house drew from hour by hour, the roof against the house, the house against its own average.
 
-Four more: `battery` is the battery as a store — what it holds on the scale of its own size, and at night a dashed line where the charge will stand at sunrise; `night` is the night itself — sunset at the top, sunrise at the bottom, a line for now, and from now how far the battery reaches, the rest in the grid’s colour because that is who will supply it; `devices` is the three drawing most, with their watts; `none` is no column at all, so the ring has the room. A column may say something else once the sun is down (`meter_dark`): a roof column has nothing to say at night, so it can become the night until sunrise and the roof again after. Instead of columns, `ring.columns: scale` lays one needle flat under the ring — draw to the left, surplus to the right. And `ring.import_switch` turns a column to the grid and the card red once the house has drawn from the grid for two minutes, letting go five minutes after the draw ends, so a kettle never trips it. The ring’s centre can do the same with `center_dark: runtime` — how long the battery lasts. The battery block can mark where the charge will stand at sunrise (`battery.sunrise_mark`): a sun under the bar, and the cells the night will use stand back. It can also draw the charge as a curve under the bar (`battery.curve`) — since sunset, dashed on to sunrise — and, as its second figure, the day's flow: what went in and out, with the cycles (`battery.extra: flow`). For a panel on the wall, `night_dim` steps the card back while the sun is below the horizon; the chip stays bright.
+Four more: `battery` is the battery as a store — what it holds on the scale of its own size, and at night a dashed line where the charge will stand at sunrise; `night` is the night itself — sunset at the top, sunrise at the bottom, a line for now, and from now how far the battery reaches, the rest in the grid’s colour because that is who will supply it; `devices` is the three drawing most, with their watts; `none` is no column at all, so the ring has the room. A column may say something else once the sun is down (`meter_dark`): a roof column has nothing to say at night, so it can become the night until sunrise and the roof again after. Instead of columns, `ring.columns: scale` lays one needle flat under the ring — draw to the left, surplus to the right. And `ring.import_switch` turns a column to the grid and the card red once the house has drawn from the grid for two minutes, letting go five minutes after the draw ends, so a kettle never trips it.
+
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/columns-night.png" alt="The night as a column in blocks and as one body, and the battery as a store" width="700">
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/columns-day.png" alt="The scale under the ring, the devices as a column, and a card with one column and none" width="700">
+
+Top: the night as a column, in blocks and as one body — the second with the battery's time in the centre, so the column keeps only the gap — and the battery as a store with the sunrise level dashed. Bottom: the scale under the ring, the three devices drawing most, and a roof column alone. The ring’s centre can do the same with `center_dark: runtime` — how long the battery lasts. The battery block can mark where the charge will stand at sunrise (`battery.sunrise_mark`): a sun under the bar, and the cells the night will use stand back. It can also draw the charge as a curve under the bar (`battery.curve`) — since sunset, dashed on to sunrise — and, as its second figure, the day's flow: what went in and out, with the cycles (`battery.extra: flow`). For a panel on the wall, `night_dim` steps the card back while the sun is below the horizon; the chip stays bright.
 
 **How it is drawn** is `ring.meter_style`, and only `grid` and `night` have a choice: `blocks` for a stepped needle or one block per hour, `bar` for one body. The others each have one honest shape, so the editor does not offer a drawing it would ignore.
 
@@ -111,17 +121,29 @@ Four more: `battery` is the battery as a store — what it holds on the scale of
 
 The card has three shapes (`shape`): as it is; `wide`, with the ring and its columns on the left and the day, the battery and the rest on the right, for a tablet on the wall — it takes hold from `wide_from` pixels and stacks as usual below that; and `compact`, one row with the ring small, three figures and the chip, for an overview page where the card only has to say all is well. And once the sun is down, `night_layout: quiet` lets everything that has nothing to say at night step aside: the columns, the tiles, the devices and the week go, and the ring, the battery and one line about the day remain.
 
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/shapes.png" alt="The wide shape for a panel, the compact row, and the quiet night" width="700">
+
 ## The corner
 
 The chip in the corner can say the day's self-supplied share instead of the state (`chip_shows: autarky`), and it can turn red with the kilowatts once the house has drawn from the grid for two minutes (`chip_alarm`), letting go five minutes after the draw ends. Beside the title, `head_price` puts this hour's import price, green under the day's mean and red over it. Without the day chart, `head_sunbar` draws the sun's day as a line under the heading, and the night at night.
+
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/head.png" alt="The price beside the title with the day's share in the chip, the sun line under the heading, and the plain corner" width="700">
 
 ## What the money says
 
 The balance can carry the month beside it (`today.month`), split itself into what was not bought and what was sold (`today.split`) — most systems earn by not buying, and this is the first place that shows — and, with what the system cost (`today.investment`), name the year it will have paid for itself at this year's pace (`today.payoff_year`).
 
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/money.png" alt="The month beside the day and the split into not bought and sold; the year the system is paid off" width="700">
+
 ## The day, and the days around it
 
 The day chart can carry three more things, each off by default. `chart.forecast_bars` stands the hours still expected as dashed outlines where their bars will be, read hour by hour off a forecast sensor such as Solcast's; after sunset it lays tomorrow's whole day over today's axis. `chart.layers` draws what the grid and the battery carried as areas under the day. `chart.best_day` puts a faint line of the year's best day behind today, with its yield beside the day's figures, so today can be read against as good as it gets. And `sections.week` adds seven days as bars with a dot above each for the self-supplied share — today bright, the rest already happened; a tap on a day puts its figures in the heading.
+
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/today.png" alt="The day with the expected hours as outlines and the best day behind it, and the week as bars" width="700">
+
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/battery-block.png" alt="The charge as a curve under the bar, and the day's flow through the battery" width="700">
+
+The battery block at night: the charge since sunset as a curve, dashed on to sunrise, with the sunrise mark on the bar; and, on the right, the day's flow through the battery with its cycles.
 
 `day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. Set `ring.columns` to `two` for a second column on the other side of the ring, with its own `ring.meter_second_shows`, so a day strip and a live needle can stand together.
 
@@ -156,6 +178,8 @@ Left, a bar: the house load now, split by device, with the part no device accoun
 **You configure nothing.** Home Assistant's Energy dashboard already lists your devices with a live power sensor each; the editor's *Take what the Energy dashboard knows* button adopts them, names included. The card never searches your sensors on its own — that list holds phase readings, switches at 0.0 and a fitness tracker's watts per kilo, and none of those are devices.
 
 Four ways to look at them, each off by default: `devices.style: tiles` for one tile per device, readable from across the room; `devices.top` for the biggest as a row of its own, with how long it has been drawing and what it cost today; `devices.spark` for a line per device over the last hour; and by room (`devices.group: area`), where a tap on a room opens the devices standing in it. An icon can be chosen per device in the editor, under *Icons*.
+
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/wohin.png" alt="The devices as tiles, as rows with the biggest on top and a line each, and by room" width="700">
 
 Two periods, one setting: **now**, averaged over a window (fifteen minutes by default) so a kettle does not light up as a hog, or **today**, read from each device's meter since midnight. Grouping by **room** sums the devices standing in one, from the device registry. Anything under a threshold folds into the rest, and at most a handful are named — both adjustable.
 
