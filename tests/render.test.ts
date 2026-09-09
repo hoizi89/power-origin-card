@@ -1034,3 +1034,93 @@ describe("the grid in red", () => {
     expect(exporting.root.querySelector("ha-card")!.classList.contains("import-alarm")).toBe(false);
   });
 });
+
+describe("the card at night", () => {
+  const evening = () => SCENARIOS.find((s) => s.name === "evening on battery")!;
+
+  it("lets a column say something else once the sun is down", async () => {
+    const day = await render(baseConfig({ ring: { meter: true, meter_shows: "roof", meter_dark: "autarky" } }), SCENARIOS[0]);
+    expect(day.text).toContain("Dach jetzt");
+    const night = await render(baseConfig({ ring: { meter: true, meter_shows: "roof", meter_dark: "autarky" } }), evening());
+    expect(night.text).toContain("Autarkie");
+    expect(night.text).not.toContain("Dach jetzt");
+  });
+
+  it("keeps a column as it was when nothing else was chosen", async () => {
+    const night = await render(baseConfig({ ring: { meter: true, meter_shows: "roof" } }), evening());
+    expect(night.text).toContain("Dach jetzt");
+  });
+
+  it("shows the battery as a needle, in the battery's colour", async () => {
+    const charging = await render(baseConfig({ ring: { meter: true, meter_shows: "battery" } }), SCENARIOS.find((s) => s.name === "charging")!);
+    expect(charging.root.querySelector(".meter-on.battery")).toBeTruthy();
+    expect(charging.text).toContain("in den Speicher");
+    const night = await render(baseConfig({ ring: { meter: true, meter_shows: "battery" } }), evening());
+    expect(night.root.querySelector(".meter-on.discharge")).toBeTruthy();
+    expect(night.text).toContain("aus dem Speicher");
+  });
+
+  it("draws what is held against what the night needs", async () => {
+    const { root, text } = await render(baseConfig({ ring: { meter: true, meter_shows: "range" } }), evening());
+    expect(root.querySelector(".range-mark")).toBeTruthy();
+    expect(text).toMatch(/reicht bis|fehlen/);
+  });
+
+  it("puts the battery's time left in the centre when asked, at night only", async () => {
+    const night = await render(baseConfig({ ring: { center: "power", center_dark: "runtime" } }), evening());
+    expect(night.text).toContain("Reicht bis");
+    const day = await render(baseConfig({ ring: { center: "power", center_dark: "runtime" } }), SCENARIOS[0]);
+    expect(day.text).not.toContain("Reicht bis");
+  });
+
+  it("dims once the sun is down, and only when asked", async () => {
+    const dim = await render(baseConfig({ night_dim: 40 }), evening());
+    expect(dim.root.querySelector("ha-card")!.classList.contains("night")).toBe(true);
+    const day = await render(baseConfig({ night_dim: 40 }), SCENARIOS[0]);
+    expect(day.root.querySelector("ha-card")!.classList.contains("night")).toBe(false);
+    const off = await render(baseConfig(), evening());
+    expect(off.root.querySelector("ha-card")!.classList.contains("night")).toBe(false);
+  });
+
+  it("says where the charge will stand at sunrise", async () => {
+    const { text } = await render(baseConfig({ battery: { extra: "sunrise" } }), evening());
+    expect(text).toContain("bei Sonnenaufgang um");
+  });
+});
+
+describe("what redraws the card", () => {
+  it("ignores a state change the card does not read", async () => {
+    clearStatisticsCache();
+    const el = document.createElement(CARD_TYPE) as HTMLElement & {
+      setConfig(c: PowerOriginCardConfig): void; hass: unknown; requestUpdate(): void; updateComplete: Promise<unknown>;
+    };
+    el.setConfig(baseConfig());
+    document.body.append(el);
+    const first = makeHass(SCENARIOS[0]);
+    el.hass = first;
+    await el.updateComplete;
+    let calls = 0;
+    const original = el.requestUpdate.bind(el);
+    el.requestUpdate = () => { calls++; original(); };
+    el.hass = { ...first, states: { ...first.states, "sensor.unrelated": { entity_id: "sensor.unrelated", state: "1", attributes: {} } } };
+    expect(calls).toBe(0);
+    el.hass = { ...first, states: { ...first.states, [IDS.house]: { ...first.states[IDS.house], state: "999" } } };
+    expect(calls).toBe(1);
+    el.remove();
+  });
+});
+
+describe("the night, said once", () => {
+  const evening = () => SCENARIOS.find((s) => s.name === "evening on battery")!;
+
+  it("does not let the centre and the battery note both say how long", async () => {
+    const { text } = await render(baseConfig({ ring: { center: "power", center_dark: "runtime" } }), evening());
+    expect(text.match(/Reicht bis/g)?.length ?? 0).toBe(1);
+    expect(text).toContain("kWh übrig");
+  });
+
+  it("says where the charge will stand at sunrise only while the battery carries the house", async () => {
+    const day = await render(baseConfig({ battery: { extra: "sunrise" } }), SCENARIOS[0]);
+    expect(day.text).not.toContain("bei Sonnenaufgang um");
+  });
+});

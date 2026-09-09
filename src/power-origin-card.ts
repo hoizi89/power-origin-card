@@ -23,7 +23,7 @@ import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
   DaySeries,
-  MeterStyle,
+  MeterStyle, MeterShows,
   HomeAssistant,
   ResolvedConfig,
   PowerOriginCardConfig,
@@ -32,7 +32,7 @@ import type {
 import {
   energyKwh,
   formatClock,
-  formatEnergy, formatEnergyFine,
+  formatEnergy, formatEnergyFine, formatDuration,
   formatMoney,
   formatNumber,
   formatPower,
@@ -78,6 +78,10 @@ export class PowerOriginCard extends LitElement {
   private _deviceToday?: Record<string, number | undefined>;
   private _pending = false;
   private _yearPeak?: number;
+  /** The most the battery moved today, in kW, for the battery column’s scale. */
+  private _batteryPeak?: number;
+  /** Set while the ring centre shows the battery’s time left, so the note does not repeat it. */
+  private _centreShowsTime = false;
   private _peakFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
   private readonly _clipId = `po-clip-${gradientSeq}`;
@@ -112,12 +116,29 @@ export class PowerOriginCard extends LitElement {
     }
     this._config = resolveConfig(config);
     this._lastFetch = 0;
+    this.requestUpdate();
   }
 
   set hass(hass: HomeAssistant) {
+    const before = this._hass;
     this._hass = hass;
-    this.requestUpdate();
+    // Home Assistant hands the card every state change in the house. Only
+    // the entities it reads can change what it draws, so only those redraw
+    // it - which on a wall panel is most of the work saved.
+    if (!before || !this._config || this._watchedChanged(before, hass)) this.requestUpdate();
     void this._maybeFetch();
+  }
+
+  private _watchedChanged(before: HomeAssistant, after: HomeAssistant): boolean {
+    const config = this._config as ResolvedConfig;
+    const ids = [
+      ...Object.values(config.entities).filter((v): v is string => typeof v === "string"),
+      ...config.devices.list,
+      ...Object.values(config.devices.energy),
+      "sun.sun"
+    ];
+    for (const id of ids) if (before.states?.[id] !== after.states?.[id]) return true;
+    return before.locale?.language !== after.locale?.language;
   }
 
   get hass(): HomeAssistant | undefined {
@@ -174,7 +195,8 @@ export class PowerOriginCard extends LitElement {
       // Grid and battery ride along in the same query: the hourly views need
       // them, and a second request would cost another recorder scan.
       const gridId = this._needsHours() ? config.entities.grid_power : undefined;
-      const cellId = this._needsHours() ? config.entities.battery_power : undefined;
+      const cellId =
+        this._needsHours() || this._usesSubject("battery") ? config.entities.battery_power : undefined;
       const socId = config.battery.extra === "range" ? config.entities.battery_soc : undefined;
       const ids = [solarId, houseId, gridId, cellId, socId].filter(Boolean) as string[];
       const stats = await cachedStatistics(
@@ -191,6 +213,15 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
+      if (cellId && stats[cellId]?.length) {
+        let most = 0;
+        for (const row of stats[cellId]) {
+          const value = row.mean;
+          if (value === null || value === undefined || !Number.isFinite(value)) continue;
+          most = Math.max(most, Math.abs(value) / divisor);
+        }
+        this._batteryPeak = most;
+      }
       // A percentage, so it is read as it comes.
       this._socRange = socId ? extremes(stats[socId] ?? []) : undefined;
 
@@ -225,6 +256,8 @@ export class PowerOriginCard extends LitElement {
       this._error = error instanceof Error ? error.message : String(error);
     } finally {
       this._pending = false;
+      // Fetched figures redraw on their own; a watched entity may be slow.
+      this.requestUpdate();
     }
   }
 
@@ -317,8 +350,10 @@ export class PowerOriginCard extends LitElement {
     return html`
       <!-- One class swaps the grid token for the whole card, so the same
            kilowatts wear the same colour wherever they appear. -->
-      <ha-card style="--sst-scale: ${config.text_scale}"
-        class="${config.ring.import_red && flow.fromGrid > 0 ? "import-alarm" : ""}">
+      <ha-card style="--sst-scale: ${config.text_scale}; --sst-night: ${(1 - config.night_dim / 100).toFixed(2)}"
+        class="${config.ring.import_red && flow.fromGrid > 0 ? "import-alarm" : ""} ${
+          config.night_dim > 0 && stateOf(hass, "sun.sun")?.state === "below_horizon" ? "night" : ""
+        }">
         ${config.title || showChip
           ? html`<div class="head ${config.title ? "" : "bare"} ${
               // Two columns reach the top corners, so there is no corner left
@@ -353,7 +388,18 @@ export class PowerOriginCard extends LitElement {
     // A ring about production says nothing before sunrise, so both production
     // views fall back to the source ring rather than showing an empty circle.
     const producing = flow.production > 0.05;
-    const dark = !producing && (mode === "surplus" || mode === "production");
+    const night = !producing;
+    const leftSubject = this._subjectFor(config.ring.meter_style, config.ring.meter_dark, night);
+    // Without a second column there is nothing to switch; the value is never read.
+    const rightSubject =
+      config.ring.meter_second === "none"
+        ? "blocks"
+        : this._subjectFor(config.ring.meter_second, config.ring.meter_second_dark, night);
+    // The battery’s time left is a night answer for any mode, not only the
+    // two that have nothing to say.
+    const timeLeft = night && config.ring.center_dark === "runtime" ? this._batteryTime() : undefined;
+    this._centreShowsTime = timeLeft !== undefined;
+    const dark = !producing && (mode === "surplus" || mode === "production" || timeLeft !== undefined);
     const showAutarky = dark ? config.ring.center_dark === "autarky" : mode === "autarky";
     const showSurplus = mode === "surplus" && producing;
     const showProduction = mode === "production" && producing;
@@ -370,10 +416,12 @@ export class PowerOriginCard extends LitElement {
     const spare = flow.toGrid + flow.toBattery;
     const centreValue = showSurplus ? spare : showProduction ? flow.production : flow.house;
 
-    const value = showAutarky
-      ? formatNumber(flow.autarky * 100, locale, 0)
-      : formatPower(centreValue, locale);
-    const unit = showAutarky ? "%" : "kW";
+    const value = timeLeft
+      ? formatDuration(timeLeft.hours, locale)
+      : showAutarky
+        ? formatNumber(flow.autarky * 100, locale, 0)
+        : formatPower(centreValue, locale);
+    const unit = timeLeft ? "" : showAutarky ? "%" : "kW";
 
     const soleSource =
       parts.length === 1 && !showSurplus && !showProduction && !showAutarky
@@ -396,7 +444,11 @@ export class PowerOriginCard extends LitElement {
                 ? "ring.source_solar"
                 : "ring.caption_house";
 
-    const caption = config.ring.caption ? localize(captionKey, locale) : undefined;
+    const caption = !config.ring.caption
+      ? undefined
+      : timeLeft
+        ? `${localize("battery.lasts_until", locale)} ${formatClock(timeLeft.at, locale)}`
+        : localize(captionKey, locale);
 
     // The outer ring answers the same question over the whole day, in the same
     // colours. Only the window differs, so the two cannot contradict each other.
@@ -440,7 +492,7 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="ring-block ${config.ring.layout}">
         <div class="ring-group size-${config.ring.size} ${config.ring.facts === "none" ? "solo" : ""}">
-        ${this._renderMeter(flow, locale)}
+        ${this._renderMeter(flow, locale, leftSubject)}
         <svg class="ring ${showSurplus ? "surplus" : ""}" viewBox="0 0 200 200" role="img" aria-label="${value} ${unit}">
           ${outer.length
             ? svg`<circle class="ring-day-track" cx="100" cy="100" r="93" pathLength="100"></circle>
@@ -534,7 +586,7 @@ export class PowerOriginCard extends LitElement {
         </svg>
         ${config.ring.meter_second === "none"
           ? nothing
-          : this._renderMeter(flow, locale, config.ring.meter_second)}
+          : this._renderMeter(flow, locale, rightSubject, true)}
         </div>
         ${this._renderLegend(flow, locale)}
       </div>
@@ -577,6 +629,28 @@ export class PowerOriginCard extends LitElement {
   }
 
   /** Whether any of the day views is switched on, and the extra series worth fetching. */
+  /** Whether any column, by day or by night, shows the subject. */
+  private _usesSubject(subject: MeterStyle): boolean {
+    const config = this._config;
+    if (!config) return false;
+    return [
+      config.ring.meter_style,
+      config.ring.meter_second,
+      config.ring.meter_dark,
+      config.ring.meter_second_dark
+    ].includes(subject);
+  }
+
+  /**
+   * The subject a column shows now. Once the sun is down a column may say
+   * something else, the way the ring’s centre already does.
+   */
+  private _subjectFor(day: MeterStyle, dark: MeterShows | "same", night: boolean): MeterStyle {
+    if (!night || dark === "same") return day;
+    if (dark === "grid") return day === "blocks" || day === "bar" ? day : "blocks";
+    return dark;
+  }
+
   private _needsHours(): boolean {
     const config = this._config;
     if (!config) return false;
@@ -879,6 +953,98 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /** The battery as the card’s battery block sees it, for the ring and the columns. */
+  private _batteryFacts(): { view: BatteryView; soc?: number; usableKwh?: number; sunrise?: Date; hoursToSunrise?: number } {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const soc = numberOf(stateOf(hass, config.entities.battery_soc));
+    const rawPower = powerKw(stateOf(hass, config.entities.battery_power));
+    const power = rawPower === undefined ? undefined : config.battery_invert ? -rawPower : rawPower;
+    const view = batteryView({
+      soc,
+      power,
+      capacity: config.battery_capacity || undefined,
+      reserve: config.battery_reserve,
+      averageLoad: this._series?.houseAverage,
+      loadSpread: this._series?.houseSpread
+    });
+    const sunrise = sunTimes(stateOf(hass, "sun.sun")).nextRising;
+    const hoursToSunrise = sunrise ? (sunrise.getTime() - Date.now()) / 3600000 : undefined;
+    return { view, soc, usableKwh: view.availableKwh, sunrise, hoursToSunrise };
+  }
+
+  /** How long the battery lasts, when it is the one carrying the house. */
+  private _batteryTime(): { hours: number; at: Date } | undefined {
+    const config = this._config as ResolvedConfig;
+    if (!config.entities.battery_soc || !config.entities.battery_power) return undefined;
+    const { view } = this._batteryFacts();
+    if (view.mode !== "discharging" || view.hours === undefined || !view.at) return undefined;
+    return { hours: view.hours, at: view.at };
+  }
+
+  /**
+   * The battery as a needle: charging up, discharging down, against the most
+   * it moved today. The ring says the house runs on it; this says how hard
+   * it is working - and by day it is the only place charging shows as power.
+   */
+  private _renderBatteryMeter(flow: Flow, locale: string) {
+    const config = this._config as ResolvedConfig;
+    if (!config.entities.battery_power) return nothing;
+    const scale = Math.max(this._batteryPeak ?? 0, flow.toBattery, flow.fromBattery, 0.5);
+    const charging = flow.toBattery >= flow.fromBattery;
+    const amount = charging ? flow.toBattery : flow.fromBattery;
+    return this._renderTwoWay(
+      Math.min(1, flow.toBattery / scale),
+      Math.min(1, flow.fromBattery / scale),
+      formatPower(amount, locale),
+      "kW",
+      localize(charging ? "meter.charging" : "meter.discharging", locale),
+      charging,
+      { up: "battery", down: "discharge", label: "leaf" }
+    );
+  }
+
+  /**
+   * What the battery holds against what the night still needs: usable energy
+   * as the fill, the need until sunrise as a mark, and the gap between them in
+   * the grid’s colour - that is what will be bought.
+   */
+  private _renderRangeMeter(flow: Flow, locale: string) {
+    const config = this._config as ResolvedConfig;
+    if (!config.entities.battery_soc) return nothing;
+    const facts = this._batteryFacts();
+    if (facts.usableKwh === undefined || facts.hoursToSunrise === undefined || !facts.sunrise) return nothing;
+    const load = this._series?.houseAverage ?? flow.house;
+    const needed = Math.max(0, facts.hoursToSunrise) * Math.max(0, load);
+    const usable = Math.max(0, facts.usableKwh);
+    const scale = Math.max(usable, needed, 0.1) * 1.1;
+    const fill = (METER_HEIGHT * usable) / scale;
+    const mark = (METER_HEIGHT * needed) / scale;
+    const short = needed > usable;
+    return html`
+      <div class="meter-block">
+        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+             aria-label="${localize("meter.range_until", locale)}">
+          <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
+          ${short
+            ? svg`<rect class="range-gap" x="8" y="${(METER_HEIGHT - mark).toFixed(1)}"
+                width="72" height="${(mark - fill).toFixed(1)}" rx="6"></rect>`
+            : nothing}
+          <rect class="bat-fill fill-leaf" x="8" y="${(METER_HEIGHT - fill).toFixed(1)}"
+                width="72" height="${fill.toFixed(1)}" rx="6"></rect>
+          <line class="range-mark" x1="4" x2="84" y1="${(METER_HEIGHT - mark).toFixed(1)}"
+                y2="${(METER_HEIGHT - mark).toFixed(1)}"></line>
+        </svg>
+        <div class="meter-label ${short ? "down" : "leaf"}">
+          <span class="meter-value">${formatEnergy(usable, locale)} <small>kWh</small></span>
+          <span class="meter-word">${short
+            ? `${localize("meter.range_gap", locale)} ${formatEnergy(needed - usable, locale)} kWh`
+            : `${localize("meter.range_until", locale)} ${formatClock(facts.sunrise, locale)}`}</span>
+        </div>
+      </div>
+    `;
+  }
+
   /** One body up, one down, and a line where they meet. */
   private _renderTwoWay(
     up: number,
@@ -886,7 +1052,8 @@ export class PowerOriginCard extends LitElement {
     value: string,
     unit: string,
     word: string,
-    good: boolean
+    good: boolean,
+    tones: { up: string; down: string; label: string } = { up: "grid", down: "import", label: good ? "up" : "down" }
   ) {
     const half = METER_HEIGHT / 2;
     return html`
@@ -894,16 +1061,16 @@ export class PowerOriginCard extends LitElement {
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${word}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
           ${up > 0.01
-            ? svg`<rect class="meter-on grid" x="8" y="${(half - half * up).toFixed(1)}"
+            ? svg`<rect class="meter-on ${tones.up}" x="8" y="${(half - half * up).toFixed(1)}"
                 width="72" height="${(half * up).toFixed(1)}" rx="5"></rect>`
             : nothing}
           ${down > 0.01
-            ? svg`<rect class="meter-on import" x="8" y="${half}"
+            ? svg`<rect class="meter-on ${tones.down}" x="8" y="${half}"
                 width="72" height="${(half * down).toFixed(1)}" rx="5"></rect>`
             : nothing}
           <line class="meter-zero" x1="1" y1="${half}" x2="87" y2="${half}"></line>
         </svg>
-        <div class="meter-label ${good ? "up" : "down"}">
+        <div class="meter-label ${tones.label}">
           <span class="meter-value">${value} <small>${unit}</small></span>
           <span class="meter-word">${word}</span>
         </div>
@@ -911,16 +1078,17 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
-  private _renderMeter(flow: Flow, locale: string, override?: MeterStyle) {
+  private _renderMeter(flow: Flow, locale: string, style: MeterStyle, second = false) {
     const config = this._config as ResolvedConfig;
     if (!config.ring.meter) return nothing;
-    const style = override ?? config.ring.meter_style;
     if (style === "day") return this._renderDayColumn(locale);
     if (style === "balance") return this._renderBalance(flow, locale);
     if (style === "money") return this._renderMoneyMeter(flow, locale);
     if (style === "load") return this._renderLoadMeter(flow, locale);
     if (style === "autarky") return this._renderAutarkyMeter(flow, locale);
-    if (style === "roof") return this._renderRoofMeter(flow, locale, Boolean(override));
+    if (style === "roof") return this._renderRoofMeter(flow, locale, second);
+    if (style === "battery") return this._renderBatteryMeter(flow, locale);
+    if (style === "range") return this._renderRangeMeter(flow, locale);
 
     // Without a solar sensor there can never be a surplus, and the draw is the
     // house load the ring already prints. Nothing of its own to say.
@@ -928,12 +1096,11 @@ export class PowerOriginCard extends LitElement {
 
     // Grid scope keeps the column on the meter itself, so the ring can name the
     // battery without the two saying the same thing twice.
-    const scope = override ? config.ring.meter_second_scope : config.ring.meter_scope;
+    const scope = second ? config.ring.meter_second_scope : config.ring.meter_scope;
     const withBattery = scope === "all";
 
     // Every setting that shapes a needle belongs to the needle it shapes, and
     // the two columns are two needles.
-    const second = Boolean(override);
     const scale = second ? config.ring.meter_second_scale : config.ring.meter_scale;
     const scaleDraw = second
       ? config.ring.meter_second_scale_draw
@@ -1467,6 +1634,27 @@ export class PowerOriginCard extends LitElement {
           label: localize("battery.saved", locale)
         };
       }
+      case "sunrise": {
+        const facts = this._batteryFacts();
+        if (facts.view.mode !== "discharging") return undefined;
+        const capacityKwh = config.battery_capacity / 1000;
+        if (
+          facts.soc === undefined ||
+          facts.hoursToSunrise === undefined ||
+          !facts.sunrise ||
+          capacityKwh <= 0 ||
+          facts.hoursToSunrise <= 0
+        ) {
+          return undefined;
+        }
+        const load = this._series?.houseAverage ?? 0;
+        const drop = ((facts.hoursToSunrise * load) / capacityKwh) * 100;
+        const at = Math.max(config.battery_reserve, facts.soc - drop);
+        return {
+          value: `${formatNumber(at, locale, 0)} %`,
+          label: `${localize("battery.at_sunrise", locale)} ${formatClock(facts.sunrise, locale)}`
+        };
+      }
       case "given": {
         if (given === undefined) return undefined;
         return {
@@ -1598,7 +1786,9 @@ export class PowerOriginCard extends LitElement {
       if (spent) {
         parts.push(localize("battery.at_reserve", locale));
       } else {
-        if (reach) {
+        if (this._centreShowsTime) {
+          // The centre already says how long; the note keeps the energy.
+        } else if (reach) {
           parts.push(localize(`battery.sunrise_${reach}`, locale));
         } else if (view.at) {
           parts.push(`${localize("battery.lasts_until", locale)} ${formatClock(view.at, locale)}`);

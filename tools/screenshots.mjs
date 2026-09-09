@@ -26,7 +26,7 @@ function sun() {
   const rise = new Date(); rise.setHours(6, 28, 0, 0);
   const set = new Date(); set.setHours(19, 36, 0, 0);
   return {
-    entity_id: "sun.sun", state: "above_horizon",
+    entity_id: "sun.sun", state: globalThis.__night ? "below_horizon" : "above_horizon",
     attributes: {
       next_rising: new Date(rise.getTime() + 86400000).toISOString(),
       next_setting: set.toISOString()

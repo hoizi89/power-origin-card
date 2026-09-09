@@ -20,7 +20,7 @@ export interface HomeAssistant {
 }
 
 export type RingCenter = "power" | "production" | "surplus" | "autarky";
-export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given";
+export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given" | "sunrise";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
@@ -50,7 +50,9 @@ export type MeterStyle =
   | "money"
   | "load"
   | "autarky"
-  | "roof";
+  | "roof"
+  | "battery"
+  | "range";
 /** What a column measures, as against how it is drawn. */
 export type MeterShows =
   | "grid"
@@ -59,7 +61,9 @@ export type MeterShows =
   | "money"
   | "load"
   | "autarky"
-  | "roof";
+  | "roof"
+  | "battery"
+  | "range";
 export type MeterDrawn = "blocks" | "bar";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
@@ -109,7 +113,7 @@ export interface SectionToggles {
 export interface RingOptions {
   center?: RingCenter;
   /** The mode to use while nothing is being produced. */
-  center_dark?: RingCenter;
+  center_dark?: "power" | "autarky" | "runtime";
   layout?: RingLayout;
   caption?: boolean;
   facts?: FactsStyle;
@@ -138,6 +142,9 @@ export interface RingOptions {
   meter_second_marks?: boolean;
   meter_second_today?: boolean;
   meter_second_shows?: MeterShows;
+  /** What each column shows once the sun is down; "same" leaves it alone. */
+  meter_dark?: MeterShows | "same";
+  meter_second_dark?: MeterShows | "same";
   meter_second_style?: MeterDrawn;
   meter_second?: MeterStyle | "none";
   meter_second_scope?: MeterScope;
@@ -218,6 +225,8 @@ export interface PowerOriginCardConfig {
   title?: string;
   /** Multiplies every type size. 1.2 suits a tablet on a wall. */
   text_scale?: number;
+  /** Percent the card dims by while the sun is down; 0 leaves it. */
+  night_dim?: number;
   chip?: ChipMode;
   tap_action?: ActionConfig;
   battery_capacity?: number;

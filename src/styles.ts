@@ -1048,4 +1048,27 @@ export const cardStyles = css`
   .dev.off {
     opacity: 0.32;
   }
+
+  /* The battery column wears the battery’s colour whichever way it moves. */
+  .meter-label.leaf .meter-value {
+    color: var(--sst-leaf);
+  }
+
+  /* Reach until sunrise: the gap between what is held and what is needed
+     is the grid’s, because that is who will supply it. */
+  .range-gap {
+    fill: var(--sst-grid);
+    opacity: 0.45;
+  }
+  .range-mark {
+    stroke: var(--sst-ink);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+    opacity: 0.8;
+  }
+
+  /* At night the chip stays bright; everything under it steps back. */
+  ha-card.night > :not(.head) {
+    opacity: var(--sst-night, 1);
+  }
 `;

@@ -178,7 +178,8 @@ export function makeHass(scenario: Scenario): HomeAssistant {
   const v = (value: number) => (scenario.unavailable ? "unavailable" : value);
 
   const states: Record<string, HassEntity> = {
-    "sun.sun": sunEntity(),
+    // The sun is where the scenario puts it: producing means day.
+    "sun.sun": { ...sunEntity(), state: scenario.pv > 0 ? "above_horizon" : "below_horizon" },
     [IDS.house]: entity(IDS.house, v(scenario.house), "W", "power"),
     [IDS.solar]: entity(IDS.solar, v(scenario.pv), "W", "power"),
     [IDS.battery_power]: entity(IDS.battery_power, v(scenario.battery), "W", "power"),

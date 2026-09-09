@@ -123,10 +123,13 @@ today:
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
 | `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, or `two` — one on each side. |
-| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky` or `roof`. |
+| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky`, `roof`, `battery` (charging up, discharging down, against the most it moved today) or `range` (usable energy against what the night still needs until sunrise; the gap wears the grid colour). |
 | `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Only `grid` has a choice, so this is shown only then. |
 | `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
 | `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |
+| `ring.meter_dark` / `ring.meter_second_dark` | `same` | What each column shows once the sun is down: `same`, or any subject. A roof column has nothing to say at night. |
+| `ring.center_dark` | `power` | The centre without sun: `power`, `autarky`, or `runtime` — how long the battery lasts, with the time it lasts until as the caption; the battery block then keeps only the energy. |
+| `night_dim` | `0` | Percent the card dims by while the sun is below the horizon; the chip stays bright. |
 | `ring.meter_top` | `true` | The best the roof managed today, printed above the roof column as the mark it fills towards. |
 | `ring.meter_second_scale` | `0` | The right column has its own of every setting that shapes a needle: `meter_second_scale`, `meter_second_scale_draw`, `meter_second_target`, `meter_second_steps`, `meter_second_marks`, `meter_second_today`. Each means for the right column what the one without `second` means for the left. |
 | `ring.meter_second` | | Written from the two fields above; kept so a card configured before the split still reads. |
@@ -148,7 +151,7 @@ today:
 | `battery.runtime_window` | `30` | Minutes averaged before dividing. |
 | `battery.percent` | `true` | The charge as a figure beside the heading. The bar says it too, so this is the number and not the picture. |
 | `battery.reserve_line` | `true` | A dashed line where the reserve begins, so a bar that reads full does not hide power that never comes out. Shown only when a reserve is set. |
-| `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out). |
+| `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house). |
 | `today.stats` | `[peak, autarky, export, import]` | Which four values appear at the bottom. |
 
 Options that cannot take effect in the current mode are **not shown in the editor at all** — no switch that does nothing.

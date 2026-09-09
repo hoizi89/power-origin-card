@@ -13,6 +13,7 @@ export const CARD_TYPE = "power-origin-card";
 
 export const DEFAULTS = {
   text_scale: 1,
+  night_dim: 0,
   chip: "always" as const,
   tap_action: { action: "more-info" as const },
   battery_capacity: 0,
@@ -45,6 +46,8 @@ export const DEFAULTS = {
     meter_second_steps: 6,
     meter_second_marks: true,
     meter_second_today: false,
+    meter_dark: "same" as const,
+    meter_second_dark: "same" as const,
     meter_second_shows: "day" as const,
     meter_second_style: "blocks" as const,
     meter_second: "none" as const,
@@ -166,6 +169,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     title: config.title,
     entities: { ...config.entities },
     text_scale: config.text_scale ?? DEFAULTS.text_scale,
+    night_dim: config.night_dim ?? DEFAULTS.night_dim,
     chip: config.chip ?? DEFAULTS.chip,
     tap_action: config.tap_action ?? DEFAULTS.tap_action,
     // The two used to sit at the top level. They belong to the battery and
@@ -332,7 +336,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                       { value: "money", label: t("editor.meter_money") },
                       { value: "load", label: t("editor.meter_load") },
                       { value: "autarky", label: t("editor.meter_autarky") },
-                      { value: "roof", label: t("editor.meter_roof") }
+                      { value: "roof", label: t("editor.meter_roof") },
+                      { value: "battery", label: t("editor.meter_battery") },
+                      { value: "range", label: t("editor.meter_range") }
                     ]
                   }
                 }
@@ -400,6 +406,26 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   { name: "meter_marks", selector: { boolean: {} } },
                   { name: "meter_today", selector: { boolean: {} } }
                 ]
+              }),
+              ...only((resolved) => resolved.ring.meter, {
+                name: "meter_dark",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "same", label: t("editor.same") },
+                      { value: "grid", label: t("editor.shows_grid") },
+                      { value: "day", label: t("editor.meter_day") },
+                      { value: "balance", label: t("editor.meter_balance") },
+                      { value: "money", label: t("editor.meter_money") },
+                      { value: "load", label: t("editor.meter_load") },
+                      { value: "autarky", label: t("editor.meter_autarky") },
+                      { value: "roof", label: t("editor.meter_roof") },
+                      { value: "battery", label: t("editor.meter_battery") },
+                      { value: "range", label: t("editor.meter_range") }
+                    ]
+                  }
+                }
               })
   ];
 
@@ -416,7 +442,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                       { value: "money", label: t("editor.meter_money") },
                       { value: "load", label: t("editor.meter_load") },
                       { value: "autarky", label: t("editor.meter_autarky") },
-                      { value: "roof", label: t("editor.meter_roof") }
+                      { value: "roof", label: t("editor.meter_roof") },
+                      { value: "battery", label: t("editor.meter_battery") },
+                      { value: "range", label: t("editor.meter_range") }
                     ]
                   }
                 }
@@ -490,6 +518,26 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   { name: "meter_second_marks", selector: { boolean: {} } },
                   { name: "meter_second_today", selector: { boolean: {} } }
                 ]
+              }),
+              ...only((resolved) => resolved.ring.meter, {
+                name: "meter_second_dark",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "same", label: t("editor.same") },
+                      { value: "grid", label: t("editor.shows_grid") },
+                      { value: "day", label: t("editor.meter_day") },
+                      { value: "balance", label: t("editor.meter_balance") },
+                      { value: "money", label: t("editor.meter_money") },
+                      { value: "load", label: t("editor.meter_load") },
+                      { value: "autarky", label: t("editor.meter_autarky") },
+                      { value: "roof", label: t("editor.meter_roof") },
+                      { value: "battery", label: t("editor.meter_battery") },
+                      { value: "range", label: t("editor.meter_range") }
+                    ]
+                  }
+                }
               })
   ];
 
@@ -623,7 +671,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 { value: "power", label: t("editor.center_power") },
                 { value: "production", label: t("editor.center_production") },
                 { value: "surplus", label: t("editor.center_surplus") },
-                { value: "autarky", label: t("editor.center_autarky") }
+                { value: "autarky", label: t("editor.center_autarky") },
+                { value: "runtime", label: t("editor.center_runtime") }
               ]
             }
           }
@@ -843,7 +892,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 { value: "range", label: t("editor.extra_range") },
                 { value: "cycles", label: t("editor.extra_cycles") },
                 { value: "saved", label: t("editor.extra_saved") },
-                { value: "given", label: t("editor.extra_given") }
+                { value: "given", label: t("editor.extra_given") },
+                { value: "sunrise", label: t("editor.extra_sunrise") }
               ]
             }
           }
@@ -997,6 +1047,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       ]
     }
     ),
+    { name: "night_dim", selector: { number: { min: 0, max: 50, step: 5, mode: "slider" } } },
   ];
 
   const labels: Record<string, string> = {
@@ -1044,6 +1095,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_target: t("editor.meter_target"),
     meter_steps: t("editor.meter_steps"),
     meter_shows: t("editor.meter_shows"),
+    meter_dark: t("editor.meter_dark"),
+    meter_second_dark: t("editor.meter_dark"),
+    night_dim: t("editor.night_dim"),
     meter_style: t("editor.meter_style"),
     meter_today: t("editor.meter_today"),
     meter_marks: t("editor.meter_marks"),
@@ -1101,6 +1155,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     meter_scope: t("editor.help_meter_scope"),
     meter_today: t("editor.help_meter_today"),
     meter_shows: t("editor.help_meter_shows"),
+    meter_dark: t("editor.help_meter_dark"),
+    meter_second_dark: t("editor.help_meter_dark"),
+    night_dim: t("editor.help_night_dim"),
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),

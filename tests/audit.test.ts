@@ -182,7 +182,16 @@ describe("every setting the editor offers changes something", () => {
       // proves nothing, and a limit above the count has nothing to cut.
       const perValue = kind !== "number";
       let anyChanged = false;
-      for (const value of alternatives(field, current)) {
+      // A night subject equal to the day subject draws the same column twice;
+      // that is the value being the same, not the setting being dead.
+      const path = field.path.join(".");
+      const daySubject =
+        path === "ring.meter_dark"
+          ? (resolved.ring as Record<string, unknown>).meter_shows
+          : path === "ring.meter_second_dark"
+            ? (resolved.ring as Record<string, unknown>).meter_second_shows
+            : undefined;
+      for (const value of alternatives(field, current).filter((v) => v !== daySubject)) {
         let changed = false;
         for (const s of tried) {
           if ((await draw(withValue(config, field.path, value), s)) !== baselines.get(s.name)) {

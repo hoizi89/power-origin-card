@@ -324,7 +324,8 @@ describe("editor coverage", () => {
 
   it("offers a roof column only what a roof column has", () => {
     const both = sections({ columns: "two", meter_shows: "grid", meter_second_shows: "roof" });
-    expect(both["Die rechte Säule"]).toEqual(["meter_second_shows", "meter_second_top"]);
+    // A roof has no needle to shape, but every column has a night.
+    expect(both["Die rechte Säule"]).toEqual(["meter_second_shows", "meter_second_top", "meter_second_dark"]);
     expect(both["Die linke Säule"]).toContain("meter_marks");
   });
 

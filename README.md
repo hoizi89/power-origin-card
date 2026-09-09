@@ -99,6 +99,8 @@ A column answers two questions, and they are two settings. **What it measures** 
 
 The same moment, six times. Top: what the roof makes against its best today, what the hour earns, how much of the house is self-supplied. Bottom: where the house drew from hour by hour, the roof against the house, the house against its own average.
 
+Two more subjects belong to the battery: `battery` is the battery as a needle — charging up, discharging down, against the most it moved today — and `range` is what it holds against what the night still needs until sunrise, the gap in the grid’s colour because that is who will supply it. A column may say something else once the sun is down (`meter_dark`): a roof column has nothing to say at night, so it can become the battery until sunrise and the roof again after. The ring’s centre can do the same with `center_dark: runtime` — how long the battery lasts. For a panel on the wall, `night_dim` steps the card back while the sun is below the horizon; the chip stays bright.
+
 **How it is drawn** is `ring.meter_style`, and only `grid` has a choice: `blocks` for a stepped needle, `bar` for one body. The other six each have one honest shape, so the editor does not offer a drawing it would ignore.
 
 `day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. Set `ring.columns` to `two` for a second column on the other side of the ring, with its own `ring.meter_second_shows`, so a day strip and a live needle can stand together.
