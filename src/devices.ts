@@ -29,7 +29,7 @@ export interface DeviceRanking {
 
 /* Longer, more specific words first: "Wärmepumpe" must not become a pump. */
 const ICONS: Array<[RegExp, string]> = [
-  [/w[äa]rmepumpe|heat ?pump|\bwp\b/i, "mdi:heat-pump-outline"],
+  [/w[äa]rmepumpe|heat ?pump|\bwp\b|lambda/i, "mdi:heat-pump-outline"],
   [/geschirr|dish/i, "mdi:dishwasher"],
   [/trockner|dryer/i, "mdi:tumble-dryer"],
   [/wasch|wash/i, "mdi:washing-machine"],
@@ -52,7 +52,18 @@ const ICONS: Array<[RegExp, string]> = [
   [/laufband|treadmill|fitness/i, "mdi:run"],
   [/alexa|echo|speaker|sonos|lautsprecher/i, "mdi:speaker"],
   [/klima|air ?con|\bac\b/i, "mdi:air-conditioner"],
-  [/boiler|warmwasser|water ?heater/i, "mdi:water-boiler"]
+  [/boiler|warmwasser|water ?heater/i, "mdi:water-boiler"],
+  // Rooms, for a sensor that sums one; after the devices so a fridge in the
+  // kitchen stays a fridge.
+  [/k[üu]che|kitchen/i, "mdi:silverware-fork-knife"],
+  [/wohnzimmer|wohnbereich|living/i, "mdi:sofa"],
+  [/schlaf|bedroom/i, "mdi:bed"],
+  [/\bbad\b|bathroom|dusche|shower/i, "mdi:shower"],
+  [/garage/i, "mdi:garage"],
+  [/keller|cellar|basement/i, "mdi:home-floor-negative-1"],
+  [/garten|garden|outdoor|au[ßs]en/i, "mdi:flower"],
+  [/heizraum|technik|hwr/i, "mdi:pipe-valve"],
+  [/gesamt|total|haus|house|home/i, "mdi:home-lightning-bolt"]
 ];
 
 /** An icon read off the name, and a plug when the name says nothing. */

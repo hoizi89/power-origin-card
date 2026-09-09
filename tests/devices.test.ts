@@ -19,6 +19,14 @@ describe("an icon read off the name", () => {
     expect(iconFor("Rosi", "sensor.rosi_power")).toBe("mdi:power-plug-outline");
     expect(iconFor("", "sensor.waschmaschine_power")).toBe("mdi:washing-machine");
   });
+  it("knows a room when the sensor sums one, and keeps a fridge a fridge", () => {
+    expect(iconFor("Wohnküche Gesamt power")).toBe("mdi:silverware-fork-knife");
+    expect(iconFor("Kühlschrank Küche")).toBe("mdi:fridge-outline");
+    expect(iconFor("Heizkörper Bad")).toBe("mdi:radiator");
+    expect(iconFor("Lambda Verbrauch Gesamt")).toBe("mdi:heat-pump-outline");
+    expect(iconFor("Garage")).toBe("mdi:garage");
+  });
+
   it("does not mistake a heat pump for a pump", () => {
     expect(iconFor("Poolpumpe")).toBe("mdi:pump");
     expect(iconFor("Wärmepumpe Keller")).toBe("mdi:heat-pump-outline");
