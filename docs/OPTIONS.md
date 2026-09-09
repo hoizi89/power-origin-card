@@ -118,7 +118,9 @@ today:
 | `chart.compare` | `false` | Draws the same weekday a week ago faintly behind today. Costs one more recorder query. |
 | `battery.capacity` | `0` | Usable capacity in Wh. Needed for kWh figures and the remaining time. |
 | `battery.reserve` | `0` | Percent held back and not counted as available. |
-| `ring.center` | `power` | Which question the ring answers — see the table above. |
+| `ring.center` | `power` | Which question the ring answers — see the table above. `money` prices the hour from the two tariffs, plus while exporting and minus while drawing; offered once a price is set. |
+| `ring.tap` | `entity` | What tapping the ring does: `entity` opens the house sensor, `cycle` steps the centre on — house, self-supplied, money, and by day production and surplus. Dots under the figure say where it stands; the browser remembers the stop. |
+| `ring.night` | `same` | `countdown` turns the outer band into the night once the sun is down: from sunset to sunrise, filled as far as it has come, moon where it began and sun where it ends. The word under the figure counts down to the sun — unless the centre already says how long the battery lasts, which keeps the caption. |
 | `ring.size` | `auto` | `auto` grows the ring and column when they have the card to themselves; `s`, `m`, `l` fix it. |
 | `ring.facts` | `bars` | The value list: `bars`, `plain`, `inline` or `none`. Defaults to `none` while the column is on. |
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
@@ -129,14 +131,14 @@ today:
 | `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
 | `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |
 | `ring.meter_dark` / `ring.meter_second_dark` | `same` | What each column shows once the sun is down: `same`, or any subject. A roof column has nothing to say at night. |
-| `ring.center_dark` | `power` | The centre without sun: `power`, `autarky`, or `runtime` — how long the battery lasts, with the time it lasts until as the caption; the battery block then keeps only the energy. |
+| `ring.center_dark` | `power` | The centre once the sun is down: `power` leaves a day view alone (production and surplus fall back to the house either way); `autarky`, `money`, or `runtime` — how long the battery lasts, with the time it lasts until as the caption; the battery block then keeps only the energy. |
 | `night_dim` | `0` | Percent the card dims by while the sun is below the horizon; the chip stays bright. |
 | `ring.meter_top` | `true` | The best the roof managed today, printed above the roof column as the mark it fills towards. |
 | `ring.meter_second_scale` | `0` | The right column has its own of every setting that shapes a needle: `meter_second_scale`, `meter_second_scale_draw`, `meter_second_target`, `meter_second_steps`, `meter_second_marks`, `meter_second_today`. Each means for the right column what the one without `second` means for the left. |
 | `ring.meter_second` | | Written from the two fields above; kept so a card configured before the split still reads. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |
-| `ring.rings` | `single` | One ring, two rings, or the clock. |
-| `ring.inner` | `icon` | Behind the centre figure: `icon`, `load` for the day's consumption curve, or `none`. |
+| `ring.rings` | `single` | One ring, two rings, the clock, or `dayclock`: the day as an hourly band outside, thinner because it is a memory, with the sources now still inside. At night the countdown takes the band. |
+| `ring.inner` | `icon` | Behind the centre figure: `icon`, `load` for the day's consumption curve, `battery` for the charge as a thin ring in the battery's colour, or `none`. |
 | `ring.meter_today` | `false` | A faint band for how far the needle swung today, in both directions. |
 | `ring.import_red` | `false` | While the house draws from the grid, the grid wears red instead of blue everywhere on the card. The shade is `--power-origin-import-color`. |
 | `ring.meter_marks` | `true` | Small arrows at the two ends of a needle column, so which end means which needs no reading. |
@@ -152,6 +154,7 @@ today:
 | `battery.runtime_window` | `30` | Minutes averaged before dividing. |
 | `battery.percent` | `true` | The charge as a figure beside the heading. The bar says it too, so this is the number and not the picture. |
 | `battery.reserve_line` | `true` | A dashed line where the reserve begins, so a bar that reads full does not hide power that never comes out. Shown only when a reserve is set. |
+| `battery.sunrise_mark` | `false` | A sun under the bar where the charge will stand at sunrise, worked out from today's average load; the cells the night will use stand back. Shown while the battery carries the house. |
 | `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house). |
 | `today.stats` | `[peak, autarky, export, import]` | Which four values appear at the bottom. |
 

@@ -19,7 +19,11 @@ export interface HomeAssistant {
   areas?: Record<string, { name: string }>;
 }
 
-export type RingCenter = "power" | "production" | "surplus" | "autarky";
+export type RingCenter = "power" | "production" | "surplus" | "autarky" | "money";
+/** What the centre shows once the sun is down; "power" leaves a day view alone. */
+export type RingCenterDark = "power" | "autarky" | "runtime" | "money";
+export type RingNight = "same" | "countdown";
+export type RingTap = "entity" | "cycle";
 export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given" | "sunrise";
 export type BatteryStyle = "segments" | "solid" | "bar";
 export type ChartStyle = "area" | "bars";
@@ -37,9 +41,9 @@ export interface ActionConfig {
 }
 
 export type ChipMode = "always" | "gridfree" | "never";
-export type RingStyle = "single" | "double" | "clock";
+export type RingStyle = "single" | "double" | "clock" | "dayclock";
 export type ColumnCount = "none" | "one" | "two";
-export type RingInner = "icon" | "load" | "none";
+export type RingInner = "icon" | "load" | "battery" | "none";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type OriginStyle = "bar" | "band";
 export type MeterStyle =
@@ -115,7 +119,11 @@ export interface SectionToggles {
 export interface RingOptions {
   center?: RingCenter;
   /** The mode to use while nothing is being produced. */
-  center_dark?: "power" | "autarky" | "runtime";
+  center_dark?: RingCenterDark;
+  /** The outer ring once the sun is down: the night, filled as far as it has come. */
+  night?: RingNight;
+  /** What a tap on the ring does: open the entity, or step the centre on. */
+  tap?: RingTap;
   layout?: RingLayout;
   caption?: boolean;
   facts?: FactsStyle;
@@ -183,6 +191,8 @@ export interface BatteryOptions {
   capacity?: number;
   reserve?: number;
   extra?: BatteryExtra;
+  /** A sun under the bar where the charge will stand at sunrise. */
+  sunrise_mark?: boolean;
 }
 
 export type DevicesStyle = "icons" | "bar" | "both";

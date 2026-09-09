@@ -27,6 +27,7 @@ import type {
   HomeAssistant,
   ResolvedConfig,
   PowerOriginCardConfig,
+  RingCenter,
   TodayStat
 } from "./types";
 import {
@@ -60,7 +61,8 @@ export class PowerOriginCard extends LitElement {
     _config: { state: true },
     _series: { state: true },
     _hours: { state: true },
-    _error: { state: true }
+    _error: { state: true },
+    _cycleAt: { state: true }
   };
 
   static styles = cardStyles;
@@ -84,6 +86,10 @@ export class PowerOriginCard extends LitElement {
   private _centreShowsTime = false;
   /** Set while a column shows how long the battery lasts, for the same reason. */
   private _columnShowsTime = false;
+  /** Where a tap left the centre; undefined until the ring is tapped. */
+  private _cycleAt?: RingCenter;
+  /** What the centre shows this render, so the blocks below repeat nothing. */
+  private _centreShown: RingCenter | "runtime" = "power";
   private _peakFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
   private readonly _clipId = `po-clip-${gradientSeq}`;
@@ -118,7 +124,83 @@ export class PowerOriginCard extends LitElement {
     }
     this._config = resolveConfig(config);
     this._lastFetch = 0;
+    this._cycleAt = undefined;
+    if (this._config.ring.tap === "cycle") {
+      try {
+        const kept = localStorage.getItem(this._cycleKey());
+        if (kept) this._cycleAt = kept as RingCenter;
+      } catch {
+        // A browser that keeps nothing starts where the configuration says.
+      }
+    }
     this.requestUpdate();
+  }
+
+  private _cycleKey(): string {
+    return `power-origin:centre:${this._config?.entities.house ?? ""}`;
+  }
+
+  /** The centres a tap can reach now, the configured one first. */
+  private _cycleModes(producing: boolean, priced: boolean): RingCenter[] {
+    const config = this._config as ResolvedConfig;
+    const modes: RingCenter[] = ["power", "autarky"];
+    if (priced) modes.push("money");
+    if (producing) modes.push("production", "surplus");
+    const start = config.ring.center;
+    if (modes.includes(start)) {
+      modes.splice(modes.indexOf(start), 1);
+      modes.unshift(start);
+    }
+    return modes;
+  }
+
+  private _cycle(producing: boolean, priced: boolean, shown: RingCenter | "runtime"): void {
+    const modes = this._cycleModes(producing, priced);
+    const next = modes[(modes.indexOf(shown as RingCenter) + 1) % modes.length];
+    this._cycleAt = next;
+    try {
+      localStorage.setItem(this._cycleKey(), next);
+    } catch {
+      // Then it holds for this page only.
+    }
+  }
+
+  /**
+   * What the centre shows. A tap wins over the configuration; the night wins
+   * over the day, and a view the moment cannot serve falls back to the house.
+   */
+  private _centreMode(night: boolean, priced: boolean): RingCenter | "runtime" {
+    const config = this._config as ResolvedConfig;
+    const producing = !night;
+    const allowed = (mode: RingCenter): boolean =>
+      mode === "money" ? priced : mode === "production" || mode === "surplus" ? producing : true;
+    if (config.ring.tap === "cycle" && this._cycleAt !== undefined) {
+      if (this._cycleModes(producing, priced).includes(this._cycleAt)) return this._cycleAt;
+    }
+    const day = config.ring.center;
+    const fallback = allowed(day) ? day : "power";
+    if (!night) return fallback;
+    const dark = config.ring.center_dark;
+    if (dark === "runtime") return this._batteryTime() ? "runtime" : fallback;
+    if (dark !== "power" && allowed(dark)) return dark;
+    return fallback;
+  }
+
+  /** How far the night has come, from the last sunset to the next sunrise. */
+  private _nightSoFar(): { done: number; hoursLeft: number } | undefined {
+    const times = sunTimes(stateOf(this._hass, "sun.sun"));
+    const rise = times.nextRising?.getTime();
+    let set = times.setting?.getTime();
+    if (rise === undefined || set === undefined) return undefined;
+    const now = Date.now();
+    // After midnight the day's sunset is the coming one; the night began at the last.
+    if (set > now) set -= 24 * 60 * 60 * 1000;
+    const length = rise - set;
+    if (length <= 0 || rise < now) return undefined;
+    return {
+      done: Math.min(1, Math.max(0, (now - set) / length)),
+      hoursLeft: (rise - now) / 3600000
+    };
   }
 
   set hass(hass: HomeAssistant) {
@@ -182,6 +264,7 @@ export class PowerOriginCard extends LitElement {
       !config.battery.runtime &&
       !meterNeedsScale &&
       !this._needsPeak() &&
+      !this._needsHours() &&
       !devicesNeed
     ) {
       return;
@@ -386,7 +469,7 @@ export class PowerOriginCard extends LitElement {
 
   private _renderRing(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
-    const mode = config.ring.center;
+    const hass = this._hass as HomeAssistant;
     // A ring about production says nothing before sunrise, so both production
     // views fall back to the source ring rather than showing an empty circle.
     const producing = flow.production > 0.05;
@@ -397,15 +480,24 @@ export class PowerOriginCard extends LitElement {
       config.ring.meter_second === "none"
         ? "blocks"
         : this._subjectFor(config.ring.meter_second, config.ring.meter_second_dark, night);
-    // The battery’s time left is a night answer for any mode, not only the
-    // two that have nothing to say.
-    const timeLeft = night && config.ring.center_dark === "runtime" ? this._batteryTime() : undefined;
+
+    // A kilowatt is not a decision; a euro an hour is, and on a moving tariff
+    // the two do not track each other.
+    const buy = numberOf(stateOf(hass, config.entities.price_import));
+    const sell = numberOf(stateOf(hass, config.entities.price_export));
+    const priced = buy !== undefined || sell !== undefined;
+    const perHour = flow.toGrid * (sell ?? 0) - flow.fromGrid * (buy ?? 0);
+
+    const mode = this._centreMode(night, priced);
+    const timeLeft = mode === "runtime" ? this._batteryTime() : undefined;
     this._centreShowsTime = timeLeft !== undefined;
     this._columnShowsTime = false;
-    const dark = !producing && (mode === "surplus" || mode === "production" || timeLeft !== undefined);
-    const showAutarky = dark ? config.ring.center_dark === "autarky" : mode === "autarky";
+    this._centreShown = mode;
+    const showAutarky = mode === "autarky";
     const showSurplus = mode === "surplus" && producing;
     const showProduction = mode === "production" && producing;
+    const showMoney = mode === "money";
+    const cycle = config.ring.tap === "cycle";
 
     const parts = showSurplus
       ? surplusSegments(flow)
@@ -423,42 +515,81 @@ export class PowerOriginCard extends LitElement {
       ? formatDuration(timeLeft.hours, locale)
       : showAutarky
         ? formatNumber(flow.autarky * 100, locale, 0)
-        : formatPower(centreValue, locale);
-    const unit = timeLeft ? "" : showAutarky ? "%" : "kW";
+        : showMoney
+          ? `${perHour < -0.005 ? "−" : "+"}${formatMoney(Math.abs(perHour), locale)}`
+          : formatPower(centreValue, locale);
+    const unit = timeLeft ? "" : showAutarky ? "%" : showMoney ? "€/h" : "kW";
 
     const soleSource =
-      parts.length === 1 && !showSurplus && !showProduction && !showAutarky
+      parts.length === 1 && !showSurplus && !showProduction && !showAutarky && !showMoney
         ? parts[0].key
         : undefined;
 
     const captionKey = showAutarky
       ? "ring.caption_autarky"
-      : showSurplus
-        ? spare > 0.01
-          ? "ring.caption_surplus"
-          : "ring.no_surplus"
-        : showProduction
-          ? "ring.caption_production"
-          : soleSource === "battery"
-            ? "ring.source_battery"
-            : soleSource === "grid"
-              ? "ring.source_grid"
-              : soleSource === "solar"
-                ? "ring.source_solar"
-                : "ring.caption_house";
+      : showMoney
+        ? perHour > 0.005
+          ? "ring.caption_earning"
+          : perHour < -0.005
+            ? "ring.caption_costing"
+            : "ring.caption_even"
+        : showSurplus
+          ? spare > 0.01
+            ? "ring.caption_surplus"
+            : "ring.no_surplus"
+          : showProduction
+            ? "ring.caption_production"
+            : soleSource === "battery"
+              ? "ring.source_battery"
+              : soleSource === "grid"
+                ? "ring.source_grid"
+                : soleSource === "solar"
+                  ? "ring.source_solar"
+                  : "ring.caption_house";
+
+    // The night around the ring: the outer band fills from sunset to sunrise.
+    // The battery’s own time keeps the caption when both have one to give.
+    const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
+    const nightArc = config.ring.night === "countdown" && sunDown ? this._nightSoFar() : undefined;
+    const countdown = nightArc && !timeLeft
+      ? `${formatDuration(nightArc.hoursLeft, locale)} ${localize("ring.to_sun", locale)}`
+      : undefined;
 
     const caption = !config.ring.caption
       ? undefined
       : timeLeft
         ? `${localize("ring.caption_until", locale)} ${formatClock(timeLeft.at, locale)}`
-        : localize(captionKey, locale);
+        : countdown ?? localize(captionKey, locale);
 
     // The outer ring answers the same question over the whole day, in the same
     // colours. Only the window differs, so the two cannot contradict each other.
     const clock = config.ring.rings === "clock" ? this._hours : undefined;
     const asClock = clock !== undefined && worthDrawing(clock);
+    // The same day outside, with now still inside: the band is thinner because
+    // it is a memory. At night the countdown takes the band instead.
+    const dayclock =
+      !nightArc && config.ring.rings === "dayclock" && this._hours && worthDrawing(this._hours)
+        ? this._hours
+        : undefined;
+    const farMarks = config.ring.clock_marks && (nightArc !== undefined || dayclock !== undefined);
+    const soc =
+      config.ring.inner === "battery" ? numberOf(stateOf(hass, config.entities.battery_soc)) : undefined;
+    const modes = cycle ? this._cycleModes(producing, priced) : [];
+    const cycleHandlers = cycle
+      ? {
+          click: (event: Event) => {
+            event.stopPropagation();
+            this._cycle(producing, priced, mode);
+          },
+          key: (event: KeyboardEvent) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            this._cycle(producing, priced, mode);
+          }
+        }
+      : undefined;
 
-    const wantsOuter = config.ring.rings === "double";
+    const wantsOuter = config.ring.rings === "double" && !nightArc;
     let outer: Array<{ colour: string; length: number; offset: number; faint?: boolean }> = [];
 
     if (wantsOuter && (showProduction || showSurplus)) {
@@ -496,21 +627,50 @@ export class PowerOriginCard extends LitElement {
       <div class="ring-block ${config.ring.layout}">
         <div class="ring-group size-${config.ring.size} ${config.ring.facts === "none" ? "solo" : ""}">
         ${this._renderMeter(flow, locale, leftSubject)}
-        <svg class="ring ${showSurplus ? "surplus" : ""}" viewBox="0 0 200 200" role="img" aria-label="${value} ${unit}">
-          ${outer.length
-            ? svg`<circle class="ring-day-track" cx="100" cy="100" r="93" pathLength="100"></circle>
-                ${outer.map(
-                  (segment) => svg`<circle
-                    class="ring-day ${segment.faint ? "faint" : ""}"
+        <svg class="ring ${showSurplus ? "surplus" : ""} ${cycle ? "cycle" : ""}"
+             viewBox="${farMarks ? "-14 -14 228 228" : "0 0 200 200"}"
+             role="${cycle ? "button" : "img"}" aria-label="${value} ${unit}"
+             tabindex="${cycle ? 0 : -1}"
+             @click=${cycleHandlers?.click} @keydown=${cycleHandlers?.key}>
+          ${nightArc
+            ? svg`<circle class="night-track" cx="100" cy="100" r="93" pathLength="100"></circle>
+                <circle class="night-arc" cx="100" cy="100" r="93" pathLength="100"
+                  stroke-dasharray="${(nightArc.done * 100).toFixed(2)} 100"
+                  transform="rotate(-90 100 100)"></circle>`
+            : dayclock
+              ? svg`${dayclock.map(
+                  (entry) => svg`<circle
+                    class="clock-hour out ${entry.dominant ?? "empty"}"
                     cx="100" cy="100" r="93" pathLength="100"
-                    stroke="${segment.colour}"
-                    stroke-dasharray="${segment.length.toFixed(2)} 100"
-                    stroke-dashoffset="${(-segment.offset).toFixed(2)}"
-                    transform="rotate(-90 100 100)"
+                    stroke-dasharray="${(100 / 24 - 0.35).toFixed(2)} 100"
+                    stroke-dashoffset="${(-(entry.hour * 100) / 24).toFixed(2)}"
+                    transform="rotate(90 100 100)"
                   ></circle>`
-                )}`
-            : nothing}
+                )}
+                <circle class="clock-now" cx="100" cy="193" r="3.5"
+                  transform="rotate(${((dayclock.at(-1)!.hour + 0.5) * 15).toFixed(1)} 100 100)"
+                ></circle>`
+              : outer.length
+                ? svg`<circle class="ring-day-track" cx="100" cy="100" r="93" pathLength="100"></circle>
+                    ${outer.map(
+                      (segment) => svg`<circle
+                        class="ring-day ${segment.faint ? "faint" : ""}"
+                        cx="100" cy="100" r="93" pathLength="100"
+                        stroke="${segment.colour}"
+                        stroke-dasharray="${segment.length.toFixed(2)} 100"
+                        stroke-dashoffset="${(-segment.offset).toFixed(2)}"
+                        transform="rotate(-90 100 100)"
+                      ></circle>`
+                    )}`
+                : nothing}
+          ${farMarks ? this._farMarks(nightArc === undefined) : nothing}
           <circle class="ring-track" cx="100" cy="100" r="76" pathLength="100"></circle>
+          ${soc !== undefined
+            ? svg`<circle class="ring-soc-track" cx="100" cy="100" r="60" pathLength="100"></circle>
+                <circle class="ring-soc" cx="100" cy="100" r="60" pathLength="100"
+                  stroke-dasharray="${Math.min(100, Math.max(0, soc)).toFixed(1)} 100"
+                  transform="rotate(-90 100 100)"></circle>`
+            : nothing}
           ${asClock
             ? clock!.map(
                 (entry) => svg`<circle
@@ -572,7 +732,8 @@ export class PowerOriginCard extends LitElement {
             const source = showSurplus || showProduction
               ? config.entities.solar
               : config.entities.house;
-            const on = source && (this._hass as HomeAssistant)?.states?.[source];
+            // With a tap that steps the centre on, the figure is not a way anywhere.
+            const on = !cycle && source && (this._hass as HomeAssistant)?.states?.[source];
             const handlers = on ? this._tap(source!) : undefined;
             return svg`<text class="ring-value ${on ? "tap" : ""}" x="100"
               y="${caption ? 104 : 112}" text-anchor="middle"
@@ -582,9 +743,16 @@ export class PowerOriginCard extends LitElement {
           })()}
           ${
             caption
-              ? svg`<text class="ring-caption" x="100" y="126" text-anchor="middle">${caption}</text>`
+              ? svg`<text class="ring-caption ${countdown && caption === countdown ? "plain" : ""}"
+                  x="100" y="126" text-anchor="middle">${caption}</text>`
               : nothing
           }
+          ${modes.length > 1
+            ? svg`<g class="ring-dots" aria-hidden="true">${modes.map(
+                (each, index) => svg`<circle class="${each === mode ? "on" : ""}"
+                  cx="${(100 + (index - (modes.length - 1) / 2) * 8).toFixed(1)}" cy="148" r="2.2"></circle>`
+              )}</g>`
+            : nothing}
 
         </svg>
         ${config.ring.meter_second === "none"
@@ -597,9 +765,23 @@ export class PowerOriginCard extends LitElement {
   }
 
   /**
-   * Surplus climbs, grid draw sinks. A ring can show proportions but never a
-   * direction, and the direction is what tells you whether to switch something on.
+   * Sun and moon outside an outer band, where the band cannot cover them. The
+   * day reads noon-up like the clock; the night reads sunset-up, so the moon
+   * stands where the night began and the sun where it ends.
    */
+  private _farMarks(sunOnTop: boolean) {
+    const sun = (y: number) => svg`
+      <g class="clock-mark sun" transform="translate(100 ${y})">
+        <circle cx="0" cy="0" r="2.7"></circle>
+        <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
+                 M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
+                 M-3.3,3.3 L-4.4,4.4"></path>
+      </g>`;
+    const moon = (y: number) => svg`<path class="clock-mark moon"
+      d="M100,${y} a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>`;
+    return sunOnTop ? svg`${sun(-5)}${moon(208)}` : svg`${moon(-2)}${sun(205)}`;
+  }
+
   /**
    * The same weekday a week ago. A second query of a recorder that may hold
    * years, so it only runs when the comparison is switched on.
@@ -659,6 +841,7 @@ export class PowerOriginCard extends LitElement {
     if (!config) return false;
     return (
       config.ring.rings === "clock" ||
+      config.ring.rings === "dayclock" ||
       config.ring.meter_style === "day" ||
       config.ring.meter_second === "day" ||
       config.ring.meter_today ||
@@ -1655,24 +1838,11 @@ export class PowerOriginCard extends LitElement {
         };
       }
       case "sunrise": {
-        const facts = this._batteryFacts();
-        if (facts.view.mode !== "discharging") return undefined;
-        const capacityKwh = config.battery_capacity / 1000;
-        if (
-          facts.soc === undefined ||
-          facts.hoursToSunrise === undefined ||
-          !facts.sunrise ||
-          capacityKwh <= 0 ||
-          facts.hoursToSunrise <= 0
-        ) {
-          return undefined;
-        }
-        const load = this._series?.houseAverage ?? 0;
-        const drop = ((facts.hoursToSunrise * load) / capacityKwh) * 100;
-        const at = Math.max(config.battery_reserve, facts.soc - drop);
+        const dawn = this._socAtSunrise();
+        if (!dawn) return undefined;
         return {
-          value: `${formatNumber(at, locale, 0)} %`,
-          label: `${localize("battery.at_sunrise", locale)} ${formatClock(facts.sunrise, locale)}`
+          value: `${formatNumber(dawn.at, locale, 0)} %`,
+          label: `${localize("battery.at_sunrise", locale)} ${formatClock(dawn.sunrise, locale)}`
         };
       }
       case "given": {
@@ -1687,6 +1857,31 @@ export class PowerOriginCard extends LitElement {
     }
   }
 
+  /**
+   * Where the charge will stand at sunrise, while the battery carries the
+   * house: the night's need at today's average load, taken off what is held.
+   * Without an average there is no honest figure, so there is none.
+   */
+  private _socAtSunrise(): { at: number; sunrise: Date } | undefined {
+    const config = this._config as ResolvedConfig;
+    const facts = this._batteryFacts();
+    if (facts.view.mode !== "discharging") return undefined;
+    const capacityKwh = config.battery_capacity / 1000;
+    const load = this._series?.houseAverage;
+    if (
+      facts.soc === undefined ||
+      facts.hoursToSunrise === undefined ||
+      !facts.sunrise ||
+      capacityKwh <= 0 ||
+      facts.hoursToSunrise <= 0 ||
+      load === undefined
+    ) {
+      return undefined;
+    }
+    const drop = ((facts.hoursToSunrise * load) / capacityKwh) * 100;
+    return { at: Math.max(config.battery_reserve, facts.soc - drop), sunrise: facts.sunrise };
+  }
+
   private _renderBatterySvg(
     soc: number,
     tone: string,
@@ -1695,6 +1890,7 @@ export class PowerOriginCard extends LitElement {
   ) {
     const config = this._config as ResolvedConfig;
     const bare = config.battery.style === "bar";
+    const dawn = config.battery.sunrise_mark ? this._socAtSunrise() : undefined;
 
     // Without a casing the bar may use the width the cap would have taken.
     // Whatever stands to the right takes its room from the bar, and only
@@ -1714,11 +1910,20 @@ export class PowerOriginCard extends LitElement {
         ? config.battery_reserve
         : 0;
 
+    // The level the morning keeps, as a place on the bar.
+    const level = (percent: number) =>
+      innerStart - 1 + ((innerWidth + 2) * Math.min(100, Math.max(0, percent))) / 100;
+    const dawnX = dawn ? level(dawn.at) : undefined;
+
     const body =
       config.battery.style === "solid"
         ? svg`<rect class="bat-fill ${tone}" x="${innerStart - 1}" y="${top}" rx="8"
-                    width="${((innerWidth + 2) * Math.min(100, Math.max(0, soc))) / 100}"
-                    height="${tall}"></rect>`
+                    width="${level(soc) - (innerStart - 1)}"
+                    height="${tall}"></rect>
+              ${dawnX !== undefined && level(soc) > dawnX
+                ? svg`<rect class="bat-fill bat-night" x="${dawnX.toFixed(1)}" y="${top}"
+                        width="${(level(soc) - dawnX).toFixed(1)}" height="${tall}"></rect>`
+                : nothing}`
         : segments(soc, segmentCount(config.battery.segments, config.battery_capacity)).map(
             (segment, index, all) => {
             const pitch = innerWidth / all.length;
@@ -1726,12 +1931,15 @@ export class PowerOriginCard extends LitElement {
             const x = innerStart + index * pitch;
             // Held back: full of power, none of it available.
             const held = reserve > 0 && ((index + 1) / all.length) * 100 <= reserve;
+            // Spoken for: the night takes it before the sun is back.
+            const night = dawn !== undefined && (index / all.length) * 100 >= dawn.at;
             return svg`
               <rect class="fill-off" x="${x}" y="${top}" width="${width}"
                     height="${tall}" rx="${radius}"></rect>
               ${
                 segment.fill > 0
-                  ? svg`<rect class="bat-fill ${tone} ${held ? "held" : ""}" x="${x}" y="${top}"
+                  ? svg`<rect class="bat-fill ${tone} ${held ? "held" : ""} ${night ? "night" : ""}"
+                              x="${x}" y="${top}"
                               width="${Math.max(3, width * segment.fill)}" height="${tall}"
                               rx="${radius}"></rect>`
                   : nothing
@@ -1740,8 +1948,18 @@ export class PowerOriginCard extends LitElement {
           );
 
     return html`
-      <svg class="full" viewBox="0 0 340 54" role="img"
+      <svg class="full" viewBox="0 0 340 ${dawn ? 62 : 54}" role="img"
            aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
+        ${dawnX !== undefined
+          ? svg`<line class="bat-sunrise" x1="${dawnX.toFixed(1)}" x2="${dawnX.toFixed(1)}"
+                  y1="${top - 3}" y2="${top + tall + 3}"></line>
+                <g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 12}) scale(0.72)">
+                  <circle cx="0" cy="0" r="2.7"></circle>
+                  <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
+                           M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
+                           M-3.3,3.3 L-4.4,4.4"></path>
+                </g>`
+          : nothing}
         ${
           bare
             ? nothing
@@ -1922,7 +2140,7 @@ export class PowerOriginCard extends LitElement {
       : `\u00d8 ${formatNumber(config.devices.window, locale, 0)} min`;
     const tap = (r: DeviceReading, content: unknown) => (rooms ? content : this._linked(r.id, content));
     // The ring's centre is the house load already; the head repeats nothing.
-    const houseShown = house !== undefined && !(config.sections.ring && config.ring.center === "power");
+    const houseShown = house !== undefined && !(config.sections.ring && this._centreShown === "power");
 
     const bar = style !== "icons" && house
       ? html`<div class="wohin-bar">
@@ -1994,12 +2212,7 @@ export class PowerOriginCard extends LitElement {
     const money = config.today.money ? this._renderMoney(locale) : nothing;
     // In autarky mode the ring already prints this very percentage.
     const ringShowsAutarky =
-      !config.today.stats_chosen &&
-      config.sections.ring &&
-      (config.ring.center === "autarky" ||
-        ((config.ring.center === "surplus" || config.ring.center === "production") &&
-          flow.production <= 0.05 &&
-          config.ring.center_dark === "autarky"));
+      !config.today.stats_chosen && config.sections.ring && this._centreShown === "autarky";
 
     const stats = config.today.stats
       .filter((stat) => !(ringShowsAutarky && stat === "autarky"))

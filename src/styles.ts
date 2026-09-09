@@ -333,6 +333,14 @@ export const cardStyles = css`
     fill: var(--sst-muted);
   }
 
+  /* A time is read, not shouted; and with its words it is the longest caption
+     the ring carries, so it is set a size smaller to stay inside the hole. */
+  .ring-caption.plain {
+    font-size: calc(9px * var(--sst-scale));
+    text-transform: none;
+    letter-spacing: 0.03em;
+  }
+
   .facts {
     display: flex;
     flex-direction: column;
@@ -843,6 +851,63 @@ export const cardStyles = css`
     opacity: 0.9;
   }
 
+  /* The day outside, now inside: the outer band is a memory, so it is thinner. */
+  .clock-hour.out {
+    stroke-width: 5;
+  }
+
+  /* The night around the ring: how far it has come, and how much is left. */
+  .night-track {
+    fill: none;
+    stroke: var(--sst-track);
+    stroke-width: 5;
+    opacity: 0.35;
+  }
+
+  .night-arc {
+    fill: none;
+    stroke: var(--sst-muted);
+    stroke-width: 5;
+    opacity: 0.75;
+    transition: stroke-dasharray 0.6s ease;
+  }
+
+  /* The charge as a thin ring inside the sources: a level, not a share. */
+  .ring-soc-track {
+    fill: none;
+    stroke: var(--sst-track);
+    stroke-width: 4;
+    opacity: 0.5;
+  }
+
+  .ring-soc {
+    fill: none;
+    stroke: var(--sst-leaf);
+    stroke-width: 4;
+    transition: stroke-dasharray 0.6s ease;
+  }
+
+  /* Where the centre stands in its round. */
+  .ring-dots circle {
+    fill: var(--sst-muted);
+    opacity: 0.35;
+  }
+
+  .ring-dots circle.on {
+    fill: var(--sst-ink);
+    opacity: 0.8;
+  }
+
+  .ring.cycle {
+    cursor: pointer;
+  }
+
+  .ring.cycle:focus-visible {
+    outline: 2px solid var(--sst-sun);
+    outline-offset: 2px;
+    border-radius: 50%;
+  }
+
   .bal-track {
     fill: var(--sst-track);
     opacity: 0.3;
@@ -922,6 +987,33 @@ export const cardStyles = css`
   .bat-held {
     fill: var(--sst-bg, #000);
     opacity: 0.55;
+  }
+
+  /* What the night will use stands back; what the morning keeps stays bright. */
+  .bat-fill.night {
+    opacity: 0.32;
+  }
+
+  .bat-night {
+    fill: var(--ha-card-background, #000);
+    opacity: 0.6;
+  }
+
+  .bat-sunrise {
+    stroke: var(--sst-ink);
+    stroke-width: 1.4;
+    opacity: 0.8;
+  }
+
+  .bat-sun {
+    fill: var(--sst-sun);
+    stroke: var(--sst-sun);
+    stroke-width: 1.2;
+    stroke-linecap: round;
+  }
+
+  .bat-sun path {
+    fill: none;
   }
 
   .bat-extra {

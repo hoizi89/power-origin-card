@@ -153,7 +153,9 @@ function place(target, config, stateName, weak) {
 }
 `;
 
-const page = (body, width) => `<title>0</title>
+/* `pre` runs before the card loads: the place to set __night or __at. */
+const page = (body, width, pre = "") => `<title>0</title>
+<script>${pre}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
@@ -359,8 +361,44 @@ const shots = {
   }
 };
 
+/* A row of small cards, one per configuration, for the ring alone. */
+const ringRow = (configs, state, weak = false) => `const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(${configs.length}, 300px)"; row.style.gap = "14px";
+    stage.append(row);
+    for (const cfg of ${JSON.stringify(configs)}) {
+      const cell = document.createElement("div"); row.append(cell);
+      place(cell, { title: "", chip: "never", ...cfg }, "${state}", ${weak});
+    }`;
+
+const RING_ONLY = { sections: { ring: true, chart: false, battery: false, today: false } };
+
+shots["ring-day"] = {
+  width: 3 * 300 + 28,
+  body: ringRow(
+    [
+      { ...RING_ONLY, ring: { center: "power", rings: "dayclock", inner: "battery", tap: "cycle", meter: true, meter_shows: "roof", facts: "none", size: "m" } },
+      { ...RING_ONLY, ring: { center: "money", meter: true, meter_shows: "grid", facts: "none", size: "m" } },
+      { ...RING_ONLY, ring: { center: "autarky", rings: "double", inner: "battery", tap: "cycle", meter: false, facts: "none", size: "m" } }
+    ],
+    "MIDDAY"
+  )
+};
+
+shots["ring-night"] = {
+  width: 3 * 300 + 28,
+  pre: `globalThis.__night = true; globalThis.__at = "22:30";`,
+  body: ringRow(
+    [
+      { ...RING_ONLY, ring: { center: "power", night: "countdown", inner: "battery", meter: true, meter_shows: "grid", facts: "none", size: "m" } },
+      { ...RING_ONLY, ring: { center: "power", night: "countdown", center_dark: "runtime", meter: true, meter_shows: "grid", facts: "none", size: "m" } },
+      { sections: { ring: false, chart: false, battery: true, today: false }, battery: { sunrise_mark: true, extra: "sunrise" } }
+    ],
+    "EVENING"
+  )
+};
+
 for (const [name, shot] of Object.entries(shots)) {
-  fs.writeFileSync(here + name + ".html", page(shot.body, shot.width));
+  fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }
 console.log(Object.keys(shots).join(" "));
 console.log(

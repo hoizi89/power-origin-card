@@ -57,7 +57,9 @@ export const DEFAULTS = {
     rings: "single" as const,
     inner: "icon" as const,
     clock_marks: true,
-    import_red: false
+    import_red: false,
+    night: "same" as const,
+    tap: "entity" as const
   },
   chart: {
     style: "area" as const,
@@ -75,7 +77,8 @@ export const DEFAULTS = {
     percent: true,
     capacity: 0,
     reserve: 0,
-    extra: "none" as const
+    extra: "none" as const,
+    sunrise_mark: false
   },
   devices: {
     list: [] as string[],
@@ -319,6 +322,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
 
   const scaled = (resolved: ResolvedConfig) =>
     gauge(resolved) || resolved.ring.meter_style === "balance";
+
+  /** A price is what turns a kilowatt into a decision; without one there is no money view. */
+  const prices = (resolved: ResolvedConfig) =>
+    Boolean(resolved.entities.price_import || resolved.entities.price_export);
+  const cell = (resolved: ResolvedConfig) => Boolean(resolved.entities.battery_soc);
+  const cellTimed = (resolved: ResolvedConfig) =>
+    Boolean(resolved.entities.battery_soc && resolved.entities.battery_power);
 
   const secondScaled = (resolved: ResolvedConfig) =>
     secondGauge(resolved) ||
@@ -674,28 +684,38 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 { value: "production", label: t("editor.center_production") },
                 { value: "surplus", label: t("editor.center_surplus") },
                 { value: "autarky", label: t("editor.center_autarky") },
-                { value: "runtime", label: t("editor.center_runtime") }
+                ...only(prices, { value: "money", label: t("editor.center_money") })
               ]
             }
           }
         },
-        // Only the production views need a stand-in for the night.
-        ...only(
-          (resolved) =>
-            resolved.ring.center === "production" || resolved.ring.center === "surplus",
-          {
-            name: "center_dark",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "power", label: t("editor.center_power") },
-                  { value: "autarky", label: t("editor.center_autarky") }
-                ]
-              }
+        // The night has answers of its own; house power leaves a day view alone.
+        {
+          name: "center_dark",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "power", label: t("editor.center_power") },
+                { value: "autarky", label: t("editor.center_autarky") },
+                ...only(cellTimed, { value: "runtime", label: t("editor.center_runtime") }),
+                ...only(prices, { value: "money", label: t("editor.center_money") })
+              ]
             }
           }
-        ),
+        },
+        {
+          name: "tap",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "entity", label: t("editor.tap_entity") },
+                { value: "cycle", label: t("editor.tap_cycle") }
+              ]
+            }
+          }
+        },
         {
           name: "rings",
           selector: {
@@ -704,15 +724,31 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               options: [
                 { value: "single", label: t("editor.ring_single") },
                 { value: "double", label: t("editor.ring_double") },
-                { value: "clock", label: t("editor.ring_clock") }
+                { value: "clock", label: t("editor.ring_clock") },
+                { value: "dayclock", label: t("editor.ring_dayclock") }
               ]
             }
           }
         },
-        ...only((resolved) => resolved.ring.rings === "clock", {
-          name: "clock_marks",
-          selector: { boolean: {} }
-        }),
+        ...only(
+          (resolved) => resolved.ring.rings === "clock" || resolved.ring.rings === "dayclock",
+          {
+            name: "clock_marks",
+            selector: { boolean: {} }
+          }
+        ),
+        {
+          name: "night",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "same", label: t("editor.same") },
+                { value: "countdown", label: t("editor.night_countdown") }
+              ]
+            }
+          }
+        },
         { name: "import_red", selector: { boolean: {} } },
         {
           name: "inner",
@@ -722,6 +758,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               options: [
                 { value: "icon", label: t("editor.inner_icon") },
                 { value: "load", label: t("editor.inner_load") },
+                ...only(cell, { value: "battery", label: t("editor.inner_battery") }),
                 { value: "none", label: t("editor.inner_none") }
               ]
             }
@@ -881,7 +918,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             ...only((resolved) => resolved.battery_reserve > 0, {
               name: "reserve_line",
               selector: { boolean: {} }
-            })
+            }),
+            ...only(
+              (resolved) => cellTimed(resolved) && resolved.battery_capacity > 0,
+              { name: "sunrise_mark", selector: { boolean: {} } }
+            )
           ]
         },
         {
@@ -1111,6 +1152,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     inner: t("editor.inner"),
     clock_marks: t("editor.clock_marks"),
     import_red: t("editor.import_red"),
+    night: t("editor.night"),
+    tap: t("editor.tap"),
+    sunrise_mark: t("editor.sunrise_mark"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     compare: t("editor.compare"),
@@ -1165,6 +1209,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),
     import_red: t("editor.help_import_red"),
+    night: t("editor.help_night"),
+    tap: t("editor.help_tap"),
+    sunrise_mark: t("editor.help_sunrise_mark"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
     mode: t("editor.help_mode"),

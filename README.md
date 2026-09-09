@@ -72,8 +72,9 @@ It only ever fills fields that are still empty, so a choice you made is never ov
 | `production` | what the roof makes | What is the system doing? |
 | `surplus` | spare power | Can I switch something on? |
 | `autarky` | self-supplied share | How independent am I right now? |
+| `money` | euros per hour | What is this hour earning or costing me? |
 
-`production` and `surplus` fall back to `power` before sunrise: a ring about production has nothing to say when nothing is produced.
+`production` and `surplus` fall back to `power` before sunrise: a ring about production has nothing to say when nothing is produced. `money` needs a price and is offered once one is set. With `ring.tap: cycle` a tap on the ring steps the centre through these, and dots under the figure say where it stands.
 
 ## The ring has a type, the column has a subject
 
@@ -82,6 +83,9 @@ It only ever fills fields that are still empty, so a choice you made is never ov
 | `single` | the shares right now |
 | `double` | a second ring outside, the same question over the whole day |
 | `clock` | the whole circle is the day, noon at the top |
+| `dayclock` | the day as an hourly band outside, the sources now inside |
+
+Inside the ring, `ring.inner: battery` draws the charge as a thin ring in the battery's colour. Once the sun is down, `ring.night: countdown` turns the outer band into the night itself — from sunset to sunrise, filled as far as it has come — and the word under the figure counts down to the sun.
 
 A column answers two questions, and they are two settings. **What it measures** is `ring.meter_shows`:
 
@@ -99,7 +103,7 @@ A column answers two questions, and they are two settings. **What it measures** 
 
 The same moment, six times. Top: what the roof makes against its best today, what the hour earns, how much of the house is self-supplied. Bottom: where the house drew from hour by hour, the roof against the house, the house against its own average.
 
-Two more subjects belong to the battery: `battery` is the battery as a needle — charging up, discharging down, against the most it moved today — and `range` is what it holds against what the night still needs until sunrise, the gap in the grid’s colour because that is who will supply it. A column may say something else once the sun is down (`meter_dark`): a roof column has nothing to say at night, so it can become the battery until sunrise and the roof again after. The ring’s centre can do the same with `center_dark: runtime` — how long the battery lasts. For a panel on the wall, `night_dim` steps the card back while the sun is below the horizon; the chip stays bright.
+Two more subjects belong to the battery: `battery` is the battery as a needle — charging up, discharging down, against the most it moved today — and `range` is what it holds against what the night still needs until sunrise, the gap in the grid’s colour because that is who will supply it. A column may say something else once the sun is down (`meter_dark`): a roof column has nothing to say at night, so it can become the battery until sunrise and the roof again after. The ring’s centre can do the same with `center_dark: runtime` — how long the battery lasts. The battery block can mark where the charge will stand at sunrise (`battery.sunrise_mark`): a sun under the bar, and the cells the night will use stand back. For a panel on the wall, `night_dim` steps the card back while the sun is below the horizon; the chip stays bright.
 
 **How it is drawn** is `ring.meter_style`, and only `grid` has a choice: `blocks` for a stepped needle, `bar` for one body. The other six each have one honest shape, so the editor does not offer a drawing it would ignore.
 
