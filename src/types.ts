@@ -91,6 +91,8 @@ export interface PowerOriginEntities {
   export_today?: string;
   import_today?: string;
   forecast?: string;
+  /** What the roof expects tomorrow, in kWh; read after sunset. */
+  forecast_tomorrow?: string;
   cost_today?: string;
   cost_export_today?: string;
   cost_import_today?: string;

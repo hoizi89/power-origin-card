@@ -82,6 +82,8 @@ export class PowerOriginCard extends LitElement {
   private _batteryPeak?: number;
   /** Set while the ring centre shows the battery’s time left, so the note does not repeat it. */
   private _centreShowsTime = false;
+  /** Set while a column shows how long the battery lasts, for the same reason. */
+  private _columnShowsTime = false;
   private _peakFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
   private readonly _clipId = `po-clip-${gradientSeq}`;
@@ -399,6 +401,7 @@ export class PowerOriginCard extends LitElement {
     // two that have nothing to say.
     const timeLeft = night && config.ring.center_dark === "runtime" ? this._batteryTime() : undefined;
     this._centreShowsTime = timeLeft !== undefined;
+    this._columnShowsTime = false;
     const dark = !producing && (mode === "surplus" || mode === "production" || timeLeft !== undefined);
     const showAutarky = dark ? config.ring.center_dark === "autarky" : mode === "autarky";
     const showSurplus = mode === "surplus" && producing;
@@ -1021,10 +1024,21 @@ export class PowerOriginCard extends LitElement {
     const fill = (METER_HEIGHT * usable) / scale;
     const mark = (METER_HEIGHT * needed) / scale;
     const short = needed > usable;
+    // The battery block already prints the energy held; this column says how
+    // long it lasts and whether that reaches the sun.
+    const lasts = facts.view.mode === "discharging" ? facts.view.hours : undefined;
+    if (lasts !== undefined) this._columnShowsTime = true;
+    const value =
+      lasts !== undefined
+        ? html`${formatDuration(lasts, locale)}`
+        : html`${formatEnergy(usable, locale)} <small>kWh</small>`;
+    const word = short
+      ? `${localize("meter.range_gap", locale)} ${formatEnergy(needed - usable, locale)} kWh`
+      : localize("meter.range_reaches", locale);
     return html`
       <div class="meter-block">
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
-             aria-label="${localize("meter.range_until", locale)}">
+             aria-label="${localize("meter.range_reaches", locale)}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
           ${short
             ? svg`<rect class="range-gap" x="8" y="${(METER_HEIGHT - mark).toFixed(1)}"
@@ -1036,10 +1050,8 @@ export class PowerOriginCard extends LitElement {
                 y2="${(METER_HEIGHT - mark).toFixed(1)}"></line>
         </svg>
         <div class="meter-label ${short ? "down" : "leaf"}">
-          <span class="meter-value">${formatEnergy(usable, locale)} <small>kWh</small></span>
-          <span class="meter-word">${short
-            ? `${localize("meter.range_gap", locale)} ${formatEnergy(needed - usable, locale)} kWh`
-            : `${localize("meter.range_until", locale)} ${formatClock(facts.sunrise, locale)}`}</span>
+          <span class="meter-value">${value}</span>
+          <span class="meter-word">${word}</span>
         </div>
       </div>
     `;
@@ -1421,6 +1433,8 @@ export class PowerOriginCard extends LitElement {
       : undefined;
     const forecast = forecastValue !== undefined && forecastValue >= 0.05 ? forecastValue : undefined;
 
+    const tomorrow = energyKwh(stateOf(hass, config.entities.forecast_tomorrow));
+    const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
     const note = [
       produced !== undefined
         ? html`<span class="key-solar">${formatEnergy(produced, locale)}
@@ -1432,6 +1446,12 @@ export class PowerOriginCard extends LitElement {
         : nothing,
       forecast !== undefined
         ? html` · ${formatEnergy(forecast, locale)}
+            <span class="dim">${localize("chart.forecast", locale)}</span>`
+        : nothing,
+      // After sunset the day is done; tomorrow’s expectation is the one figure
+      // that still looks ahead, and it stands beside today, not instead of it.
+      tomorrow !== undefined && sunDown
+        ? html`<span class="dim">${localize("chart.tomorrow", locale)}</span> ${formatEnergy(tomorrow, locale)}
             <span class="dim">${localize("chart.forecast", locale)}</span>`
         : nothing
     ];
@@ -1786,8 +1806,8 @@ export class PowerOriginCard extends LitElement {
       if (spent) {
         parts.push(localize("battery.at_reserve", locale));
       } else {
-        if (this._centreShowsTime) {
-          // The centre already says how long; the note keeps the energy.
+        if (this._centreShowsTime || this._columnShowsTime) {
+          // The centre or a column already says how long; the note keeps the energy.
         } else if (reach) {
           parts.push(localize(`battery.sunrise_${reach}`, locale));
         } else if (view.at) {

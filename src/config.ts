@@ -253,6 +253,7 @@ export function stubConfig(entityIds: string[]): PowerOriginCardConfig {
         entityIds[0] ??
         "",
       solar: find("pv", "power") ?? find("solar", "power") ?? find("erzeugung"),
+      forecast_tomorrow: find("forecast", "tomorrow") ?? find("prognose", "morgen"),
       battery_power: find("battery", "power") ?? find("speicher", "leistung"),
       battery_soc:
         find("battery", "state_of_charge") ??
@@ -616,6 +617,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           schema: [entityField("export_today", "energy"), entityField("import_today", "energy")]
         },
         entityField("forecast", "energy"),
+        entityField("forecast_tomorrow", "energy"),
         entityField("cost_today", "monetary"),
         {
           type: "grid",
@@ -1066,6 +1068,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     export_today: t("editor.export_today"),
     import_today: t("editor.import_today"),
     forecast: t("editor.forecast"),
+    forecast_tomorrow: t("editor.forecast_tomorrow"),
     cost_today: t("editor.cost_today"),
     cost_export_today: t("editor.cost_export_today"),
     cost_import_today: t("editor.cost_import_today"),

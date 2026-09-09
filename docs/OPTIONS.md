@@ -101,6 +101,7 @@ today:
 | `battery_soc` | State of charge in percent. Switches on the battery block. |
 | `grid_power` | Grid power, **positive while importing**. Taken as the truth when set. |
 | `solar_today`, `house_today`, `export_today`, `import_today`, `battery_out_today` | Daily energy totals for the chart note, the origin bar and the today strip. |
+| `forecast_tomorrow` | What the roof expects tomorrow, in kWh. Read after sunset, beside today: the day stays, tomorrow joins it. |
 | `forecast` | Energy still expected today, e.g. from Solcast. |
 | `cost_today` | Today's balance in your currency. **Negative means earned.** |
 | `cost_export_today`, `cost_import_today` | The two sides of the balance. |
@@ -123,7 +124,7 @@ today:
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
 | `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, or `two` — one on each side. |
-| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky`, `roof`, `battery` (charging up, discharging down, against the most it moved today) or `range` (usable energy against what the night still needs until sunrise; the gap wears the grid colour). |
+| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky`, `roof`, `battery` (charging up, discharging down, against the most it moved today) or `range` (what the battery holds against what the night still needs until sunrise; the gap wears the grid colour, the figure is how long it lasts, and the battery block then keeps only the energy). |
 | `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Only `grid` has a choice, so this is shown only then. |
 | `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
 | `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |

@@ -1063,7 +1063,10 @@ describe("the card at night", () => {
   it("draws what is held against what the night needs", async () => {
     const { root, text } = await render(baseConfig({ ring: { meter: true, meter_shows: "range" } }), evening());
     expect(root.querySelector(".range-mark")).toBeTruthy();
-    expect(text).toMatch(/reicht bis|fehlen/);
+    expect(text).toMatch(/reicht bis Sonnenaufgang|fehlen/);
+    // The column carries the time, so the battery note keeps only the energy.
+    expect(text).not.toContain("Reicht bis");
+    expect(text).toContain("kWh übrig");
   });
 
   it("puts the battery's time left in the centre when asked, at night only", async () => {
@@ -1124,5 +1127,16 @@ describe("the night, said once", () => {
   it("says where the charge will stand at sunrise only while the battery carries the house", async () => {
     const day = await render(baseConfig({ battery: { extra: "sunrise" } }), SCENARIOS[0]);
     expect(day.text).not.toContain("bei Sonnenaufgang um");
+  });
+});
+
+describe("tomorrow, after sunset", () => {
+  it("stands beside today once the sun is down, and not before", async () => {
+    const night = await render(baseConfig(), SCENARIOS.find((s) => s.name === "evening on battery")!);
+    expect(night.text).toContain("morgen");
+    expect(night.text).toContain("24,7");
+    expect(night.text).toContain("erzeugt");
+    const day = await render(baseConfig(), SCENARIOS[0]);
+    expect(day.text).not.toContain("morgen");
   });
 });
