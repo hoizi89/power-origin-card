@@ -1068,9 +1068,9 @@ describe("the card at night", () => {
 
   it("puts the battery's time left in the centre when asked, at night only", async () => {
     const night = await render(baseConfig({ ring: { center: "power", center_dark: "runtime" } }), evening());
-    expect(night.text).toContain("Reicht bis");
+    expect(night.text).toMatch(/\bbis \d/);
     const day = await render(baseConfig({ ring: { center: "power", center_dark: "runtime" } }), SCENARIOS[0]);
-    expect(day.text).not.toContain("Reicht bis");
+    expect(day.text).not.toMatch(/\bbis \d/);
   });
 
   it("dims once the sun is down, and only when asked", async () => {
