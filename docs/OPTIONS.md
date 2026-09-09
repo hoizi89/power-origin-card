@@ -145,7 +145,7 @@ today:
 | `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Offered for the columns that fill from one end — `grid`, `night`, `roof`, `battery`, `autarky`; the others have one shape. Unset, the grid is blocks and the rest are one body, so nothing is redrawn unasked. The night in blocks is one block per hour. |
 | `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
 | `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |
-| `ring.meter_dark` / `ring.meter_second_dark` | `same` | What each column shows once the sun is down: `same`, or any subject. A roof column has nothing to say at night. |
+| `ring.meter_dark` / `ring.meter_second_dark` | `same` | What each column shows once the sun is down: `same`, or a subject that has something to say at night — `night`, `grid`, `day`, `money`, `load`, `autarky`, `battery`, `devices`, `none`. The roof and the roof against the house are not offered here, and `night` is offered only here. |
 | `ring.center_dark` | `power` | The centre once the sun is down: `power` leaves a day view alone (production and surplus fall back to the house either way); `autarky`, `money`, or `runtime` — how long the battery lasts, with the time it lasts until as the caption; the battery block then keeps only the energy. |
 | `night_dim` | `0` | Percent the card dims by while the sun is below the horizon; the chip stays bright. |
 | `ring.meter_top` | `true` | The best the roof managed today above the roof column, or the capacity above the battery column: the mark it fills towards. |

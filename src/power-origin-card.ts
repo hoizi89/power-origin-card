@@ -1114,7 +1114,7 @@ export class PowerOriginCard extends LitElement {
         <div class="ring-group size-${bare ? "s" : config.ring.size} ${config.ring.facts === "none" || bare ? "solo" : ""}">
         ${bare ? nothing : this._renderMeter(flow, locale, leftSubject)}
         <svg class="ring ${showSurplus ? "surplus" : ""} ${cycle ? "cycle" : ""}"
-             viewBox="${farMarks ? "-14 -14 228 228" : "0 0 200 200"}"
+             viewBox="${farMarks ? "-17 -17 234 234" : "0 0 200 200"}"
              role="${cycle ? "button" : "img"}" aria-label="${value} ${unit}"
              tabindex="${cycle ? 0 : -1}"
              @click=${cycleHandlers?.click} @keydown=${cycleHandlers?.key}>
@@ -1341,7 +1341,7 @@ export class PowerOriginCard extends LitElement {
       </g>`;
     const moon = (y: number) => svg`<path class="clock-mark moon"
       d="M100,${y} a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>`;
-    return sunOnTop ? svg`${sun(-5)}${moon(208)}` : svg`${moon(-2)}${sun(205)}`;
+    return sunOnTop ? svg`${sun(-8)}${moon(211)}` : svg`${moon(-6)}${sun(208)}`;
   }
 
   /**
@@ -1889,8 +1889,8 @@ export class PowerOriginCard extends LitElement {
           : "bal-track";
 
     // The hours stand in the left margin, so the column gives up a little width.
-    const X = 18;
-    const W = 62;
+    const X = 24;
+    const W = 56;
     const body =
       drawn === "blocks"
         ? svg`${[...ticks.map((tick) => tick.y), H].map((to, index, all) => {
@@ -1949,10 +1949,10 @@ export class PowerOriginCard extends LitElement {
             : nothing}
           ${body}
           ${ticks.map(
-            (tick) => svg`<line class="night-tick" x1="${tick.hour % 4 === 0 ? 12 : 14}" x2="${X - 1}"
+            (tick) => svg`<line class="night-tick" x1="${tick.hour % 4 === 0 ? 17 : 20}" x2="${X - 1}"
               y1="${tick.y.toFixed(1)}" y2="${tick.y.toFixed(1)}"></line>
               ${tick.hour % 4 === 0
-                ? svg`<text class="night-hour" x="10" y="${(tick.y + 2.5).toFixed(1)}"
+                ? svg`<text class="night-hour" x="15" y="${(tick.y + 3).toFixed(1)}"
                     text-anchor="end">${String(tick.hour).padStart(2, "0")}</text>`
                 : nothing}`
           )}
@@ -2925,9 +2925,7 @@ export class PowerOriginCard extends LitElement {
       <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${dawn ? 62 : 54}" role="img"
            aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
         ${dawnX !== undefined
-          ? svg`<line class="bat-sunrise" x1="${dawnX.toFixed(1)}" x2="${dawnX.toFixed(1)}"
-                  y1="${top - 3}" y2="${top + tall + 3}"></line>
-                <g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 12}) scale(0.72)">
+          ? svg`<g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 12}) scale(0.72)">
                   <circle cx="0" cy="0" r="2.7"></circle>
                   <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
                            M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3

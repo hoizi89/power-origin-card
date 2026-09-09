@@ -1295,12 +1295,6 @@ export const cardStyles = css`
     fill: var(--sst-muted);
   }
 
-  .bat-sunrise {
-    stroke: var(--sst-ink);
-    stroke-width: 1.4;
-    opacity: 0.8;
-  }
-
   .bat-sun {
     fill: var(--sst-sun);
     stroke: var(--sst-sun);
@@ -1671,7 +1665,7 @@ export const cardStyles = css`
   }
   .night-hour {
     font-family: var(--sst-mono);
-    font-size: 7px;
+    font-size: 8.5px;
     fill: var(--sst-muted);
   }
 

@@ -390,7 +390,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     secondGauge(resolved) ||
     (resolved.ring.meter && resolved.ring.meter_second === "balance");
 
-  /** The subjects a column can take. Devices need a list to draw from. */
+  /* The subjects a column can take. The night is a night subject only; the
+     roof and the roof against the house have nothing to say at night, so the
+     night list leaves them out. Devices need a list to draw from. */
+  const devicesSubject = only((resolved) => resolved.devices.list.length > 0, {
+    value: "devices",
+    label: t("editor.meter_devices")
+  });
   const subjects = [
     { value: "grid", label: t("editor.shows_grid") },
     { value: "day", label: t("editor.meter_day") },
@@ -400,14 +406,21 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     { value: "autarky", label: t("editor.meter_autarky") },
     { value: "roof", label: t("editor.meter_roof") },
     { value: "battery", label: t("editor.meter_battery") },
-    { value: "night", label: t("editor.meter_night") },
-    ...only((resolved) => resolved.devices.list.length > 0, {
-      value: "devices",
-      label: t("editor.meter_devices")
-    }),
+    ...devicesSubject,
     { value: "none", label: t("editor.meter_none") }
   ];
-  const darkSubjects = [{ value: "same", label: t("editor.same") }, ...subjects];
+  const darkSubjects = [
+    { value: "same", label: t("editor.same") },
+    { value: "night", label: t("editor.meter_night") },
+    { value: "grid", label: t("editor.shows_grid") },
+    { value: "day", label: t("editor.meter_day") },
+    { value: "money", label: t("editor.meter_money") },
+    { value: "load", label: t("editor.meter_load") },
+    { value: "autarky", label: t("editor.meter_autarky") },
+    { value: "battery", label: t("editor.meter_battery") },
+    ...devicesSubject,
+    { value: "none", label: t("editor.meter_none") }
+  ];
   /** A column that fills from one end can be blocks or one body; the rest have one shape. */
   const drawable = (shows: string) =>
     ["grid", "night", "roof", "battery", "autarky"].includes(shows);
@@ -623,10 +636,16 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       ]
     : leftColumn;
 
-  /* The top of the form, in rows that read as pairs: what the card is
-     called and how big; the chip and what it says; a tap and the shape;
-     the night; and last the three switches for the corner. */
+  /* The top of the form is one group like the others, open by default, in
+     rows that read as pairs: what the card is called and how big; the chip
+     and what it says; a tap and the shape; the night. */
   const schema = [
+    {
+      type: "expandable",
+      title: t("editor.card_settings"),
+      icon: "mdi:card-text-outline",
+      expanded: true,
+      schema: [
     {
       type: "grid",
       schema: [
@@ -709,6 +728,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           }
         },
         { name: "night_dim", selector: { number: { min: 0, max: 50, step: 5, mode: "slider" } } }
+      ]
+    }
       ]
     },
     {

@@ -86,7 +86,7 @@ describe("the night around the ring", () => {
     expect(root.querySelector(".night-arc")).toBeTruthy();
     expect(text()).toContain("bis Sonne");
     // The moon stands where the night began, outside the band.
-    expect(root.querySelector(".ring")?.getAttribute("viewBox")).toContain("-14");
+    expect(root.querySelector(".ring")?.getAttribute("viewBox")).toContain("-17");
   });
 
   it("stays out of the day", async () => {
@@ -110,7 +110,7 @@ describe("the day outside, now inside", () => {
     const { root } = await render(config({ ring: { rings: "dayclock" } }), day);
     expect(root.querySelectorAll(".clock-hour.out").length).toBeGreaterThan(2);
     expect(root.querySelectorAll(".seg").length).toBeGreaterThan(0);
-    expect(root.querySelector(".ring")?.getAttribute("viewBox")).toContain("-14");
+    expect(root.querySelector(".ring")?.getAttribute("viewBox")).toContain("-17");
   });
 
   it("gives the band to the night once the countdown is on", async () => {
@@ -149,13 +149,13 @@ describe("tapping the ring", () => {
 describe("the charge at sunrise, on the bar", () => {
   it("marks the level and dims the cells the night will use", async () => {
     const { root } = await render(config({ battery: { sunrise_mark: true, capacity: 13100 } }), evening);
-    expect(root.querySelector(".bat-sunrise")).toBeTruthy();
+    expect(root.querySelector(".bat-sun")).toBeTruthy();
     expect(root.querySelector(".bat-sun")).toBeTruthy();
     expect(root.querySelectorAll(".bat-fill.night").length).toBeGreaterThan(0);
   });
 
   it("has nothing to say while the battery charges", async () => {
     const { root } = await render(config({ battery: { sunrise_mark: true, capacity: 13100 } }), day);
-    expect(root.querySelector(".bat-sunrise")).toBeNull();
+    expect(root.querySelector(".bat-sun")).toBeNull();
   });
 });
