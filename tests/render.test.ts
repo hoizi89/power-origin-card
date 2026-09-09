@@ -987,3 +987,12 @@ describe("where the power goes, over time", () => {
     expect(text).not.toContain("167 W");
   });
 });
+
+describe("when the house sensor is silent", () => {
+  it("says which sensor, so the owner knows where to look", async () => {
+    const offline = SCENARIOS.find((s) => s.name === "inverter offline")!;
+    const { text } = await render(baseConfig(), offline);
+    expect(text).toContain("Keine Daten");
+    expect(text).toContain(IDS.house);
+  });
+});

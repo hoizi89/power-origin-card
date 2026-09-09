@@ -104,3 +104,7 @@ Arithmetic goes in its own module with its own test. Rendering is asserted in js
 - **A flow that is a rounding error is not named.**
 - **The card picks defaults; it never removes what someone asked for.** A default may step aside when the ring already says it. A setting typed by hand is honoured even if it repeats something.
 - **A setting that cannot take effect is not shown.** The scale disappears for a column with no needle. This is about dead controls, never about taste.
+
+## The clock in tests
+
+Every test runs at 13:00 on 15 June 2026 (`tests/setup.ts` fakes `Date`, nothing else). The fixtures describe a day from midnight to now and the card reads the clock for sunrise, runtime and the chart; at seven in the morning the day has no shape yet and the suite went red for no reason. If a test needs another moment, call `vi.setSystemTime` inside it.

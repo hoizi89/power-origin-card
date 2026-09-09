@@ -306,6 +306,8 @@ export class PowerOriginCard extends LitElement {
     if (!flow) {
       return html`<ha-card>
         <div class="warn">${localize("state.unknown", locale)}</div>
+        <!-- Saying which sensor is silent turns a shrug into a lead. -->
+        <div class="row-note dim">${localize("state.unreachable", locale)} ${config.entities.house}</div>
       </ha-card>`;
     }
 
