@@ -173,6 +173,8 @@ export interface RingOptions {
   meter_second_drawn?: MeterDrawn;
   /** Grid draw that lasts turns a column to the grid and the card red; it lets go after a while. */
   import_switch?: boolean;
+  /** The self-supplied column in three colours: the grid's below half, the sun's up to 80 %, the battery's above. */
+  autarky_colours?: boolean;
   meter_second_scope?: MeterScope;
   meter_scope?: MeterScope;
   size?: RingSize;
@@ -225,6 +227,8 @@ export interface BatteryOptions {
   sunrise_mark?: boolean;
   /** The charge over the night, or the day, as a small curve under the bar, with where it is heading. */
   curve?: boolean;
+  /** A slow wave through the cells, towards the cap while charging and away from it while discharging. */
+  animate?: boolean;
 }
 
 export type DevicesStyle = "icons" | "bar" | "both" | "tiles";

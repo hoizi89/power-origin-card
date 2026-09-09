@@ -1601,6 +1601,49 @@ export const cardStyles = css`
     color: var(--sst-leaf);
   }
 
+  /* The share graded: below half the grid carries the house, up to eighty
+     the sun does with help, above that the house is its own. */
+  .fill-share-low,
+  .meter-label.share-low .meter-value {
+    fill: var(--sst-grid);
+    color: var(--sst-grid);
+  }
+
+  .fill-share-mid,
+  .meter-label.share-mid .meter-value {
+    fill: var(--sst-sun);
+    color: var(--sst-sun);
+  }
+
+  .fill-share-good,
+  .meter-label.share-good .meter-value {
+    fill: var(--sst-leaf);
+    color: var(--sst-leaf);
+  }
+
+  /* A wave through the cells: each one breathes a little later than the
+     one before, so the eye reads a direction. Towards the cap while charging,
+     back from it while discharging; nothing moves while the battery rests. */
+  @keyframes bat-wave {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  .bat-flow .bat-fill.cell {
+    animation: bat-wave 2.8s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * -0.18s);
+  }
+
+  .bat-flow.discharging .bat-fill.cell {
+    animation-delay: calc(var(--i, 0) * 0.18s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bat-flow .bat-fill.cell {
+      animation: none;
+    }
+  }
+
   /* The night as a column: what has passed is spent, what the battery reaches
      is its own colour, and what is left over is the grid's, because that is
      who will supply it. */

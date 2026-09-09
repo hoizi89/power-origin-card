@@ -66,6 +66,7 @@ export const DEFAULTS = {
     clock_marks: true,
     import_red: false,
     import_switch: false,
+    autarky_colours: false,
     night: "same" as const,
     tap: "entity" as const
   },
@@ -90,7 +91,8 @@ export const DEFAULTS = {
     reserve: 0,
     extra: "none" as const,
     sunrise_mark: false,
-    curve: false
+    curve: false,
+    animate: false
   },
   devices: {
     list: [] as string[],
@@ -937,6 +939,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             (resolved) => resolved.ring.columns !== "none" && Boolean(resolved.entities.grid_power),
             { name: "import_switch", selector: { boolean: {} } }
           ),
+          // Only a column that shows the share, by day or by night, has colours to grade.
+          ...only(
+            (resolved) =>
+              resolved.ring.meter &&
+              [
+                resolved.ring.meter_shows,
+                resolved.ring.meter_second_shows,
+                resolved.ring.meter_dark,
+                resolved.ring.meter_second_dark
+              ].includes("autarky"),
+            { name: "autarky_colours", selector: { boolean: {} } }
+          ),
           ...(config?.ring.columns === "scale" ? scaleSection : columnSections)
         ]
       }
@@ -1048,7 +1062,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               (resolved) => cellTimed(resolved) && resolved.battery_capacity > 0,
               { name: "sunrise_mark", selector: { boolean: {} } }
             ),
-            ...only(cell, { name: "curve", selector: { boolean: {} } })
+            ...only(cell, { name: "curve", selector: { boolean: {} } }),
+            ...only(
+              (resolved) => cellTimed(resolved) && resolved.battery.style !== "solid",
+              { name: "animate", selector: { boolean: {} } }
+            )
           ]
         },
         {
@@ -1359,6 +1377,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     tap: t("editor.tap"),
     sunrise_mark: t("editor.sunrise_mark"),
     import_switch: t("editor.import_switch"),
+    autarky_colours: t("editor.autarky_colours"),
+    animate: t("editor.animate"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     compare: t("editor.compare"),
@@ -1429,6 +1449,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     tap: t("editor.help_tap"),
     sunrise_mark: t("editor.help_sunrise_mark"),
     import_switch: t("editor.help_import_switch"),
+    autarky_colours: t("editor.help_autarky_colours"),
+    animate: t("editor.help_animate"),
     columns: t("editor.help_columns"),
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),

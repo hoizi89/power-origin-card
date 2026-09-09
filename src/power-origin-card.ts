@@ -1589,18 +1589,27 @@ export class PowerOriginCard extends LitElement {
 
   /** No middle to speak of: it fills from nothing to everything. */
   private _renderAutarkyMeter(flow: Flow, locale: string) {
+    const config = this._config as ResolvedConfig;
     const share = Math.min(1, Math.max(0, flow.autarky));
     const height = METER_HEIGHT * share;
+    // Graded, the column says at a glance who carries the house.
+    const grade = !config.ring.autarky_colours
+      ? undefined
+      : share < 0.5
+        ? "low"
+        : share < 0.8
+          ? "mid"
+          : "good";
 
     return html`
       <div class="meter-block">
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.autarky", locale)}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
-          <rect class="bat-fill fill-leaf" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
+          <rect class="bat-fill ${grade ? `fill-share-${grade}` : "fill-leaf"}" x="8" y="${(METER_HEIGHT - height).toFixed(1)}"
                 width="72" height="${height.toFixed(1)}" rx="6"></rect>
         </svg>
-        <div class="meter-label up">
+        <div class="meter-label ${grade ? `share-${grade}` : "up"}">
           <span class="meter-value">${formatNumber(flow.autarky * 100, locale, 0)} <small>%</small></span>
           <span class="meter-word">${localize("meter.autarky", locale)}</span>
         </div>
@@ -2572,7 +2581,7 @@ export class PowerOriginCard extends LitElement {
               >`
             : nothing}
         </div>
-        ${this._renderBatterySvg(soc, tone, locale, extra)}
+        ${this._renderBatterySvg(soc, tone, locale, extra, config.battery.animate ? view.mode : undefined)}
         ${config.battery.curve ? this._renderBatteryCurve(soc, view, locale) : nothing}
         <div class="row-note">${this._renderBatteryNote(view, locale)}</div>
       </div>
@@ -2747,11 +2756,14 @@ export class PowerOriginCard extends LitElement {
     soc: number,
     tone: string,
     locale: string,
-    extra: { value: string; label: string } | undefined
+    extra: { value: string; label: string } | undefined,
+    motion?: BatteryView["mode"]
   ) {
     const config = this._config as ResolvedConfig;
     const bare = config.battery.style === "bar";
     const dawn = config.battery.sunrise_mark ? this._socAtSunrise() : undefined;
+    // The wave runs only while the battery moves; a resting battery stands still.
+    const flowing = motion === "charging" || motion === "discharging" ? motion : undefined;
 
     // Without a casing the bar may use the width the cap would have taken.
     // Whatever stands to the right takes its room from the bar, and only
@@ -2799,7 +2811,8 @@ export class PowerOriginCard extends LitElement {
                     height="${tall}" rx="${radius}"></rect>
               ${
                 segment.fill > 0
-                  ? svg`<rect class="bat-fill ${tone} ${held ? "held" : ""} ${night ? "night" : ""}"
+                  ? svg`<rect class="bat-fill cell ${tone} ${held ? "held" : ""} ${night ? "night" : ""}"
+                              style="--i: ${index}"
                               x="${x}" y="${top}"
                               width="${Math.max(3, width * segment.fill)}" height="${tall}"
                               rx="${radius}"></rect>`
@@ -2809,7 +2822,7 @@ export class PowerOriginCard extends LitElement {
           );
 
     return html`
-      <svg class="full" viewBox="0 0 340 ${dawn ? 62 : 54}" role="img"
+      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${dawn ? 62 : 54}" role="img"
            aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
         ${dawnX !== undefined
           ? svg`<line class="bat-sunrise" x1="${dawnX.toFixed(1)}" x2="${dawnX.toFixed(1)}"

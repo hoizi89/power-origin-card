@@ -4,6 +4,10 @@
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/card.png" alt="Midday: two rings, the day beside them, and what the day earned" width="430">
 
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFB020?style=flat-square&labelColor=1A1E2B)](https://www.buymeacoffee.com/hoizi89)
+
+If the card earns its place on your wall, a coffee keeps the night shifts going.
+
 The ring splits the house load into its sources. Sun gold, battery green, grid blue — the colour always names the participant that is not the house, everywhere on the card. If you would rather see red the moment the house draws from the grid, one switch (`ring.import_red`) makes the grid wear red instead of blue for exactly as long as that lasts — on the ring, the column and the bar alike. Beside it a column with a middle: surplus climbs, grid draw sinks.
 
 Three rules it is built on:
