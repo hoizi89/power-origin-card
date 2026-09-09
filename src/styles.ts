@@ -187,30 +187,35 @@ export const cardStyles = css`
     min-width: 0;
   }
 
+  /* A column is as wide as its drawing and no wider, whatever stands under
+     it: a word that changes must not move the ring. */
   .meter-block {
+    --meter-w: 66px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    flex: 0 0 auto;
+    flex: 0 0 var(--meter-w);
+    width: var(--meter-w);
   }
 
   .meter {
     display: block;
-    width: 66px;
+    width: var(--meter-w);
     height: auto;
     flex: 0 0 auto;
   }
 
-  /* The block is content-wide, so a word that cannot wrap widens it until the
-     card clips it. Two lines are better than half a word. */
+  /* The label is a fixed box centred under the column, wider than the column
+     and allowed to stand out on both sides; two lines beat half a word. */
   .meter-label {
     display: flex;
     flex-direction: column;
     align-items: center;
     line-height: 1.25;
     text-align: center;
-    max-width: calc(112px * var(--sst-scale));
+    width: calc(112px * var(--sst-scale));
+    margin: 0 calc((var(--meter-w) - 112px * var(--sst-scale)) / 2);
   }
 
   .meter-value {
@@ -957,8 +962,8 @@ export const cardStyles = css`
       max-width: 248px;
     }
 
-    .ring-group.solo .meter {
-      width: 82px;
+    .ring-group.solo .meter-block {
+      --meter-w: 82px;
     }
   }
 
@@ -967,24 +972,24 @@ export const cardStyles = css`
     max-width: 168px;
   }
 
-  .ring-group.size-s .meter {
-    width: 60px;
+  .ring-group.size-s .meter-block {
+    --meter-w: 60px;
   }
 
   .ring-group.size-m .ring {
     max-width: 200px;
   }
 
-  .ring-group.size-m .meter {
-    width: 66px;
+  .ring-group.size-m .meter-block {
+    --meter-w: 66px;
   }
 
   .ring-group.size-l .ring {
     max-width: 252px;
   }
 
-  .ring-group.size-l .meter {
-    width: 82px;
+  .ring-group.size-l .meter-block {
+    --meter-w: 82px;
   }
 
   /* The day views share one palette with everything else on the card. */
@@ -1678,6 +1683,11 @@ export const cardStyles = css`
   }
 
   /* The devices as a column: a narrow list, the house's own colour. */
+  /* The devices column is a list, so its block is as wide as the list. */
+  .ring-group .meter-block.wide {
+    --meter-w: calc(118px * var(--sst-scale));
+  }
+
   .devs {
     display: flex;
     flex-direction: column;

@@ -1983,7 +1983,7 @@ export class PowerOriginCard extends LitElement {
       (ranking.rest ?? 0) +
       ranking.named.slice(named.length).reduce((sum, r) => sum + (r.watts ?? 0), 0);
     return html`
-      <div class="meter-block">
+      <div class="meter-block wide">
         <div class="devs">
           ${named.map(
             (r) => html`<div class="dev-row"><span>${r.name}</span><b>${w(r.watts ?? 0)}</b></div>`
