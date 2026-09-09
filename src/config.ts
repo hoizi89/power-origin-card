@@ -21,7 +21,7 @@ export const DEFAULTS = {
   battery_invert: false,
   grid_invert: false,
   sections: { ring: true, chart: true, battery: true, today: true,
-    devices: true },
+    devices: true, week: false },
   ring: {
     center: "power" as const,
     center_dark: "power" as const,
@@ -67,7 +67,10 @@ export const DEFAULTS = {
     consumption: true,
     show_forecast: true,
     compare: false,
-    height: 84
+    height: 84,
+    forecast_bars: false,
+    layers: false,
+    best_day: false
   },
   battery: {
     style: "segments" as const,
@@ -616,7 +619,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           schema: [entityField("export_today", "energy"), entityField("import_today", "energy")]
         },
         entityField("forecast", "energy"),
-        entityField("forecast_tomorrow", "energy"),
+        { type: "grid", schema: [entityField("forecast_tomorrow", "energy"), entityField("forecast_hourly", "energy")] },
         entityField("cost_today", "monetary"),
         {
           type: "grid",
@@ -650,7 +653,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             { name: "chart", selector: { boolean: {} } },
             { name: "battery", selector: { boolean: {} } },
             { name: "today", selector: { boolean: {} } },
-            { name: "devices", selector: { boolean: {} } }
+            { name: "devices", selector: { boolean: {} } },
+            ...only((resolved) => Boolean(resolved.entities.solar_today), {
+              name: "week",
+              selector: { boolean: {} }
+            })
           ]
         }
       ]
@@ -858,6 +865,24 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }),
             ...only((resolved) => Boolean(resolved.entities.solar), {
               name: "compare",
+              selector: { boolean: {} }
+            })
+          ]
+        },
+        {
+          type: "grid",
+          schema: [
+            ...only(
+              (resolved) =>
+                Boolean(resolved.entities.forecast_hourly || resolved.entities.forecast_tomorrow),
+              { name: "forecast_bars", selector: { boolean: {} } }
+            ),
+            ...only(
+              (resolved) => Boolean(resolved.entities.grid_power || resolved.entities.battery_power),
+              { name: "layers", selector: { boolean: {} } }
+            ),
+            ...only((resolved) => Boolean(resolved.entities.solar), {
+              name: "best_day",
               selector: { boolean: {} }
             })
           ]
@@ -1104,6 +1129,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     import_today: t("editor.import_today"),
     forecast: t("editor.forecast"),
     forecast_tomorrow: t("editor.forecast_tomorrow"),
+    forecast_hourly: t("editor.forecast_hourly"),
+    forecast_bars: t("editor.forecast_bars"),
+    layers: t("editor.layers"),
+    best_day: t("editor.best_day"),
+    week: t("editor.section_week"),
     cost_today: t("editor.cost_today"),
     cost_export_today: t("editor.cost_export_today"),
     cost_import_today: t("editor.cost_import_today"),
@@ -1209,6 +1239,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     sunrise_mark: t("editor.help_sunrise_mark"),
     import_switch: t("editor.help_import_switch"),
     columns: t("editor.help_columns"),
+    forecast_hourly: t("editor.help_forecast_hourly"),
+    forecast_bars: t("editor.help_forecast_bars"),
+    layers: t("editor.help_layers"),
+    best_day: t("editor.help_best_day"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
     mode: t("editor.help_mode"),

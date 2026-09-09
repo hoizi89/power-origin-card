@@ -102,6 +102,8 @@ export interface PowerOriginEntities {
   forecast?: string;
   /** What the roof expects tomorrow, in kWh; read after sunset. */
   forecast_tomorrow?: string;
+  /** A sensor carrying the day's forecast by hour in its attributes, the way Solcast does. */
+  forecast_hourly?: string;
   cost_today?: string;
   cost_export_today?: string;
   cost_import_today?: string;
@@ -119,6 +121,8 @@ export interface SectionToggles {
   battery?: boolean;
   today?: boolean;
   devices?: boolean;
+  /** Seven days as bars, with the self-supplied share above each. */
+  week?: boolean;
 }
 
 export interface RingOptions {
@@ -189,6 +193,20 @@ export interface ChartOptions {
   compare?: boolean;
   /** Drawing height in pixels. */
   height?: number;
+  /** The hours still expected, as outlines after now; after sunset, tomorrow's. */
+  forecast_bars?: boolean;
+  /** What the grid and the battery carried, as areas under the day. */
+  layers?: boolean;
+  /** The best day of the year, faintly behind today. */
+  best_day?: boolean;
+}
+
+export interface WeekDay {
+  /** Midnight that starts the day, in milliseconds. */
+  day: number;
+  solar?: number;
+  house?: number;
+  imported?: number;
 }
 
 export interface BatteryOptions {

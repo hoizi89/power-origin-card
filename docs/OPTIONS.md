@@ -108,6 +108,8 @@ today:
 | `price_import`, `price_export` | A fixed price per kWh, used only to work the money out — see below. |
 | `amortisation` | How much of the system has paid for itself, in percent. |
 
+`forecast_hourly` is a sensor whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`); after sunset the card reads `forecast_tomorrow` the same way.
+
 ### Card
 
 | Option | Default | What it does |
@@ -116,6 +118,10 @@ today:
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
 | `tap_action` | `more-info` | What tapping a figure does, in Lovelace's own vocabulary. |
 | `chart.compare` | `false` | Draws the same weekday a week ago faintly behind today. Costs one more recorder query. |
+| `chart.forecast_bars` | `false` | The hours still expected as dashed outlines after now, where their bars will stand; after sunset, tomorrow's whole day over today's axis. Read from the attributes of `forecast_hourly` (or of `forecast_tomorrow` at night), the way Solcast attaches them. |
+| `chart.layers` | `false` | What the grid and the battery carried, hour by hour, as areas under the day, in the ring's colours for the same two. |
+| `chart.best_day` | `false` | A faint line of the year's best day behind today, with its yield beside the day's figures. Two recorder queries, twice a day. |
+| `sections.week` | `false` | Seven days as bars for the roof's yield, a dot above each for the self-supplied share (green from 80 %), today bright. The heading carries the average; a tap on a day puts its figures there instead. Needs the daily roof meter; one query an hour. |
 | `battery.capacity` | `0` | Usable capacity in Wh. Needed for kWh figures and the remaining time. |
 | `battery.reserve` | `0` | Percent held back and not counted as available. |
 | `ring.center` | `power` | Which question the ring answers — see the table above. `money` prices the hour from the two tariffs, plus while exporting and minus while drawing; offered once a price is set. |

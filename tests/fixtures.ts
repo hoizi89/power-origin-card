@@ -12,6 +12,7 @@ export const IDS = {
   import_today: "sensor.import_today",
   forecast: "sensor.forecast",
   forecast_tomorrow: "sensor.forecast_tomorrow",
+  forecast_hourly: "sensor.forecast_hourly",
   cost_today: "sensor.cost_today",
   cost_export_today: "sensor.cost_export_today",
   cost_import_today: "sensor.cost_import_today",
@@ -141,14 +142,71 @@ const DEVICE_KWH: Record<string, number> = {
   "sensor.oven_energy": 2.2
 };
 
-function statistics(scenario: Scenario, ids: string[]) {
+/** The day's forecast by hour, the way Solcast attaches it: a bell over the daylight. */
+function hourlyRows(dayOffset: number, peakKw: number) {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  midnight.setDate(midnight.getDate() + dayOffset);
+  return Array.from({ length: 24 }, (_, hour) => ({
+    period_start: new Date(midnight.getTime() + hour * 3600000).toISOString(),
+    pv_estimate: Number((peakKw * Math.max(0, Math.sin(((hour - 6.5) / 13) * Math.PI))).toFixed(3))
+  }));
+}
+
+function statistics(scenario: Scenario, ids: string[], period?: string, startTime?: string) {
   const midnight = new Date();
   midnight.setHours(0, 0, 0, 0);
   const now = Date.now();
   const out: Record<string, Array<Record<string, unknown>>> = {};
+  const known = new Set([...Object.values(IDS), ...Object.keys(DEVICE_WATTS), ...Object.keys(DEVICE_KWH)]);
+
+  // Days: one row per day from the requested start, with what each meter
+  // grew and what the roof averaged; the days differ so a week has a shape.
+  if (period === "day") {
+    const first = new Date(Date.parse(startTime ?? midnight.toISOString()));
+    first.setHours(0, 0, 0, 0);
+    for (const id of ids) {
+      if (!known.has(id)) continue;
+      const rows: Array<Record<string, unknown>> = [];
+      for (let day = first.getTime(), index = 0; day <= now; index += 1) {
+        const at = new Date(day);
+        const factor = 0.55 + 0.45 * Math.abs(Math.sin(index * 1.3));
+        rows.push({
+          start: at.toISOString(),
+          mean: id === IDS.solar ? scenario.pv * factor : scenario.house,
+          change:
+            id === IDS.solar_today
+              ? scenario.solarToday * factor
+              : id === IDS.house_today
+                ? scenario.houseToday
+                : id === IDS.import_today
+                  ? scenario.importToday * (1.5 - factor)
+                  : id in DEVICE_KWH
+                    ? DEVICE_KWH[id]
+                    : null
+        });
+        at.setDate(at.getDate() + 1);
+        day = at.getTime();
+      }
+      out[id] = rows;
+    }
+    return out;
+  }
+
+  // Hours of one day, for the best day's outline.
+  if (period === "hour" && startTime) {
+    const first = new Date(Date.parse(startTime));
+    for (const id of ids) {
+      if (!known.has(id)) continue;
+      out[id] = Array.from({ length: 24 }, (_, hour) => ({
+        start: new Date(first.getTime() + hour * 3600000).toISOString(),
+        mean: id === IDS.solar ? scenario.pv * Math.max(0, Math.sin(((hour - 6.5) / 13) * Math.PI)) : scenario.house
+      }));
+    }
+    return out;
+  }
 
   const count = Math.floor((now - midnight.getTime()) / (5 * 60 * 1000)) + 1;
-  const known = new Set([...Object.values(IDS), ...Object.keys(DEVICE_WATTS), ...Object.keys(DEVICE_KWH)]);
   for (const id of ids) {
     if (!known.has(id)) continue;
     const rows: Array<Record<string, unknown>> = [];
@@ -191,7 +249,14 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     [IDS.export_today]: entity(IDS.export_today, v(scenario.exportToday), "kWh", "energy"),
     [IDS.import_today]: entity(IDS.import_today, v(scenario.importToday), "kWh", "energy"),
     [IDS.forecast]: entity(IDS.forecast, scenario.forecast, "kWh", "energy"),
-    [IDS.forecast_tomorrow]: entity(IDS.forecast_tomorrow, 24.7, "kWh", "energy"),
+    [IDS.forecast_tomorrow]: {
+      ...entity(IDS.forecast_tomorrow, 24.7, "kWh", "energy"),
+      attributes: { unit_of_measurement: "kWh", device_class: "energy", detailedHourly: hourlyRows(1, 6.4) }
+    },
+    [IDS.forecast_hourly]: {
+      ...entity(IDS.forecast_hourly, scenario.forecast + scenario.solarToday, "kWh", "energy"),
+      attributes: { unit_of_measurement: "kWh", device_class: "energy", detailedHourly: hourlyRows(0, 7.1) }
+    },
     [IDS.cost_today]: entity(IDS.cost_today, v(scenario.cost), "€", "monetary"),
     [IDS.cost_export_today]: entity(IDS.cost_export_today, v(1.2), "€", "monetary"),
     [IDS.cost_import_today]: entity(IDS.cost_import_today, v(0.02), "€", "monetary"),
@@ -220,7 +285,12 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     async callWS(message: Record<string, unknown>) {
       if (message.type !== "recorder/statistics_during_period") return {} as never;
       if (scenario.unavailable) return {} as never;
-      return statistics(scenario, (message.statistic_ids as string[]) ?? []) as never;
+      return statistics(
+        scenario,
+        (message.statistic_ids as string[]) ?? [],
+        message.period as string | undefined,
+        message.start_time as string | undefined
+      ) as never;
     },
     async callApi() {
       return {} as never;

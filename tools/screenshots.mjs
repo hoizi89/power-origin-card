@@ -436,6 +436,49 @@ shots["columns-day"] = {
     }`
 };
 
+shots["today"] = {
+  width: 2 * 400 + 16,
+  body: `const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(2, 400px)"; row.style.gap = "16px";
+    stage.append(row);
+    const hourly = Array.from({ length: 24 }, (_, h) => ({
+      period_start: new Date(new Date().setHours(h, 0, 0, 0)).toISOString(),
+      pv_estimate: Math.max(0, Math.sin(((h - 6.5) / 13) * Math.PI)) * 7.4
+    }));
+    for (const cfg of [
+      { chart: { style: "bars", forecast_bars: true, layers: true, best_day: true } },
+      { chart: { style: "area", forecast_bars: true, layers: true, best_day: true }, sections: { ring: false, chart: true, battery: false, today: false, week: true } }
+    ]) {
+      const cell = document.createElement("div"); row.append(cell);
+      const ids = freshIds();
+      const el = document.createElement("power-origin-card");
+      el.setConfig({ type: "custom:power-origin-card", title: "Solar", battery_capacity: 13100,
+        entities: { ...ids, forecast_hourly: "sensor.forecast_hourly" },
+        sections: { ring: false, chart: true, battery: false, today: false }, ...cfg });
+      const h = hass(ids, MIDDAY, false);
+      h.states["sensor.forecast_hourly"] = { entity_id: "sensor.forecast_hourly", state: "49.6",
+        attributes: { unit_of_measurement: "kWh", device_class: "energy", detailedHourly: hourly } };
+      const base = h.callWS;
+      h.callWS = async (m) => {
+        if (m.type !== "recorder/statistics_during_period") return {};
+        if (m.period === "day") {
+          const out = {}; const first = new Date(m.start_time); first.setHours(0, 0, 0, 0);
+          for (const id of m.statistic_ids) { out[id] = []; for (let i = 0; i < 400; i++) { const d = new Date(first); d.setDate(first.getDate() + i); if (d > new Date()) break;
+            const f = 0.35 + 0.65 * Math.abs(Math.sin(i * 1.3)); out[id].push({ start: d.toISOString(), mean: id === ids.solar ? 8200 * f : 1500, change: id === ids.solar_today ? 41 * f : id === ids.house_today ? 17 + 4 * f : id === ids.import_today ? 3 * (1.2 - f) : null }); } }
+          return out;
+        }
+        if (m.period === "hour") {
+          const out = {}; const first = new Date(m.start_time);
+          for (const id of m.statistic_ids) out[id] = Array.from({ length: 24 }, (_, hr) => ({ start: new Date(first.getTime() + hr * 3600000).toISOString(), mean: id === ids.solar ? 9600 * Math.max(0, Math.sin(((hr - 6) / 14) * Math.PI)) : 1500 }));
+          return out;
+        }
+        return base(m);
+      };
+      el.hass = h;
+      cell.append(el);
+    }`
+};
+
 for (const [name, shot] of Object.entries(shots)) {
   fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }

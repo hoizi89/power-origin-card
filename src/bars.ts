@@ -1,4 +1,12 @@
-import { niceTick, type ChartBox, type ChartDomain, type ChartTick } from "./chart";
+import {
+  bestPath,
+  layerPaths,
+  niceTick,
+  type ChartBox,
+  type ChartDomain,
+  type ChartExtras,
+  type ChartTick
+} from "./chart";
 
 export interface Bar {
   x: number;
@@ -9,10 +17,15 @@ export interface Bar {
 
 export interface BarGeometry {
   bars: Bar[];
+  /** The hours still to come, as expected: outlines where the bars will stand. */
+  ghosts: Bar[];
   /** Consumption across the bar centres, on the same scale. */
   house: string;
   /** The same day a week ago, on the same scale. */
   earlier?: string;
+  best?: string;
+  layerGrid?: string;
+  layerBattery?: string;
   nowX?: number;
   tick?: ChartTick;
 }
@@ -53,13 +66,14 @@ export function chartBars(
   house: number[],
   domain: ChartDomain,
   box: ChartBox,
-  earlier: number[] = []
+  earlier: number[] = [],
+  extras: ChartExtras = {}
 ): BarGeometry {
-  if (timestamps.length < 2) return { bars: [], house: "" };
+  if (timestamps.length < 2) return { bars: [], ghosts: [], house: "" };
 
   const span = box.width - box.padding * 2;
   const width = domain.end - domain.start;
-  if (width <= 0) return { bars: [], house: "" };
+  if (width <= 0) return { bars: [], ghosts: [], house: "" };
 
 
   const scaleX = (time: number) =>
@@ -71,17 +85,32 @@ export function chartBars(
   const solarHours = hours.map((hour) => hourlyMean(timestamps, solar, hour, hour + HOUR));
   const houseHours = hours.map((hour) => hourlyMean(timestamps, house, hour, hour + HOUR));
 
-  // The comparison shares the scale, or the two days compare nothing.
+  // The hours still to come stand where their bars will; the hour in progress
+  // already has a bar, so the ghost begins after it.
+  const now = timestamps.at(-1) ?? domain.start;
+  const ghostHours = new Map(
+    (extras.ghost ?? [])
+      .filter((g) => extras.ghostAll || g.start >= floorHour(now) + HOUR)
+      .map((g) => [g.start, g.kw])
+  );
+  const layers = extras.layers ?? [];
+  const best = extras.best ?? [];
+
+  // Everything drawn shares the scale, or nothing can be compared with anything.
   const max = Math.max(
     0.001,
     ...solarHours.filter((value): value is number => Number.isFinite(value)),
     ...houseHours.filter((value): value is number => Number.isFinite(value)),
-    ...earlier.filter((value) => Number.isFinite(value))
+    ...earlier.filter((value) => Number.isFinite(value)),
+    ...ghostHours.values(),
+    ...layers.map((l) => l.grid + l.battery),
+    ...best
   );
 
   const scaleY = (value: number) => box.height - (Math.max(0, value) / max) * (box.height - box.padding);
 
   const bars: Bar[] = [];
+  const ghosts: Bar[] = [];
   const points: Array<[number, number]> = [];
 
   hours.forEach((hour, index) => {
@@ -96,9 +125,20 @@ export function chartBars(
       bars.push({ x: left, y, width: barWidth, height: Math.max(0, box.height - y) });
     }
 
+    const expected = ghostHours.get(hour);
+    if (expected !== undefined && expected > 0.01) {
+      const y = scaleY(expected);
+      ghosts.push({ x: left, y, width: barWidth, height: Math.max(0, box.height - y) });
+    }
+
     const houseValue = houseHours[index];
     if (houseValue !== undefined) points.push([centre, scaleY(houseValue)]);
   });
+
+  const midnight = new Date(domain.start);
+  midnight.setHours(0, 0, 0, 0);
+  const layered = layers.length ? layerPaths(layers, scaleX, scaleY, domain, box.height) : undefined;
+  const bestLine = bestPath(best, scaleX, scaleY, domain, midnight.getTime());
 
   const path =
     points.length > 1
@@ -121,9 +161,13 @@ export function chartBars(
 
   return {
     bars,
+    ghosts,
     house: path,
     nowX: scaleX(timestamps.at(-1) ?? domain.start),
     tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue) },
-    earlier: earlierPath
+    earlier: earlierPath,
+    best: bestLine,
+    layerGrid: layered?.grid || undefined,
+    layerBattery: layered?.battery || undefined
   };
 }

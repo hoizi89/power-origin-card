@@ -969,6 +969,86 @@ export const cardStyles = css`
     opacity: 0.4;
   }
 
+  /* What is still to come stands where it will stand, drawn as an outline
+     because it is not there yet. */
+  .prod-ghost {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 2;
+    opacity: 0.55;
+  }
+
+  .ghost-line {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.6;
+    stroke-dasharray: 3 2;
+    opacity: 0.5;
+  }
+
+  /* The best day is a memory of the year: further back than last week. */
+  .best-line {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.4;
+    stroke-dasharray: 1.5 3;
+    opacity: 0.4;
+  }
+
+  /* Who carried each hour, under the day: the grid at the foot, the battery
+     on it, in the colours the ring uses for the same two. */
+  .layer-grid {
+    fill: var(--sst-grid);
+    opacity: 0.22;
+  }
+
+  .layer-battery {
+    fill: var(--sst-leaf);
+    opacity: 0.22;
+  }
+
+  /* Seven days: bars for the roof, a dot above each for how much of the house
+     it carried. Today is bright; the others have already happened. */
+  .week-bar {
+    fill: var(--sst-sun);
+    opacity: 0.45;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+  }
+
+  .week-bar.today,
+  .week-bar.picked {
+    opacity: 1;
+  }
+
+  .week-hit {
+    fill: transparent;
+    cursor: pointer;
+  }
+
+  .week-dot.good {
+    fill: var(--sst-leaf);
+  }
+
+  .week-dot.weak {
+    fill: var(--sst-grid);
+  }
+
+  .week-dot.faint {
+    opacity: 0.55;
+  }
+
+  .week-label {
+    font-family: var(--sst-mono);
+    font-size: calc(9px * var(--sst-scale));
+    fill: var(--sst-muted);
+  }
+
+  .week-label.today {
+    fill: var(--sst-ink);
+  }
+
   .meter-mark {
     fill: none;
     stroke: var(--sst-muted);

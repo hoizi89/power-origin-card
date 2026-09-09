@@ -12,13 +12,14 @@ import {
   type Flow
 } from "./flow";
 import { pickFromEnergy, type EnergyPrefs } from "./energy";
+import { hourlyForecast, type ForecastHour } from "./forecast";
 import { byArea, iconFor, rankDevices, type DeviceReading } from "./devices";
 import { fetchRecentMeans, fetchTodayChange } from "./stats";
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, extremes, fetchStatistics } from "./stats";
+import { buildDaySeries, cachedStatistics, extremes, fetchStatistics, startOfToday } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -28,7 +29,8 @@ import type {
   ResolvedConfig,
   PowerOriginCardConfig,
   RingCenter,
-  TodayStat
+  TodayStat,
+  WeekDay
 } from "./types";
 import {
   energyKwh,
@@ -62,7 +64,8 @@ export class PowerOriginCard extends LitElement {
     _series: { state: true },
     _hours: { state: true },
     _error: { state: true },
-    _cycleAt: { state: true }
+    _cycleAt: { state: true },
+    _weekPick: { state: true }
   };
 
   static styles = cardStyles;
@@ -80,6 +83,15 @@ export class PowerOriginCard extends LitElement {
   private _deviceToday?: Record<string, number | undefined>;
   private _pending = false;
   private _yearPeak?: number;
+  /** The best day of the year, one mean per hour in kW, and its yield. */
+  private _bestDay?: number[];
+  private _bestKwh?: number;
+  private _bestFetched = 0;
+  /** The last seven days, today last. */
+  private _week?: WeekDay[];
+  private _weekFetched = 0;
+  /** The day a tap picked in the week block. */
+  private _weekPick?: number;
   /** When the current grid draw began, when it was last seen, and whether the switch is thrown. */
   private _importSince?: number;
   private _importLast?: number;
@@ -246,6 +258,7 @@ export class PowerOriginCard extends LitElement {
       1 +
       (sections.ring ? 4 : 0) +
       (sections.chart ? 2 : 0) +
+      (sections.week ? 2 : 0) +
       (sections.battery ? 1 : 0) +
       (sections.today ? 2 : 0)
     );
@@ -268,6 +281,7 @@ export class PowerOriginCard extends LitElement {
       !meterNeedsScale &&
       !this._needsPeak() &&
       !this._needsHours() &&
+      !config.sections.week &&
       !devicesNeed
     ) {
       return;
@@ -329,6 +343,8 @@ export class PowerOriginCard extends LitElement {
       await this._fetchLastWeek(hass, solarId, houseId, divisor);
       await this._fetchYearPeak(hass, solarId, houseId, divisor);
       await this._fetchDevices(hass, config);
+      await this._fetchBestDay(hass, solarId, divisor);
+      await this._fetchWeek(hass, config);
       this._error = undefined;
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
@@ -384,6 +400,136 @@ export class PowerOriginCard extends LitElement {
 
   private _needsPeak(): boolean {
     return this._config?.today.stats.includes("peak") ?? false;
+  }
+
+  /**
+   * The best day of the year: the day whose roof averaged most, then that
+   * day hour by hour. A memory of the year, so it is refreshed twice a day.
+   */
+  private async _fetchBestDay(
+    hass: HomeAssistant,
+    solarId: string | undefined,
+    divisor: number
+  ): Promise<void> {
+    const config = this._config as ResolvedConfig;
+    if (!config.chart.best_day || !config.sections.chart || !solarId) {
+      this._bestDay = undefined;
+      return;
+    }
+    const HALF_DAY = 12 * 60 * 60 * 1000;
+    if (Date.now() - this._bestFetched < HALF_DAY) return;
+    this._bestFetched = Date.now();
+
+    type Rows = Record<string, Array<Record<string, unknown>>>;
+    const query = (start: Date, end: Date, period: "day" | "hour") =>
+      hass.callWS<Rows>({
+        type: "recorder/statistics_during_period",
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        statistic_ids: [solarId],
+        period,
+        types: ["mean"]
+      });
+    const days = (await cachedStatistics(
+      [solarId],
+      HALF_DAY,
+      () => query(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), new Date(), "day") as never,
+      "best-days"
+    )) as unknown as Rows;
+    const today = startOfToday().getTime();
+    let bestStart: number | undefined;
+    let bestMean = 0;
+    for (const row of days?.[solarId] ?? []) {
+      const start = Date.parse(String(row.start));
+      const mean = Number(row.mean);
+      if (!Number.isFinite(start) || !Number.isFinite(mean) || start >= today) continue;
+      if (mean > bestMean) {
+        bestMean = mean;
+        bestStart = start;
+      }
+    }
+    if (bestStart === undefined) {
+      this._bestDay = undefined;
+      return;
+    }
+    const from = new Date(bestStart);
+    const to = new Date(bestStart);
+    to.setDate(to.getDate() + 1);
+    const hours = (await cachedStatistics(
+      [solarId],
+      HALF_DAY,
+      () => query(from, to, "hour") as never,
+      `best-hours-${bestStart}`
+    )) as unknown as Rows;
+    const byHour: number[] = Array.from({ length: 24 }, () => 0);
+    for (const row of hours?.[solarId] ?? []) {
+      const start = Date.parse(String(row.start));
+      const mean = Number(row.mean);
+      if (!Number.isFinite(start) || !Number.isFinite(mean)) continue;
+      byHour[new Date(start).getHours()] = Math.max(0, mean) / divisor;
+    }
+    this._bestDay = byHour;
+    this._bestKwh = byHour.reduce((sum, kw) => sum + kw, 0);
+  }
+
+  /**
+   * Seven days from the daily meters: how much each meter grew per day,
+   * which holds for a meter that resets at midnight and for one that never
+   * does. Refreshed hourly; the days before today do not change.
+   */
+  private async _fetchWeek(hass: HomeAssistant, config: ResolvedConfig): Promise<void> {
+    if (!config.sections.week || !config.entities.solar_today) {
+      this._week = undefined;
+      return;
+    }
+    const HOUR = 60 * 60 * 1000;
+    if (Date.now() - this._weekFetched < HOUR) return;
+    this._weekFetched = Date.now();
+
+    const ids = [config.entities.solar_today, config.entities.house_today, config.entities.import_today]
+      .filter((id): id is string => Boolean(id));
+    const first = startOfToday();
+    first.setDate(first.getDate() - 6);
+    type Rows = Record<string, Array<Record<string, unknown>>>;
+    const rows = (await cachedStatistics(
+      ids,
+      HOUR,
+      () =>
+        hass.callWS<Rows>({
+          type: "recorder/statistics_during_period",
+          start_time: first.toISOString(),
+          end_time: new Date().toISOString(),
+          statistic_ids: ids,
+          period: "day",
+          types: ["change"]
+        }) as never,
+      "week-days"
+    )) as unknown as Rows;
+
+    const kwh = (id: string | undefined, day: number): number | undefined => {
+      if (!id) return undefined;
+      const row = (rows?.[id] ?? []).find((r) => {
+        const start = new Date(Date.parse(String(r.start)));
+        const at = new Date(day);
+        return start.getFullYear() === at.getFullYear() && start.getMonth() === at.getMonth() && start.getDate() === at.getDate();
+      });
+      const change = Number(row?.change);
+      if (!Number.isFinite(change)) return undefined;
+      return unitOf(stateOf(hass, id)).toLowerCase() === "wh" ? change / 1000 : change;
+    };
+    const week: WeekDay[] = [];
+    for (let index = 0; index < 7; index += 1) {
+      const at = new Date(first);
+      at.setDate(first.getDate() + index);
+      const day = at.getTime();
+      week.push({
+        day,
+        solar: kwh(config.entities.solar_today, day),
+        house: kwh(config.entities.house_today, day),
+        imported: kwh(config.entities.import_today, day)
+      });
+    }
+    this._week = week;
   }
 
   private _flow(): Flow | undefined {
@@ -454,6 +600,7 @@ export class PowerOriginCard extends LitElement {
           : nothing}
         ${config.sections.ring ? this._renderRing(flow, locale, alarm) : nothing}
         ${config.sections.chart ? this._renderChart(locale) : nothing}
+        ${config.sections.week ? this._renderWeek(locale) : nothing}
         ${config.sections.battery ? this._renderBattery(locale) : nothing}
         ${config.sections.today ? this._renderToday(flow, locale) : nothing}
         ${config.sections.devices ? this._renderDevices(locale) : nothing}
@@ -962,6 +1109,7 @@ export class PowerOriginCard extends LitElement {
       config.ring.meter_second === "day" ||
       config.ring.meter_today ||
       config.ring.meter_second_today ||
+      (config.sections.chart && config.chart.layers) ||
       (config.today.origin_bar && config.today.origin_style === "band")
     );
   }
@@ -1818,6 +1966,29 @@ export class PowerOriginCard extends LitElement {
         : [];
 
     const asBars = config.chart.style === "bars";
+    const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
+
+    // What is still to come: today's hours after now, or, once the sun is
+    // down, tomorrow's whole day laid over today's axis. The hours are read
+    // off whichever sensor carries them.
+    const DAY = 24 * 60 * 60 * 1000;
+    const ghost: ForecastHour[] = !config.chart.forecast_bars
+      ? []
+      : sunDown
+        ? hourlyForecast(stateOf(hass, config.entities.forecast_tomorrow))
+            .map((hour) => ({ start: hour.start - DAY, kw: hour.kw }))
+        : hourlyForecast(stateOf(hass, config.entities.forecast_hourly));
+    const midnight = startOfToday().getTime();
+    const layers =
+      config.chart.layers && this._hours
+        ? this._hours.map((hour) => ({
+            start: midnight + hour.hour * 60 * 60 * 1000,
+            grid: hour.grid,
+            battery: hour.battery
+          }))
+        : [];
+    const best = config.chart.best_day ? (this._bestDay ?? []) : [];
+    const extras = { ghost, layers, best, ghostAll: sunDown };
 
     const barGeometry =
       series && asBars && inDay.length > 1 && dayStart !== undefined && dayEnd !== undefined
@@ -1827,7 +1998,8 @@ export class PowerOriginCard extends LitElement {
             config.chart.consumption ? inDay.map((point) => series.house[point.index]) : [],
             { start: dayStart, end: dayEnd },
             box,
-            this._earlierSolar(inDay.length)
+            this._earlierSolar(inDay.length),
+            extras
           )
         : undefined;
 
@@ -1839,7 +2011,8 @@ export class PowerOriginCard extends LitElement {
             config.chart.consumption ? inDay.map((point) => series.house[point.index]) : [],
             { start: dayStart, end: dayEnd },
             box,
-            this._earlierSolar(inDay.length)
+            this._earlierSolar(inDay.length),
+            extras
           )
         : undefined;
 
@@ -1853,7 +2026,7 @@ export class PowerOriginCard extends LitElement {
 
     const nowX = geometry?.nowX ?? barGeometry?.nowX;
     const nowLabel =
-      nowX !== undefined && nowX > box.padding + 34 && nowX < box.width - box.padding - 34
+      nowX !== undefined && nowX > box.padding + 40 && nowX < box.width - box.padding - 44
         ? nowX
         : undefined;
     const produced = energyKwh(stateOf(hass, config.entities.solar_today));
@@ -1865,7 +2038,6 @@ export class PowerOriginCard extends LitElement {
     const forecast = forecastValue !== undefined && forecastValue >= 0.05 ? forecastValue : undefined;
 
     const tomorrow = energyKwh(stateOf(hass, config.entities.forecast_tomorrow));
-    const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
     const note = [
       produced !== undefined
         ? html`<span class="key-solar">${formatEnergy(produced, locale)}
@@ -1884,6 +2056,10 @@ export class PowerOriginCard extends LitElement {
       tomorrow !== undefined && sunDown
         ? html` · <span class="dim">${localize("chart.tomorrow", locale)}</span> ${formatEnergy(tomorrow, locale)}
             <span class="dim">${localize("chart.forecast", locale)}</span>`
+        : nothing,
+      // The line behind today has a figure, or it is only a shape.
+      config.chart.best_day && this._bestKwh !== undefined && this._bestDay
+        ? html` · <span class="dim">${localize("chart.best", locale)}</span> ${formatEnergy(this._bestKwh, locale)}`
         : nothing
     ];
 
@@ -1936,8 +2112,25 @@ export class PowerOriginCard extends LitElement {
                               d="${geometry.area}"></path>`
                   : nothing
               }
+              ${(geometry?.layerGrid ?? barGeometry?.layerGrid)
+                ? svg`<path class="layer-grid" d="${geometry?.layerGrid ?? barGeometry?.layerGrid}"></path>`
+                : nothing}
+              ${(geometry?.layerBattery ?? barGeometry?.layerBattery)
+                ? svg`<path class="layer-battery" d="${geometry?.layerBattery ?? barGeometry?.layerBattery}"></path>`
+                : nothing}
+              ${(geometry?.best ?? barGeometry?.best)
+                ? svg`<path class="best-line" d="${geometry?.best ?? barGeometry?.best}"></path>`
+                : nothing}
               ${(geometry?.earlier ?? barGeometry?.earlier)
                 ? svg`<path class="earlier-line" d="${geometry?.earlier ?? barGeometry?.earlier}"></path>`
+                : nothing}
+              ${geometry?.ghost ? svg`<path class="ghost-line" d="${geometry.ghost}"></path>` : nothing}
+              ${barGeometry
+                ? barGeometry.ghosts.map(
+                    (bar) => svg`<rect class="prod-ghost" x="${(bar.x + 0.6).toFixed(1)}"
+                                      y="${bar.y.toFixed(1)}" width="${(bar.width - 1.2).toFixed(1)}"
+                                      height="${bar.height.toFixed(1)}" rx="2"></rect>`
+                  )
                 : nothing}
               ${geometry?.solar ? svg`<path class="prod-line" d="${geometry.solar}"></path>` : nothing}
               ${
@@ -1988,6 +2181,80 @@ export class PowerOriginCard extends LitElement {
             </svg>`
           : nothing}
         <div class="row-note">${note}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Seven days as bars, the roof's yield, with a dot above each for how much
+   * of the house it carried. Today is bright, the rest has happened. A tap on
+   * a day puts its figures in the heading; the average stands there otherwise.
+   */
+  private _renderWeek(locale: string) {
+    const week = this._week;
+    if (!week || week.every((day) => day.solar === undefined)) return nothing;
+
+    const W = 340;
+    const H = 78;
+    const BASE = 60;
+    const slot = W / 7;
+    const max = Math.max(0.1, ...week.map((day) => day.solar ?? 0));
+    const autarky = (day: WeekDay): number | undefined =>
+      day.house !== undefined && day.house > 0 && day.imported !== undefined
+        ? Math.min(1, Math.max(0, 1 - day.imported / day.house))
+        : undefined;
+    const today = startOfToday().getTime();
+    const names = new Intl.DateTimeFormat(locale, { weekday: "short" });
+
+    const known = week.filter((day) => day.solar !== undefined);
+    const shares = week.map(autarky).filter((s): s is number => s !== undefined);
+    const picked = this._weekPick !== undefined ? week[this._weekPick] : undefined;
+    const note = picked
+      ? html`<span class="key-solar">${names.format(new Date(picked.day))}</span>
+          ${picked.solar !== undefined ? html` ${formatEnergy(picked.solar, locale)} <span class="unit">kWh</span>` : nothing}
+          ${autarky(picked) !== undefined
+            ? html` · ${formatNumber((autarky(picked) as number) * 100, locale, 0)} <span class="unit">%</span>`
+            : nothing}`
+      : html`<span class="dim">Ø</span>
+          ${formatEnergy(known.reduce((sum, day) => sum + (day.solar as number), 0) / Math.max(1, known.length), locale)}
+          <span class="unit">kWh</span>
+          ${shares.length
+            ? html` · ${formatNumber((shares.reduce((a, b) => a + b, 0) / shares.length) * 100, locale, 0)}
+                <span class="unit">%</span>`
+            : nothing}`;
+
+    return html`
+      <div class="row week">
+        <div class="row-head">
+          <span class="row-title">${localize("week.title", locale)}</span>
+          <span class="row-note">${note}</span>
+        </div>
+        <svg class="full" viewBox="0 0 ${W} ${H}" role="img" aria-label="${localize("week.title", locale)}">
+          ${week.map((day, index) => {
+            const x = index * slot + slot * 0.25;
+            const width = slot * 0.5;
+            const height = day.solar === undefined ? 0 : (BASE - 10) * (day.solar / max);
+            const isToday = day.day === today;
+            const share = autarky(day);
+            const pick = () => {
+              this._weekPick = this._weekPick === index ? undefined : index;
+            };
+            return svg`
+              <rect class="week-hit" x="${(index * slot).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}"
+                    @click=${pick}></rect>
+              ${day.solar !== undefined
+                ? svg`<rect class="week-bar ${isToday ? "today" : ""} ${this._weekPick === index ? "picked" : ""}"
+                        x="${x.toFixed(1)}" y="${(BASE - height).toFixed(1)}" width="${width.toFixed(1)}"
+                        height="${Math.max(1, height).toFixed(1)}" rx="2" @click=${pick}></rect>`
+                : nothing}
+              ${share !== undefined
+                ? svg`<circle class="week-dot ${share >= 0.8 ? "good" : "weak"} ${isToday ? "" : "faint"}"
+                        cx="${(x + width / 2).toFixed(1)}" cy="${(BASE - height - 6).toFixed(1)}" r="2.6"></circle>`
+                : nothing}
+              <text class="week-label ${isToday ? "today" : ""}" x="${(x + width / 2).toFixed(1)}" y="${H - 4}"
+                    text-anchor="middle">${names.format(new Date(day.day))}</text>`;
+          })}
+        </svg>
       </div>
     `;
   }

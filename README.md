@@ -107,6 +107,10 @@ Four more: `battery` is the battery as a store — what it holds on the scale of
 
 **How it is drawn** is `ring.meter_style`, and only `grid` and `night` have a choice: `blocks` for a stepped needle or one block per hour, `bar` for one body. The others each have one honest shape, so the editor does not offer a drawing it would ignore.
 
+## The day, and the days around it
+
+The day chart can carry three more things, each off by default. `chart.forecast_bars` stands the hours still expected as dashed outlines where their bars will be, read hour by hour off a forecast sensor such as Solcast's; after sunset it lays tomorrow's whole day over today's axis. `chart.layers` draws what the grid and the battery carried as areas under the day. `chart.best_day` puts a faint line of the year's best day behind today, with its yield beside the day's figures, so today can be read against as good as it gets. And `sections.week` adds seven days as bars with a dot above each for the self-supplied share — today bright, the rest already happened; a tap on a day puts its figures in the heading.
+
 `day` and `balance` are the two that are never empty — a needle reads zero all night. **`balance` answers what no ring can**: a ring shows what a total is made of, never whether the total is enough. Set `ring.columns` to `two` for a second column on the other side of the ring, with its own `ring.meter_second_shows`, so a day strip and a live needle can stand together.
 
 ---
