@@ -155,7 +155,13 @@ export class PowerOriginCard extends LitElement {
       throw new Error(localize("error.no_house", localeOf(this._hass)));
     }
     this._config = resolveConfig(config);
+    // A changed configuration may want figures the last one did not; every
+    // slow query is allowed again, or a block switched on shows nothing for an hour.
     this._lastFetch = 0;
+    this._peakFetched = 0;
+    this._bestFetched = 0;
+    this._weekFetched = 0;
+    this._moneyFetched = 0;
     this._cycleAt = undefined;
     this._measure();
     if (this._config.ring.tap === "cycle") {
@@ -573,7 +579,7 @@ export class PowerOriginCard extends LitElement {
           end_time: new Date().toISOString(),
           statistic_ids: ids,
           period: "day",
-          types: ["change", "max"]
+          types: ["change", "state", "max"]
         }) as never,
       "money-days"
     )) as unknown as Rows;
@@ -596,11 +602,12 @@ export class PowerOriginCard extends LitElement {
     const byMonth = (id: string | undefined): Map<number, number> => {
       const out = new Map<number, number>();
       if (!id) return out;
-      const wh = unitOf(stateOf(hass, id)).toLowerCase() === "wh";
+      const entity = stateOf(hass, id);
+      const wh = unitOf(entity).toLowerCase() === "wh";
       for (const row of rows?.[id] ?? []) {
         const at = new Date(Date.parse(String(row.start)));
         if (!Number.isFinite(at.getTime())) continue;
-        const value = dayTotal(row, classOf(id));
+        const value = dayTotal(row, classOf(id), entity?.attributes?.last_reset != null);
         if (value === undefined) continue;
         const month = new Date(at.getFullYear(), at.getMonth(), 1).getTime();
         out.set(month, (out.get(month) ?? 0) + (wh ? value / 1000 : value));
@@ -659,7 +666,7 @@ export class PowerOriginCard extends LitElement {
           end_time: new Date().toISOString(),
           statistic_ids: ids,
           period: "day",
-          types: ["change", "max"]
+          types: ["change", "state", "max"]
         }) as never,
       "week-days"
     )) as unknown as Rows;
@@ -671,9 +678,10 @@ export class PowerOriginCard extends LitElement {
         const at = new Date(day);
         return start.getFullYear() === at.getFullYear() && start.getMonth() === at.getMonth() && start.getDate() === at.getDate();
       });
-      const value = dayTotal(row, stateOf(hass, id)?.attributes?.state_class);
+      const entity = stateOf(hass, id);
+      const value = dayTotal(row, entity?.attributes?.state_class, entity?.attributes?.last_reset != null);
       if (value === undefined) return undefined;
-      return unitOf(stateOf(hass, id)).toLowerCase() === "wh" ? value / 1000 : value;
+      return unitOf(entity).toLowerCase() === "wh" ? value / 1000 : value;
     };
     const week: WeekDay[] = [];
     for (let index = 0; index < 7; index += 1) {

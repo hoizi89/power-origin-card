@@ -251,12 +251,21 @@ export function runMinutes(
  */
 export function dayTotal(
   row: Record<string, unknown> | undefined,
-  stateClass: unknown
+  stateClass: unknown,
+  saysWhenItResets = false
 ): number | undefined {
   if (!row) return undefined;
   const change = Number(row.change);
+  const state = Number(row.state);
   const max = Number(row.max);
-  if (stateClass === "total_increasing") return Number.isFinite(change) ? change : undefined;
+  // The recorder understands the resets of a meter that only climbs, and of
+  // one that says when it reset; for those the change is the day.
+  if (stateClass === "total_increasing" || saysWhenItResets) {
+    return Number.isFinite(change) ? change : undefined;
+  }
+  // A meter that resets at midnight without saying so ends the day at the
+  // day's total, which is the last state the recorder kept for the day.
+  if (Number.isFinite(state)) return Math.max(0, state);
   if (Number.isFinite(max)) return Math.max(0, max);
   return Number.isFinite(change) ? change : undefined;
 }

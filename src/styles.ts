@@ -1255,7 +1255,7 @@ export const cardStyles = css`
 
   /* What the night will use stands back; what the morning keeps stays bright. */
   .bat-fill.night {
-    opacity: 0.32;
+    opacity: 0.6;
   }
 
   .bat-night {
@@ -1631,12 +1631,12 @@ export const cardStyles = css`
   }
 
   .bat-flow .bat-fill.cell {
-    animation: bat-wave 2.8s ease-in-out infinite;
-    animation-delay: calc(var(--i, 0) * -0.18s);
+    animation: bat-wave 4.2s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * 0.28s);
   }
 
   .bat-flow.discharging .bat-fill.cell {
-    animation-delay: calc(var(--i, 0) * 0.18s);
+    animation-delay: calc(var(--i, 0) * -0.28s);
   }
 
   @media (prefers-reduced-motion: reduce) {

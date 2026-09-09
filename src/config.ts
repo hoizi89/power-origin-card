@@ -697,21 +697,28 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       ]
     },
     {
-      type: "grid",
+      type: "expandable",
+      title: t("editor.head_settings"),
+      icon: "mdi:page-layout-header",
       schema: [
-        ...only((resolved) => Boolean(resolved.entities.grid_power), {
-          name: "chip_alarm",
-          selector: { boolean: {} }
-        }),
-        ...only((resolved) => Boolean(resolved.entities.price_import), {
-          name: "head_price",
-          selector: { boolean: {} }
-        }),
-        // The day chart already draws the sun's day; the line is for a card without it.
-        ...only((resolved) => !resolved.sections.chart, {
-          name: "head_sunbar",
-          selector: { boolean: {} }
-        })
+        {
+          type: "grid",
+          schema: [
+            ...only((resolved) => Boolean(resolved.entities.grid_power), {
+              name: "chip_alarm",
+              selector: { boolean: {} }
+            }),
+            ...only((resolved) => Boolean(resolved.entities.price_import), {
+              name: "head_price",
+              selector: { boolean: {} }
+            }),
+            // The day chart already draws the sun's day; the line is for a card without it.
+            ...only((resolved) => !resolved.sections.chart, {
+              name: "head_sunbar",
+              selector: { boolean: {} }
+            })
+          ]
+        }
       ]
     },
     {

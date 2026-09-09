@@ -193,6 +193,7 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
           start: at.toISOString(),
           mean: id === IDS.solar ? scenario.pv * factor : scenario.house,
           change,
+          state: change,
           max: change
         });
         at.setDate(at.getDate() + 1);

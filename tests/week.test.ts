@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { chartBars } from "../src/bars";
 import { CARD_TYPE } from "../src/config";
 import { hourlyForecast } from "../src/forecast";
-import { clearStatisticsCache } from "../src/stats";
+import { clearStatisticsCache, dayTotal } from "../src/stats";
 import type { PowerOriginCardConfig } from "../src/types";
 import { IDS, SCENARIOS, makeHass, type Scenario } from "./fixtures";
 
@@ -49,6 +49,27 @@ beforeAll(async () => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+describe("what a meter did in a day", () => {
+  const row = { change: -30, state: 12.5, max: 12.5 };
+
+  it("reads a meter that only climbs by its change", () => {
+    expect(dayTotal({ change: 41.2, state: 90210, max: 90210 }, "total_increasing")).toBe(41.2);
+  });
+
+  it("reads a meter that says when it resets by its change too", () => {
+    expect(dayTotal({ change: 6.1, state: 6.1 }, "total", true)).toBe(6.1);
+  });
+
+  it("reads a meter that resets at midnight without saying so by the state it ended the day at", () => {
+    expect(dayTotal(row, "total")).toBe(12.5);
+    expect(dayTotal({ change: -30, max: 9 }, "total")).toBe(9);
+  });
+
+  it("has nothing for no row", () => {
+    expect(dayTotal(undefined, "total")).toBeUndefined();
+  });
 });
 
 describe("reading a forecast by hour", () => {
@@ -154,6 +175,17 @@ describe("the week", () => {
     expect(root.querySelectorAll(".week-bar.picked").length).toBe(1);
     expect(text()).not.toBe(before);
     expect(text()).not.toContain("Ø");
+  });
+
+  it("comes when switched on after the card has already fetched once", async () => {
+    const { element, root } = await mount(config(), day);
+    expect(root.querySelector(".week")).toBeNull();
+    element.setConfig(config({ sections: { week: true } }));
+    element.hass = makeHass(day);
+    await element.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await element.updateComplete;
+    expect(root.querySelector(".week")).toBeTruthy();
   });
 
   it("is not there without a daily roof meter", async () => {
