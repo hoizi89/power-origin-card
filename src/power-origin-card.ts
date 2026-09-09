@@ -1451,7 +1451,7 @@ export class PowerOriginCard extends LitElement {
       // After sunset the day is done; tomorrow’s expectation is the one figure
       // that still looks ahead, and it stands beside today, not instead of it.
       tomorrow !== undefined && sunDown
-        ? html`<span class="dim">${localize("chart.tomorrow", locale)}</span> ${formatEnergy(tomorrow, locale)}
+        ? html` · <span class="dim">${localize("chart.tomorrow", locale)}</span> ${formatEnergy(tomorrow, locale)}
             <span class="dim">${localize("chart.forecast", locale)}</span>`
         : nothing
     ];
