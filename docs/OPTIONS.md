@@ -125,15 +125,16 @@ today:
 | `ring.facts` | `bars` | The value list: `bars`, `plain`, `inline` or `none`. Defaults to `none` while the column is on. |
 | `ring.layout` | `auto` | Whether the values sit beside the ring or under it. |
 | `ring.caption` | `true` | The word under the centre figure, which names the source when one carries the whole house. |
-| `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, or `two` — one on each side. |
-| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky`, `roof`, `battery` (charging up, discharging down, against the most it moved today) or `range` (what the battery holds against what the night still needs until sunrise; the gap wears the grid colour, the figure is how long it lasts, and the battery block then keeps only the energy). |
-| `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Only `grid` has a choice, so this is shown only then. |
+| `ring.columns` | `one` | How many columns stand beside the ring: `none`, `one`, `two` — one on each side — or `scale`: no columns, but the left column laid flat under the ring, draw to the left and surplus to the right, with the left column's scope and deflections. |
+| `ring.import_switch` | `false` | Grid draw that lasts two minutes turns the right column (or the only one) to the grid exchange and the card red; five minutes without draw and it goes back. A kettle never trips it. Needs a grid sensor. |
+| `ring.meter_shows` | `grid` | What the left column measures: `grid`, `day`, `balance`, `money`, `load`, `autarky`, `roof`, `battery` (what it holds on the scale of its own size, the reserve at the foot, at night a dashed line where the charge will stand at sunrise), `night` (sunset at the top, sunrise at the bottom, a line for now, and from now how far the battery reaches — what it does not reach wears the grid colour; the figure is the time it lasts until, unless the centre already says so; by day the column is empty), `devices` (the three drawing most, with their watts, from the devices list) or `none` (no column; the ring has the room). |
+| `ring.meter_style` | `blocks` | How it is drawn: `blocks` or `bar`. Only `grid` and `night` have a choice, so this is shown only then; the night in blocks is one block per hour. |
 | `ring.meter_second_shows` | `day` | The same for the right column, when `ring.columns` is `two`. |
 | `ring.meter_second_style` | `blocks` | How the right one is drawn, again only for `grid`. |
 | `ring.meter_dark` / `ring.meter_second_dark` | `same` | What each column shows once the sun is down: `same`, or any subject. A roof column has nothing to say at night. |
 | `ring.center_dark` | `power` | The centre once the sun is down: `power` leaves a day view alone (production and surplus fall back to the house either way); `autarky`, `money`, or `runtime` — how long the battery lasts, with the time it lasts until as the caption; the battery block then keeps only the energy. |
 | `night_dim` | `0` | Percent the card dims by while the sun is below the horizon; the chip stays bright. |
-| `ring.meter_top` | `true` | The best the roof managed today, printed above the roof column as the mark it fills towards. |
+| `ring.meter_top` | `true` | The best the roof managed today above the roof column, or the capacity above the battery column: the mark it fills towards. |
 | `ring.meter_second_scale` | `0` | The right column has its own of every setting that shapes a needle: `meter_second_scale`, `meter_second_scale_draw`, `meter_second_target`, `meter_second_steps`, `meter_second_marks`, `meter_second_today`. Each means for the right column what the one without `second` means for the left. |
 | `ring.meter_second` | | Written from the two fields above; kept so a card configured before the split still reads. |
 | `ring.meter_scope` | `grid` | Whether the column also counts the battery — see the table above. |

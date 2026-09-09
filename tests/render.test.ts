@@ -1051,18 +1051,20 @@ describe("the card at night", () => {
     expect(night.text).toContain("Dach jetzt");
   });
 
-  it("shows the battery as a needle, in the battery's colour", async () => {
-    const charging = await render(baseConfig({ ring: { meter: true, meter_shows: "battery" } }), SCENARIOS.find((s) => s.name === "charging")!);
-    expect(charging.root.querySelector(".meter-on.battery")).toBeTruthy();
-    expect(charging.text).toContain("in den Speicher");
+  it("shows the battery as a store on the scale of its own size", async () => {
+    const day = await render(baseConfig({ ring: { meter: true, meter_shows: "battery" } }), SCENARIOS.find((s) => s.name === "charging")!);
+    expect(day.text).toContain("13,1 kWh");
+    expect(day.text).toContain("gespeichert");
+    expect(day.root.querySelector(".range-mark")).toBeNull();
     const night = await render(baseConfig({ ring: { meter: true, meter_shows: "battery" } }), evening());
-    expect(night.root.querySelector(".meter-on.discharge")).toBeTruthy();
-    expect(night.text).toContain("aus dem Speicher");
+    expect(night.root.querySelector(".range-mark")).toBeTruthy();
+    expect(night.text).toContain("bei Sonnenaufgang");
   });
 
-  it("draws what is held against what the night needs", async () => {
-    const { root, text } = await render(baseConfig({ ring: { meter: true, meter_shows: "range" } }), evening());
-    expect(root.querySelector(".range-mark")).toBeTruthy();
+  it("draws the night with how far the battery reaches", async () => {
+    const { root, text } = await render(baseConfig({ ring: { meter: true, meter_shows: "night" } }), evening());
+    expect(root.querySelector(".night-now")).toBeTruthy();
+    expect(root.querySelector(".night-reach")).toBeTruthy();
     expect(text).toMatch(/reicht bis Sonnenaufgang|fehlen/);
     // The column carries the time, so the battery note keeps only the energy.
     expect(text).not.toContain("Reicht bis");

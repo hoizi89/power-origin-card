@@ -134,7 +134,11 @@ const NOT_A_DRAWING = new Set(["entity", "ui_action"]);
  * reading steady, so a wider or narrower average lands on the same number;
  * battery.test.ts covers the averaging itself.
  */
-const NEEDS_A_MOVING_HISTORY = new Set(["battery.runtime_window"]);
+const NEEDS_A_MOVING_HISTORY = new Set([
+  "battery.runtime_window",
+  // The switch waits two minutes of draw before it shows; columns.test.ts moves the clock.
+  "ring.import_switch"
+]);
 
 describe("every setting the editor offers changes something", () => {
   beforeAll(async () => {

@@ -58,6 +58,7 @@ export const DEFAULTS = {
     inner: "icon" as const,
     clock_marks: true,
     import_red: false,
+    import_switch: false,
     night: "same" as const,
     tap: "entity" as const
   },
@@ -150,9 +151,12 @@ function resolveColumns(config: PowerOriginCardConfig) {
 
   return {
     columns,
-    meter: columns !== "none",
+    // The scale is no column: it stands under the ring, not beside it.
+    meter: columns === "one" || columns === "two",
     meter_shows: shows,
     meter_style: shows === "grid" ? drawn : (shows as MeterStyle),
+    meter_drawn: drawn,
+    meter_second_drawn: secondDrawn,
     meter_second_shows: secondShows,
     meter_second_style: secondDrawn,
     // Asking for two and leaving the right one unset gets the day, which is
@@ -334,31 +338,39 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     secondGauge(resolved) ||
     (resolved.ring.meter && resolved.ring.meter_second === "balance");
 
+  /** The subjects a column can take. Devices need a list to draw from. */
+  const subjects = [
+    { value: "grid", label: t("editor.shows_grid") },
+    { value: "day", label: t("editor.meter_day") },
+    { value: "balance", label: t("editor.meter_balance") },
+    { value: "money", label: t("editor.meter_money") },
+    { value: "load", label: t("editor.meter_load") },
+    { value: "autarky", label: t("editor.meter_autarky") },
+    { value: "roof", label: t("editor.meter_roof") },
+    { value: "battery", label: t("editor.meter_battery") },
+    { value: "night", label: t("editor.meter_night") },
+    ...only((resolved) => resolved.devices.list.length > 0, {
+      value: "devices",
+      label: t("editor.meter_devices")
+    }),
+    { value: "none", label: t("editor.meter_none") }
+  ];
+  const darkSubjects = [{ value: "same", label: t("editor.same") }, ...subjects];
+  /** Only the grid and the night have a choice of drawing. */
+  const drawable = (shows: string) => shows === "grid" || shows === "night";
+  /** A column with a mark above it: the roof's best, or the battery's size. */
+  const topped = (shows: string) => shows === "roof" || shows === "battery";
+
   const leftColumn = [
               ...only((resolved) => resolved.ring.meter, {
                 name: "meter_shows",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "grid", label: t("editor.shows_grid") },
-                      { value: "day", label: t("editor.meter_day") },
-                      { value: "balance", label: t("editor.meter_balance") },
-                      { value: "money", label: t("editor.meter_money") },
-                      { value: "load", label: t("editor.meter_load") },
-                      { value: "autarky", label: t("editor.meter_autarky") },
-                      { value: "roof", label: t("editor.meter_roof") },
-                      { value: "battery", label: t("editor.meter_battery") },
-                      { value: "range", label: t("editor.meter_range") }
-                    ]
-                  }
-                }
+                selector: { select: { mode: "dropdown", options: subjects } }
               }),
-              ...only((resolved) => resolved.ring.meter_shows === "roof", {
+              ...only((resolved) => topped(resolved.ring.meter_shows), {
                 name: "meter_top",
                 selector: { boolean: {} }
               }),
-              ...only((resolved) => resolved.ring.meter && resolved.ring.meter_shows === "grid", {
+              ...only((resolved) => resolved.ring.meter && drawable(resolved.ring.meter_shows), {
                 name: "meter_style",
                 selector: {
                   select: {
@@ -420,51 +432,20 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }),
               ...only((resolved) => resolved.ring.meter, {
                 name: "meter_dark",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "same", label: t("editor.same") },
-                      { value: "grid", label: t("editor.shows_grid") },
-                      { value: "day", label: t("editor.meter_day") },
-                      { value: "balance", label: t("editor.meter_balance") },
-                      { value: "money", label: t("editor.meter_money") },
-                      { value: "load", label: t("editor.meter_load") },
-                      { value: "autarky", label: t("editor.meter_autarky") },
-                      { value: "roof", label: t("editor.meter_roof") },
-                      { value: "battery", label: t("editor.meter_battery") },
-                      { value: "range", label: t("editor.meter_range") }
-                    ]
-                  }
-                }
+                selector: { select: { mode: "dropdown", options: darkSubjects } }
               })
   ];
 
   const rightColumn = [
               ...only((resolved) => resolved.ring.meter, {
                 name: "meter_second_shows",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "grid", label: t("editor.shows_grid") },
-                      { value: "day", label: t("editor.meter_day") },
-                      { value: "balance", label: t("editor.meter_balance") },
-                      { value: "money", label: t("editor.meter_money") },
-                      { value: "load", label: t("editor.meter_load") },
-                      { value: "autarky", label: t("editor.meter_autarky") },
-                      { value: "roof", label: t("editor.meter_roof") },
-                      { value: "battery", label: t("editor.meter_battery") },
-                      { value: "range", label: t("editor.meter_range") }
-                    ]
-                  }
-                }
+                selector: { select: { mode: "dropdown", options: subjects } }
               }),
-              ...only((resolved) => resolved.ring.meter_second_shows === "roof", {
+              ...only((resolved) => topped(resolved.ring.meter_second_shows), {
                 name: "meter_second_top",
                 selector: { boolean: {} }
               }),
-              ...only((resolved) => resolved.ring.meter_second_shows === "grid", {
+              ...only((resolved) => drawable(resolved.ring.meter_second_shows), {
                 name: "meter_second_style",
                 selector: {
                   select: {
@@ -532,24 +513,32 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }),
               ...only((resolved) => resolved.ring.meter, {
                 name: "meter_second_dark",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "same", label: t("editor.same") },
-                      { value: "grid", label: t("editor.shows_grid") },
-                      { value: "day", label: t("editor.meter_day") },
-                      { value: "balance", label: t("editor.meter_balance") },
-                      { value: "money", label: t("editor.meter_money") },
-                      { value: "load", label: t("editor.meter_load") },
-                      { value: "autarky", label: t("editor.meter_autarky") },
-                      { value: "roof", label: t("editor.meter_roof") },
-                      { value: "battery", label: t("editor.meter_battery") },
-                      { value: "range", label: t("editor.meter_range") }
-                    ]
-                  }
-                }
+                selector: { select: { mode: "dropdown", options: darkSubjects } }
               })
+  ];
+
+  /* The scale under the ring is one needle laid flat, so it keeps the left
+     column's scope and deflections and needs nothing else. */
+  const scaleSection = [
+    {
+      name: "meter_scope",
+      selector: {
+        select: {
+          mode: "dropdown",
+          options: [
+            { value: "grid", label: t("editor.meter_scope_grid") },
+            { value: "all", label: t("editor.meter_scope_all") }
+          ]
+        }
+      }
+    },
+    {
+      type: "grid",
+      schema: [
+        { name: "meter_scale", selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } } },
+        { name: "meter_scale_draw", selector: { number: { min: 0, max: 50, step: 0.5, mode: "box" } } }
+      ]
+    }
   ];
 
   /*
@@ -825,12 +814,17 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 options: [
                   { value: "none", label: t("editor.columns_none") },
                   { value: "one", label: t("editor.columns_one") },
-                  { value: "two", label: t("editor.columns_two") }
+                  { value: "two", label: t("editor.columns_two") },
+                  { value: "scale", label: t("editor.columns_scale") }
                 ]
               }
             }
           },
-          ...columnSections
+          ...only(
+            (resolved) => resolved.ring.columns !== "none" && Boolean(resolved.entities.grid_power),
+            { name: "import_switch", selector: { boolean: {} } }
+          ),
+          ...(config?.ring.columns === "scale" ? scaleSection : columnSections)
         ]
       }
     ),
@@ -1155,6 +1149,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     night: t("editor.night"),
     tap: t("editor.tap"),
     sunrise_mark: t("editor.sunrise_mark"),
+    import_switch: t("editor.import_switch"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     compare: t("editor.compare"),
@@ -1212,6 +1207,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     night: t("editor.help_night"),
     tap: t("editor.help_tap"),
     sunrise_mark: t("editor.help_sunrise_mark"),
+    import_switch: t("editor.help_import_switch"),
+    columns: t("editor.help_columns"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
     mode: t("editor.help_mode"),

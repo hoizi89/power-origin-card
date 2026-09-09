@@ -1146,17 +1146,140 @@ export const cardStyles = css`
     color: var(--sst-leaf);
   }
 
-  /* Reach until sunrise: the gap between what is held and what is needed
-     is the grid’s, because that is who will supply it. */
-  .range-gap {
+  /* The night as a column: what has passed is spent, what the battery reaches
+     is its own colour, and what is left over is the grid's, because that is
+     who will supply it. */
+  .night-past {
+    fill: var(--sst-track);
+    opacity: 0.55;
+  }
+  .night-reach {
+    fill: var(--sst-leaf);
+  }
+  .night-short {
     fill: var(--sst-grid);
     opacity: 0.45;
   }
+  .night-now {
+    stroke: var(--sst-ink);
+    stroke-width: 1.4;
+    opacity: 0.85;
+  }
+  .night-tick {
+    stroke: var(--sst-muted);
+    stroke-width: 1;
+    opacity: 0.6;
+  }
+  .night-hour {
+    font-family: var(--sst-mono);
+    font-size: 7px;
+    fill: var(--sst-muted);
+  }
+
+  /* A dashed line across a column marks a level the column will reach. */
   .range-mark {
     stroke: var(--sst-ink);
     stroke-width: 1.5;
     stroke-dasharray: 3 3;
     opacity: 0.8;
+  }
+
+  /* The devices as a column: a narrow list, the house's own colour. */
+  .devs {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: calc(118px * var(--sst-scale));
+    font-family: var(--sst-mono);
+    font-size: calc(10px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+  .devs .dev-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--sst-hairline);
+  }
+  .devs .dev-row span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .devs b {
+    color: var(--sst-ink);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .devs .rest {
+    opacity: 0.6;
+  }
+
+  /* The scale: one needle laid flat, draw to the left, surplus to the right. */
+  .scale {
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .scale-track {
+    fill: var(--sst-track);
+    opacity: 0.3;
+  }
+  .scale-on.grid {
+    fill: var(--sst-sun);
+  }
+  .scale-on.battery {
+    fill: var(--sst-leaf);
+  }
+  .scale-on.import {
+    fill: var(--sst-grid);
+  }
+  .scale-on.discharge {
+    fill: var(--sst-leaf);
+  }
+  .scale-zero {
+    stroke: var(--sst-muted);
+    stroke-width: 1;
+    opacity: 0.6;
+  }
+  .scale-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--sst-mono);
+    font-size: calc(9px * var(--sst-scale));
+    letter-spacing: 0.08em;
+    color: var(--sst-muted);
+  }
+  .scale-ends .meter-glyph {
+    vertical-align: -2px;
+  }
+  .scale-value {
+    text-align: center;
+    font-size: calc(14px * var(--sst-scale));
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .scale-value small {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    font-weight: 400;
+    color: var(--sst-muted);
+  }
+  .scale-value .meter-word {
+    margin-left: 8px;
+  }
+  .scale.up .scale-value {
+    color: var(--sst-sun);
+  }
+  .scale.down .scale-value {
+    color: var(--sst-grid);
+  }
+  .scale.idle .scale-value {
+    color: var(--sst-muted);
   }
 
   /* At night the chip stays bright; everything under it steps back. */

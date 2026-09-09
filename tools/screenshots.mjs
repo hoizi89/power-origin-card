@@ -76,6 +76,7 @@ function stats(ids, map, weak) {
         id === map.solar ? p.pv
         : id === map.grid_power ? p.grid
         : id === map.battery_power ? p.battery
+        : globalThis.__dev && id in globalThis.__dev ? globalThis.__dev[id]
         : p.house;
       rows.push({ start: midnight.getTime() + m * 60000, mean: value, max: value * 1.1 });
     }
@@ -395,6 +396,44 @@ shots["ring-night"] = {
     ],
     "EVENING"
   )
+};
+
+shots["columns-night"] = {
+  width: 3 * 300 + 28,
+  pre: `globalThis.__night = true; globalThis.__at = "22:30";`,
+  body: ringRow(
+    [
+      { ...RING_ONLY, ring: { center: "power", meter: true, meter_shows: "night", meter_style: "blocks", facts: "none", size: "m" } },
+      { ...RING_ONLY, ring: { center: "power", meter: true, meter_shows: "night", meter_style: "bar", center_dark: "runtime", facts: "none", size: "m" } },
+      { ...RING_ONLY, ring: { center: "power", meter: true, meter_shows: "battery", facts: "none", size: "m" } }
+    ],
+    "EVENING"
+  )
+};
+
+shots["columns-day"] = {
+  width: 3 * 300 + 28,
+  body: `const DEV = [["sensor.wp_power", "Wärmepumpe", 1840], ["sensor.dish_power", "Geschirrspüler", 1120], ["sensor.desk_power", "Büro", 167], ["sensor.nas_power", "NAS", 20]];
+    globalThis.__dev = Object.fromEntries(DEV.map((d) => [d[0], d[2]]));
+    const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(3, 300px)"; row.style.gap = "14px";
+    stage.append(row);
+    const cfgs = [
+      { ring: { center: "power", columns: "scale", facts: "none", size: "m" } },
+      { ring: { center: "power", meter: true, meter_shows: "devices", facts: "none", size: "m" }, devices: { list: DEV.map((d) => d[0]), names: Object.fromEntries(DEV.map((d) => [d[0], d[1]])) } },
+      { ring: { center: "power", columns: "two", meter_shows: "roof", meter_second_shows: "none", facts: "none", size: "m" } }
+    ];
+    for (const cfg of cfgs) {
+      const cell = document.createElement("div"); row.append(cell);
+      const ids = freshIds();
+      const el = document.createElement("power-origin-card");
+      el.setConfig({ type: "custom:power-origin-card", title: "", chip: "never", battery_capacity: 13100, battery_reserve: 15,
+        entities: { ...ids }, sections: { ring: true, chart: false, battery: false, today: false, devices: false }, ...cfg });
+      const h = hass(ids, MIDDAY, false);
+      for (const [id, , w] of DEV) h.states[id] = entity(id, w, "W", "power");
+      el.hass = h;
+      cell.append(el);
+    }`
 };
 
 for (const [name, shot] of Object.entries(shots)) {

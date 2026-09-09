@@ -42,7 +42,8 @@ export interface ActionConfig {
 
 export type ChipMode = "always" | "gridfree" | "never";
 export type RingStyle = "single" | "double" | "clock" | "dayclock";
-export type ColumnCount = "none" | "one" | "two";
+/** How many columns stand beside the ring; `scale` is one balance bar under it instead. */
+export type ColumnCount = "none" | "one" | "two" | "scale";
 export type RingInner = "icon" | "load" | "battery" | "none";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type OriginStyle = "bar" | "band";
@@ -56,7 +57,9 @@ export type MeterStyle =
   | "autarky"
   | "roof"
   | "battery"
-  | "range";
+  | "night"
+  | "devices"
+  | "none";
 /** What a column measures, as against how it is drawn. */
 export type MeterShows =
   | "grid"
@@ -67,7 +70,9 @@ export type MeterShows =
   | "autarky"
   | "roof"
   | "battery"
-  | "range";
+  | "night"
+  | "devices"
+  | "none";
 export type MeterDrawn = "blocks" | "bar";
 export type FactsStyle = "bars" | "plain" | "inline" | "none";
 export type RingLayout = "auto" | "beside" | "below";
@@ -157,6 +162,11 @@ export interface RingOptions {
   meter_second_dark?: MeterShows | "same";
   meter_second_style?: MeterDrawn;
   meter_second?: MeterStyle | "none";
+  /** How each column is drawn, kept apart from its subject; written by resolution. */
+  meter_drawn?: MeterDrawn;
+  meter_second_drawn?: MeterDrawn;
+  /** Grid draw that lasts turns a column to the grid and the card red; it lets go after a while. */
+  import_switch?: boolean;
   meter_second_scope?: MeterScope;
   meter_scope?: MeterScope;
   size?: RingSize;
