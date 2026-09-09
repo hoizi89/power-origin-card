@@ -1548,6 +1548,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     spark: t("editor.help_spark"),
     meter_top: t("editor.help_meter_top"),
     meter_scale: t("editor.help_meter_scale"),
+    meter_steps: t("editor.help_meter_steps"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
     meter_target: t("editor.help_meter_target"),
     house: t("editor.help_house"),

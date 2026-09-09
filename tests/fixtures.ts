@@ -190,7 +190,7 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
                         : null;
         // The fixtures' meters reset at midnight, so the day's high water mark is the day.
         rows.push({
-          start: at.toISOString(),
+          start: at.getTime(),
           mean: id === IDS.solar ? scenario.pv * factor : scenario.house,
           change,
           state: change,
@@ -217,7 +217,7 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
         at.setMonth(first.getMonth() + index);
         if (at.getTime() > now) break;
         rows.push({
-          start: at.toISOString(),
+          start: at.getTime(),
           max: id === IDS.solar ? scenario.pv * 1.1 : scenario.house,
           change:
             id === IDS.cost_today
@@ -244,7 +244,7 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
     for (const id of ids) {
       if (!known.has(id)) continue;
       out[id] = Array.from({ length: 24 }, (_, hour) => ({
-        start: new Date(first.getTime() + hour * 3600000).toISOString(),
+        start: first.getTime() + hour * 3600000,
         mean: id === IDS.solar ? scenario.pv * Math.max(0, Math.sin(((hour - 6.5) / 13) * Math.PI)) : scenario.house
       }));
     }

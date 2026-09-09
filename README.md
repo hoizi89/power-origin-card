@@ -243,3 +243,5 @@ MIT
 ## Support
 
 Power Origin is free and stays free. If it earns its place on your wall, you can [buy me a coffee](https://buymeacoffee.com/hoizi89) — that is what keeps the night shifts going. Bug reports and ideas are just as welcome, in the [issues](https://github.com/hoizi89/power-origin-card/issues), in English or German.
+
+<a href="https://buymeacoffee.com/hoizi89"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50"></a>

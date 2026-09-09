@@ -19,7 +19,7 @@ import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, startOfToday } from "./stats";
+import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, startOfToday, toMillis } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -493,7 +493,7 @@ export class PowerOriginCard extends LitElement {
     let bestStart: number | undefined;
     let bestMean = 0;
     for (const row of days?.[solarId] ?? []) {
-      const start = Date.parse(String(row.start));
+      const start = toMillis(row.start);
       const mean = Number(row.mean);
       if (!Number.isFinite(start) || !Number.isFinite(mean) || start >= today) continue;
       if (mean > bestMean) {
@@ -516,7 +516,7 @@ export class PowerOriginCard extends LitElement {
     )) as unknown as Rows;
     const byHour: number[] = Array.from({ length: 24 }, () => 0);
     for (const row of hours?.[solarId] ?? []) {
-      const start = Date.parse(String(row.start));
+      const start = toMillis(row.start);
       const mean = Number(row.mean);
       if (!Number.isFinite(start) || !Number.isFinite(mean)) continue;
       byHour[new Date(start).getHours()] = Math.max(0, mean) / divisor;
@@ -605,7 +605,7 @@ export class PowerOriginCard extends LitElement {
       const entity = stateOf(hass, id);
       const wh = unitOf(entity).toLowerCase() === "wh";
       for (const row of rows?.[id] ?? []) {
-        const at = new Date(Date.parse(String(row.start)));
+        const at = new Date(toMillis(row.start));
         if (!Number.isFinite(at.getTime())) continue;
         const value = dayTotal(row, classOf(id), entity?.attributes?.last_reset != null);
         if (value === undefined) continue;
@@ -674,7 +674,7 @@ export class PowerOriginCard extends LitElement {
     const kwh = (id: string | undefined, day: number): number | undefined => {
       if (!id) return undefined;
       const row = (rows?.[id] ?? []).find((r) => {
-        const start = new Date(Date.parse(String(r.start)));
+        const start = new Date(toMillis(r.start));
         const at = new Date(day);
         return start.getFullYear() === at.getFullYear() && start.getMonth() === at.getMonth() && start.getDate() === at.getDate();
       });

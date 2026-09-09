@@ -5,7 +5,8 @@ type StatisticsResponse = Record<string, Array<Record<string, unknown>>>;
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 
-function toMillis(value: unknown): number {
+/** A statistic row starts at a time the recorder sends as milliseconds since 2023 and as text before; both read. */
+export function toMillis(value: unknown): number {
   if (typeof value === "number") return value;
   const parsed = Date.parse(String(value));
   return Number.isFinite(parsed) ? parsed : NaN;
