@@ -27,3 +27,8 @@ jobs:
         with:
           files: dist/power-origin-card.js
           generate_release_notes: true
+          append_body: true
+          body: |
+
+            ---
+            ☕ If the card earns its place on your wall: [buy me a coffee](https://buymeacoffee.com/hoizi89).
