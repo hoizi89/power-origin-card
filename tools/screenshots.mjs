@@ -511,6 +511,40 @@ shots["battery-block"] = {
     }`
 };
 
+shots["wohin"] = {
+  width: 3 * 300 + 28,
+  body: `const DEV = [["sensor.wp_power", "Wärmepumpe", 1840], ["sensor.dish_power", "Geschirrspüler", 1120], ["sensor.desk_power", "Büro Schreibtisch", 167], ["sensor.nas_power", "NAS", 20], ["sensor.fridge_power", "Kühlschrank", 0]];
+    globalThis.__dev = Object.fromEntries(DEV.map((d) => [d[0], d[2]]));
+    const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(3, 300px)"; row.style.gap = "14px";
+    stage.append(row);
+    for (const cfg of [
+      { devices: { style: "tiles" } },
+      { devices: { style: "both", top: true, spark: true, energy: { "sensor.wp_power": "sensor.wp_energy" } } },
+      { devices: { style: "bar", group: "area" } }
+    ]) {
+      const cell = document.createElement("div"); row.append(cell);
+      const ids = freshIds();
+      const el = document.createElement("power-origin-card");
+      el.setConfig({ type: "custom:power-origin-card", title: "", chip: "never", entities: { ...ids },
+        sections: { ring: false, chart: false, battery: false, today: false, devices: true },
+        devices: { list: DEV.map((d) => d[0]), names: Object.fromEntries(DEV.map((d) => [d[0], d[1]])), values: true, threshold: 10, "icon:sensor.desk_power": "mdi:laptop", ...cfg.devices } });
+      const h = hass(ids, { ...MIDDAY, house: 3200 }, false);
+      for (const [id, , w] of DEV) h.states[id] = entity(id, w, "W", "power");
+      h.entities = { "sensor.wp_power": { area_id: "hr" }, "sensor.dish_power": { area_id: "k" }, "sensor.fridge_power": { area_id: "k" }, "sensor.desk_power": { area_id: "b" }, "sensor.nas_power": { area_id: "b" } };
+      h.areas = { hr: { name: "Heizraum" }, k: { name: "Küche" }, b: { name: "Büro" } };
+      const base = h.callWS;
+      h.callWS = async (m) => {
+        if (m.type === "recorder/statistics_during_period" && m.period === "day") return { "sensor.wp_energy": [{ start: new Date().toISOString(), change: 6.4 }] };
+        const out = await base(m);
+        if (m.type === "recorder/statistics_during_period") for (const id of m.statistic_ids) if (out[id] && id in globalThis.__dev) out[id] = out[id].map((r, i) => ({ ...r, mean: globalThis.__dev[id] * (id.includes("fridge") ? (i % 4 < 2 ? 1 : 0) : 0.7 + 0.3 * Math.abs(Math.sin(i))) }));
+        return out;
+      };
+      el.hass = h;
+      cell.append(el);
+    }`
+};
+
 for (const [name, shot] of Object.entries(shots)) {
   fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }

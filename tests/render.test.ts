@@ -1005,7 +1005,7 @@ describe("the devices block and the rest of the card", () => {
         SCENARIOS[0]
       );
       const block = root.querySelector(".wohin")!;
-      expect(block.classList.contains("wohin-" + style)).toBe(true);
+      expect(block.classList.contains("wohin-style-" + style)).toBe(true);
       expect(block.classList.contains(style)).toBe(false);
     }
   });

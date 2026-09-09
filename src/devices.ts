@@ -14,6 +14,8 @@ export interface DeviceReading {
   watts: number | undefined;
   icon: string;
   area?: string;
+  /** For a room: the devices standing in it, biggest first. */
+  members?: DeviceReading[];
 }
 
 export interface DeviceRanking {
@@ -104,10 +106,15 @@ export function byArea(readings: DeviceReading[], nowhere: string): DeviceReadin
       id: reading.id,
       name: key,
       watts: 0,
-      icon: reading.area ? "mdi:floor-plan" : "mdi:help-circle-outline"
+      icon: reading.area ? "mdi:floor-plan" : "mdi:help-circle-outline",
+      members: []
     };
     room.watts = (room.watts ?? 0) + reading.watts;
+    room.members?.push(reading);
     rooms.set(key, room);
+  }
+  for (const room of rooms.values()) {
+    room.members?.sort((a, b) => (b.watts ?? 0) - (a.watts ?? 0));
   }
   return [...rooms.values()];
 }

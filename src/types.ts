@@ -227,7 +227,7 @@ export interface BatteryOptions {
   curve?: boolean;
 }
 
-export type DevicesStyle = "icons" | "bar" | "both";
+export type DevicesStyle = "icons" | "bar" | "both" | "tiles";
 export type DevicesGroup = "device" | "area";
 export type DevicesMode = "now" | "today";
 
@@ -250,6 +250,14 @@ export interface DevicesOptions {
   limit?: number;
   /** Below this many watts a device is not worth a name. */
   threshold?: number;
+  /** An icon chosen for a device, by entity; beats the sensor's own and the name. */
+  icons?: Record<string, string>;
+  /** The biggest device as a row of its own, with how long it has run and what it cost today. */
+  top?: boolean;
+  /** A line per device for the last hour. */
+  spark?: boolean;
+  /** The editor writes one icon field per device under this prefix. */
+  [key: `icon:${string}`]: string | undefined;
 }
 
 export interface TodayOptions {

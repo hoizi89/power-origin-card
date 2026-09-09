@@ -143,6 +143,8 @@ Left, a bar: the house load now, split by device, with the part no device accoun
 
 **You configure nothing.** Home Assistant's Energy dashboard already lists your devices with a live power sensor each; the editor's *Take what the Energy dashboard knows* button adopts them, names included. The card never searches your sensors on its own — that list holds phase readings, switches at 0.0 and a fitness tracker's watts per kilo, and none of those are devices.
 
+Four ways to look at them, each off by default: `devices.style: tiles` for one tile per device, readable from across the room; `devices.top` for the biggest as a row of its own, with how long it has been drawing and what it cost today; `devices.spark` for a line per device over the last hour; and by room (`devices.group: area`), where a tap on a room opens the devices standing in it. An icon can be chosen per device in the editor, under *Icons*.
+
 Two periods, one setting: **now**, averaged over a window (fifteen minutes by default) so a kettle does not light up as a hog, or **today**, read from each device's meter since midnight. Grouping by **room** sums the devices standing in one, from the device registry. Anything under a threshold folds into the rest, and at most a handful are named — both adjustable.
 
 Each device gets the icon you gave its entity in Home Assistant; without one, the card reads an icon off the name — heat pump, dishwasher, fridge, lights, NAS — and falls back to a plug.

@@ -1176,7 +1176,7 @@ export const cardStyles = css`
     background: var(--sst-track);
     margin-top: 2px;
   }
-  .wohin-both .wohin-bar {
+  .wohin-style-both .wohin-bar {
     height: 16px;
   }
   .wohin-seg {
@@ -1251,6 +1251,165 @@ export const cardStyles = css`
   }
   .dev.off {
     opacity: 0.32;
+  }
+
+  /* The biggest device as a row of its own: what it is, since when, what it cost. */
+  .wohin-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: var(--sst-inset);
+    margin-top: 4px;
+    --mdc-icon-size: 22px;
+  }
+
+  .wohin-top-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    font-size: calc(13px * var(--sst-scale));
+    font-weight: 500;
+  }
+
+  .wohin-top-name small {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    font-weight: 400;
+    color: var(--sst-muted);
+  }
+
+  .wohin-top b {
+    font-size: calc(17px * var(--sst-scale));
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  /* Tiles: readable from across the room, the biggest first. */
+  .wohin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: var(--sst-inset);
+    min-width: 0;
+    --mdc-icon-size: 18px;
+    color: var(--sst-muted);
+  }
+
+  .tile.room {
+    cursor: pointer;
+  }
+
+  .tile-name {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tile b {
+    font-size: calc(15px * var(--sst-scale));
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--sst-ink);
+  }
+
+  .tile.off {
+    opacity: 0.4;
+  }
+
+  /* Rows with a line each: the last hour of every device. */
+  .wohin-rows {
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+  }
+
+  .wohin-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--sst-hairline);
+    --mdc-icon-size: 16px;
+    color: var(--sst-muted);
+  }
+
+  .wohin-row.room {
+    cursor: pointer;
+  }
+
+  .wohin-row-name {
+    flex: 1;
+    min-width: 0;
+    font-size: calc(12.5px * var(--sst-scale));
+    color: var(--sst-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wohin-row b {
+    font-family: var(--sst-mono);
+    font-size: calc(11px * var(--sst-scale));
+    font-weight: 500;
+    color: var(--sst-ink);
+    white-space: nowrap;
+    min-width: 54px;
+    text-align: right;
+  }
+
+  .wohin-row.rest {
+    opacity: 0.6;
+  }
+
+  .spark {
+    width: 60px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+
+  .spark polyline {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  /* A room opened: the devices standing in it, one step in. */
+  .wohin-keys .room,
+  .wohin-keys .room b {
+    cursor: pointer;
+  }
+
+  .wohin-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 12px;
+    padding: 3px 0 4px 14px;
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    color: var(--sst-muted);
+    width: 100%;
+  }
+
+  .wohin-sub b {
+    color: var(--sst-ink);
+    font-weight: 500;
   }
 
   /* The battery column wears the battery’s colour whichever way it moves. */

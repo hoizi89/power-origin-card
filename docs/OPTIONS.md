@@ -271,10 +271,13 @@ devices:
 | `devices.list` | `[]` | The live power sensors, one per device. The editor's adopt button takes them from the Energy dashboard's device list. |
 | `devices.mode` | `now` | `now` averages each sensor over the window; `today` sums each device's meter since midnight. Offered only once meters are known. |
 | `devices.window` | `15` | Minutes the live readings are averaged over. |
-| `devices.style` | `both` | `both` a bar carrying icons, `bar` a plain bar, `icons` an icon per device with a level. |
+| `devices.style` | `both` | `both` a bar carrying icons, `bar` a plain bar, `icons` an icon per device with a level, `tiles` one tile per device — icon, name and watts, the biggest first, the quiet ones dim. |
+| `devices.top` | `false` | The biggest device as a row of its own above the list, with how long it has been drawing (from its last three hours, five minutes at a time) and what it cost today (its meter times the import price). It leaves the list below, so it never stands there twice. |
+| `devices.spark` | `false` | A line per device for the last hour beside its name: the fridge's rhythm, the heat pump's ramp, the kettle's spike. Turns the name list into rows. |
+| `devices.icons` | `{}` | An icon chosen per device, by entity — in the editor one field per device under *Icons*, written as `icon:<entity>` keys. A chosen icon beats the one set on the entity, which beats the one read off the name. |
 | `devices.values` | `true` | Print watts (or kWh) beside the names. |
-| `devices.group` | `device` | `area` sums devices by the room they stand in. |
+| `devices.group` | `device` | `area` sums devices by the room they stand in; a tap on a room opens the devices standing in it. |
 | `devices.limit` | `5` | How many devices get a name; the others fold into the rest. |
 | `devices.threshold` | `25` | Watts below which a device is not named. Shown for `now` only. |
-| *(icons)* | | The icon set on the entity in Home Assistant wins; otherwise one is read off the name, with a plug as the fallback. No card setting needed. |
+| *(icons)* | | Without a chosen icon, the one set on the entity in Home Assistant wins; otherwise one is read off the name, with a plug as the fallback. |
 | `devices.names`, `devices.energy` | | Written by the adopt button: the dashboard's name and meter for each sensor. Data, not settings. |

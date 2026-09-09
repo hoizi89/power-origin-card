@@ -197,6 +197,51 @@ export async function fetchRecentMeans(
   return out;
 }
 
+/**
+ * What each sensor averaged, five minutes at a time, over the last while, in
+ * its own unit: a line per device, and how long one has been drawing.
+ */
+export async function fetchRecentSeries(
+  hass: HomeAssistant,
+  ids: string[],
+  minutes: number,
+  now = new Date()
+): Promise<Record<string, Array<{ start: number; mean: number }>>> {
+  const wanted = ids.filter(Boolean);
+  if (wanted.length === 0) return {};
+  const from = now.getTime() - Math.max(5, minutes) * 60000;
+  const response = await hass.callWS<Record<string, Array<Record<string, unknown>> | undefined>>({
+    type: "recorder/statistics_during_period",
+    start_time: new Date(from).toISOString(),
+    end_time: now.toISOString(),
+    statistic_ids: wanted,
+    period: "5minute",
+    types: ["mean"]
+  });
+  const out: Record<string, Array<{ start: number; mean: number }>> = {};
+  for (const id of wanted) {
+    out[id] = (response?.[id] ?? [])
+      .map((row) => ({ start: toMillis(row.start), mean: toNumber(row.mean) }))
+      .filter((row): row is { start: number; mean: number } => Number.isFinite(row.start) && row.mean !== undefined && row.start >= from)
+      .sort((a, b) => a.start - b.start);
+  }
+  return out;
+}
+
+/** Minutes the series has stayed at or above the threshold, counted back from its end. */
+export function runMinutes(
+  series: Array<{ start: number; mean: number }>,
+  threshold: number,
+  now = Date.now()
+): number | undefined {
+  let since: number | undefined;
+  for (let index = series.length - 1; index >= 0; index -= 1) {
+    if (series[index].mean < threshold) break;
+    since = series[index].start;
+  }
+  return since === undefined ? undefined : Math.max(0, Math.round((now - since) / 60000));
+}
+
 /** How much each meter grew since midnight, in its own unit. */
 export async function fetchTodayChange(
   hass: HomeAssistant,

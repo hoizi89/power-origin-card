@@ -95,7 +95,9 @@ export const DEFAULTS = {
     values: true,
     group: "device" as const,
     limit: 5,
-    threshold: 25
+    threshold: 25,
+    top: false,
+    spark: false
   },
   today: {
     money: true,
@@ -219,6 +221,20 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       reserve: config.battery?.reserve ?? config.battery_reserve ?? DEFAULTS.battery.reserve
     },
     devices: {
+      // The editor writes one field per device; the card reads one map.
+      ...Object.fromEntries(
+        Object.entries(config.devices ?? {}).filter(([key]) => key.startsWith("icon:"))
+      ),
+      icons: {
+        ...config.devices?.icons,
+        ...Object.fromEntries(
+          Object.entries(config.devices ?? {})
+            .filter(([key, value]) => key.startsWith("icon:") && typeof value === "string" && value)
+            .map(([key, value]) => [key.slice(5), value as string])
+        )
+      },
+      top: config.devices?.top ?? DEFAULTS.devices.top,
+      spark: config.devices?.spark ?? DEFAULTS.devices.spark,
       list: config.devices?.list ?? DEFAULTS.devices.list,
       names: { ...DEFAULTS.devices.names, ...config.devices?.names },
       mode: config.devices?.mode ?? DEFAULTS.devices.mode,
@@ -1023,10 +1039,24 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   options: [
                     { value: "both", label: t("editor.devices_both") },
                     { value: "bar", label: t("editor.devices_bar") },
-                    { value: "icons", label: t("editor.devices_icons") }
+                    { value: "icons", label: t("editor.devices_icons") },
+                    { value: "tiles", label: t("editor.devices_tiles") }
                   ]
                 }
               }
+            },
+            {
+              type: "grid",
+              schema: [
+                ...only((resolved) => resolved.devices.mode === "now", {
+                  name: "top",
+                  selector: { boolean: {} }
+                }),
+                ...only(
+                  (resolved) => resolved.devices.mode === "now" && resolved.devices.style !== "icons",
+                  { name: "spark", selector: { boolean: {} } }
+                )
+              ]
             },
             {
               type: "grid",
@@ -1055,6 +1085,17 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   selector: { number: { min: 0, max: 2000, step: 5, mode: "box" } }
                 })
               ]
+            },
+            // One icon field per device, named after the device so the list reads itself.
+            {
+              type: "expandable",
+              title: t("editor.device_icons"),
+              icon: "mdi:shape-outline",
+              schema: (config?.devices.list ?? []).map((id) => ({
+                name: `icon:${id}`,
+                title: config?.devices.names[id] ?? id,
+                selector: { icon: {} }
+              }))
             }
           )
         ]
@@ -1168,6 +1209,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     group: t("editor.group"),
     limit: t("editor.limit"),
     threshold: t("editor.threshold"),
+    top: t("editor.top"),
+    spark: t("editor.spark"),
     meter_scale: t("editor.meter_scale"),
     meter_scale_draw: t("editor.meter_scale_draw"),
     meter_target: t("editor.meter_target"),
@@ -1262,6 +1305,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     window: t("editor.help_window"),
     group: t("editor.help_group"),
     threshold: t("editor.help_threshold"),
+    top: t("editor.help_top"),
+    spark: t("editor.help_spark"),
     meter_top: t("editor.help_meter_top"),
     meter_scale: t("editor.help_meter_scale"),
     meter_scale_draw: t("editor.help_meter_scale_draw"),
