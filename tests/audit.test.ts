@@ -136,8 +136,10 @@ const NOT_A_DRAWING = new Set(["entity", "ui_action"]);
  */
 const NEEDS_A_MOVING_HISTORY = new Set([
   "battery.runtime_window",
-  // The switch waits two minutes of draw before it shows; columns.test.ts moves the clock.
-  "ring.import_switch"
+  // The switch waits two minutes of draw before it shows; columns.test.ts and
+  // head.test.ts move the clock.
+  "ring.import_switch",
+  "chip_alarm"
 ]);
 
 describe("every setting the editor offers changes something", () => {

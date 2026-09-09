@@ -288,6 +288,14 @@ export interface PowerOriginCardConfig {
   /** Percent the card dims by while the sun is down; 0 leaves it. */
   night_dim?: number;
   chip?: ChipMode;
+  /** What the chip says: the state, or the day's self-supplied share. */
+  chip_shows?: "state" | "autarky";
+  /** Lasting grid draw turns the chip red with the kilowatts. */
+  chip_alarm?: boolean;
+  /** The import price beside the title, coloured against the day's mean. */
+  head_price?: boolean;
+  /** A line under the heading from sunrise to sunset with the sun on it; the night at night. */
+  head_sunbar?: boolean;
   tap_action?: ActionConfig;
   battery_capacity?: number;
   battery_reserve?: number;

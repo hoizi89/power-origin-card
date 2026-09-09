@@ -255,7 +255,9 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
               ? scenario.battery
               : id === IDS.battery_soc
                 ? Math.min(100, Math.max(0, scenario.soc + 8 * Math.sin(t / 3600000)))
-                : id in DEVICE_WATTS
+                : id === IDS.price_import
+                  ? 0.29
+                  : id in DEVICE_WATTS
                   ? DEVICE_WATTS[id]
                   : scenario.house;
       rows.push({

@@ -574,6 +574,18 @@ shots["money"] = {
     }`
 };
 
+shots["head"] = {
+  width: 3 * 300 + 28,
+  body: ringRow(
+    [
+      { ...RING_ONLY, title: "Solar", chip_shows: "autarky", head_price: true, ring: { center: "power", meter: false, facts: "none", size: "s" } },
+      { ...RING_ONLY, title: "Solar", head_sunbar: true, ring: { center: "power", meter: false, facts: "none", size: "s" } },
+      { ...RING_ONLY, title: "Solar", chip: "always", ring: { center: "power", meter: false, facts: "none", size: "s" } }
+    ],
+    "MIDDAY"
+  ).replace('place(cell, { title: "", chip: "never", ...cfg }', 'place(cell, { ...cfg }')
+};
+
 for (const [name, shot] of Object.entries(shots)) {
   fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }

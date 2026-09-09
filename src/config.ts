@@ -15,6 +15,10 @@ export const DEFAULTS = {
   text_scale: 1,
   night_dim: 0,
   chip: "always" as const,
+  chip_shows: "state" as const,
+  chip_alarm: false,
+  head_price: false,
+  head_sunbar: false,
   tap_action: { action: "more-info" as const },
   battery_capacity: 0,
   battery_reserve: 0,
@@ -188,6 +192,10 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     text_scale: config.text_scale ?? DEFAULTS.text_scale,
     night_dim: config.night_dim ?? DEFAULTS.night_dim,
     chip: config.chip ?? DEFAULTS.chip,
+    chip_shows: config.chip_shows ?? DEFAULTS.chip_shows,
+    chip_alarm: config.chip_alarm ?? DEFAULTS.chip_alarm,
+    head_price: config.head_price ?? DEFAULTS.head_price,
+    head_sunbar: config.head_sunbar ?? DEFAULTS.head_sunbar,
     tap_action: config.tap_action ?? DEFAULTS.tap_action,
     // The two used to sit at the top level. They belong to the battery and
     // live there now; a card written before that still reads.
@@ -618,6 +626,36 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         }
+      ]
+    },
+    {
+      type: "grid",
+      schema: [
+        ...only((resolved) => resolved.chip !== "never", {
+          name: "chip_shows",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "state", label: t("editor.chip_state") },
+                { value: "autarky", label: t("editor.chip_autarky") }
+              ]
+            }
+          }
+        }),
+        ...only((resolved) => Boolean(resolved.entities.grid_power), {
+          name: "chip_alarm",
+          selector: { boolean: {} }
+        }),
+        ...only((resolved) => Boolean(resolved.entities.price_import), {
+          name: "head_price",
+          selector: { boolean: {} }
+        }),
+        // The day chart already draws the sun's day; the line is for a card without it.
+        ...only((resolved) => !resolved.sections.chart, {
+          name: "head_sunbar",
+          selector: { boolean: {} }
+        })
       ]
     },
     {
@@ -1209,6 +1247,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     title: t("editor.title"),
     text_scale: t("editor.text_scale"),
     chip: t("editor.chip"),
+    chip_shows: t("editor.chip_shows"),
+    chip_alarm: t("editor.chip_alarm"),
+    head_price: t("editor.head_price"),
+    head_sunbar: t("editor.head_sunbar"),
     tap_action: t("editor.tap_action"),
     entities: t("editor.entities"),
     house: t("editor.house"),
@@ -1316,6 +1358,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     title: t("editor.help_title"),
     text_scale: t("editor.help_text_scale"),
     chip: t("editor.help_chip"),
+    chip_alarm: t("editor.help_chip_alarm"),
+    head_price: t("editor.help_head_price"),
+    head_sunbar: t("editor.help_head_sunbar"),
     tap_action: t("editor.help_tap_action"),
     cost_today: t("editor.help_cost_today"),
     cost_export_today: t("editor.help_cost_sides"),

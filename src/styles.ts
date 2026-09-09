@@ -96,6 +96,89 @@ export const cardStyles = css`
     background: color-mix(in srgb, var(--sst-grid) 16%, transparent);
   }
 
+  /* Lasting draw: the chip wears the import colour whatever the card wears. */
+  .chip.alarm {
+    color: var(--power-origin-import-color, #e5484d);
+    background: color-mix(in srgb, var(--power-origin-import-color, #e5484d) 16%, transparent);
+  }
+
+  .head-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  /* The price of this hour, against the day's mean: cheap, dear, or neither. */
+  .head-price {
+    font-family: var(--sst-mono);
+    font-size: calc(11px * var(--sst-scale));
+    letter-spacing: 0.04em;
+    color: var(--sst-muted);
+    white-space: nowrap;
+  }
+
+  .head-price.cheap {
+    color: var(--sst-leaf);
+  }
+
+  .head-price.dear {
+    color: var(--power-origin-import-color, #e5484d);
+  }
+
+  /* The sun's day as a line: where it stands, and how much day is left. */
+  .sunbar {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: -4px;
+  }
+
+  .sunbar-track {
+    position: relative;
+    display: block;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--sst-track);
+  }
+
+  .sunbar-done {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 1px;
+    background: var(--sst-sun);
+    transition: width 0.6s ease;
+  }
+
+  .sunbar.night .sunbar-done {
+    background: var(--sst-muted);
+  }
+
+  .sunbar-mark {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--sst-sun);
+    --mdc-icon-size: 12px;
+    line-height: 0;
+    background: var(--ha-card-background, #1a1e2b);
+    border-radius: 50%;
+  }
+
+  .sunbar.night .sunbar-mark {
+    color: var(--sst-muted);
+  }
+
+  .sunbar-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--sst-mono);
+    font-size: calc(8.5px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+
   .ring-group {
     display: flex;
     align-items: center;

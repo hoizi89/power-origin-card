@@ -107,6 +107,10 @@ Four more: `battery` is the battery as a store — what it holds on the scale of
 
 **How it is drawn** is `ring.meter_style`, and only `grid` and `night` have a choice: `blocks` for a stepped needle or one block per hour, `bar` for one body. The others each have one honest shape, so the editor does not offer a drawing it would ignore.
 
+## The corner
+
+The chip in the corner can say the day's self-supplied share instead of the state (`chip_shows: autarky`), and it can turn red with the kilowatts once the house has drawn from the grid for two minutes (`chip_alarm`), letting go five minutes after the draw ends. Beside the title, `head_price` puts this hour's import price, green under the day's mean and red over it. Without the day chart, `head_sunbar` draws the sun's day as a line under the heading, and the night at night.
+
 ## What the money says
 
 The balance can carry the month beside it (`today.month`), split itself into what was not bought and what was sold (`today.split`) — most systems earn by not buying, and this is the first place that shows — and, with what the system cost (`today.investment`), name the year it will have paid for itself at this year's pace (`today.payoff_year`).

@@ -116,6 +116,10 @@ today:
 | --- | --- | --- |
 | `text_scale` | `1` | Multiplies every type size at once. |
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
+| `chip_shows` | `state` | What the chip says: `state` (grid-free or from grid) or `autarky` — the day's self-supplied share from the daily meters, green from 80 %, the grid's colour below. |
+| `chip_alarm` | `false` | After two minutes of drawing from the grid the chip turns red and carries the kilowatts; five minutes without draw and it is itself again. The same switch as `ring.import_switch`, on the chip alone; it shows even when the chip is otherwise hidden. |
+| `head_price` | `false` | This hour's import price beside the title, green under the day's mean, red over it. For a moving tariff; needs `price_import`. |
+| `head_sunbar` | `false` | A line under the heading from sunrise to sunset with the sun where it stands; at night the night, with the moon. Offered only without the day chart, which draws the same day. |
 | `tap_action` | `more-info` | What tapping a figure does, in Lovelace's own vocabulary. |
 | `chart.compare` | `false` | Draws the same weekday a week ago faintly behind today. Costs one more recorder query. |
 | `chart.forecast_bars` | `false` | The hours still expected as dashed outlines after now, where their bars will stand; after sunset, tomorrow's whole day over today's axis. Read from the attributes of `forecast_hourly` (or of `forecast_tomorrow` at night), the way Solcast attaches them. |

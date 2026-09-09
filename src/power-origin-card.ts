@@ -100,6 +100,8 @@ export class PowerOriginCard extends LitElement {
   private _weekFetched = 0;
   /** The day a tap picked in the week block. */
   private _weekPick?: number;
+  /** The import price's mean over the day so far, for colouring this hour's. */
+  private _priceMean?: number;
   /** The last twelve months' balances, negative when a month earned, current month last. */
   private _moneyMonths?: Array<{ start: number; balance: number }>;
   private _moneyFetched = 0;
@@ -295,6 +297,7 @@ export class PowerOriginCard extends LitElement {
       !this._needsHours() &&
       !config.sections.week &&
       !this._wantsMoneyHistory() &&
+      !config.head_price &&
       !devicesNeed
     ) {
       return;
@@ -315,7 +318,8 @@ export class PowerOriginCard extends LitElement {
         config.battery.extra === "range" || (config.sections.battery && config.battery.curve)
           ? config.entities.battery_soc
           : undefined;
-      const ids = [solarId, houseId, gridId, cellId, socId].filter(Boolean) as string[];
+      const priceId = config.head_price ? config.entities.price_import : undefined;
+      const ids = [solarId, houseId, gridId, cellId, socId, priceId].filter(Boolean) as string[];
       const stats = await cachedStatistics(
         ids,
         REFRESH_MS,
@@ -333,6 +337,10 @@ export class PowerOriginCard extends LitElement {
       // A percentage, so it is read as it comes.
       this._socRange = socId ? extremes(stats[socId] ?? []) : undefined;
       this._socRows = socId ? stats[socId] : undefined;
+      const prices = priceId
+        ? (stats[priceId] ?? []).map((row) => row.mean).filter((v): v is number => typeof v === "number" && Number.isFinite(v))
+        : [];
+      this._priceMean = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : undefined;
 
       if (gridId && stats[gridId]?.length) {
         let up = 0;
@@ -674,36 +682,75 @@ export class PowerOriginCard extends LitElement {
     }
 
     const gridfree = !worthNaming(flow.fromGrid, flow.house);
-    const showChip = config.chip === "always" || (config.chip === "gridfree" && gridfree);
     const alarm = this._importAlarm(flow);
+    const chipAlarm = config.chip_alarm && alarm;
+    const showChip =
+      config.chip === "always" || (config.chip === "gridfree" && gridfree) || chipAlarm;
+    const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
+
+    // The chip: the state, the day's share, or the draw that would not stop.
+    const houseDay = energyKwh(stateOf(hass, config.entities.house_today));
+    const importDay = energyKwh(stateOf(hass, config.entities.import_today));
+    const dayShare =
+      houseDay !== undefined && importDay !== undefined && houseDay > 0
+        ? Math.min(1, Math.max(0, (houseDay - importDay) / houseDay))
+        : flow.autarky;
+    const chip = chipAlarm
+      ? html`<span class="chip alarm">${formatPower(flow.fromGrid, locale)} kW ${localize("state.importing", locale)}</span>`
+      : config.chip_shows === "autarky"
+        ? html`<span class="chip ${dayShare >= 0.8 ? "gridfree" : "importing"}">
+            ${formatNumber(dayShare * 100, locale, 0)} % ${localize("chip.autarky", locale)}
+          </span>`
+        : html`<span class="chip ${gridfree ? "gridfree" : "importing"}">
+            ${localize(gridfree ? "state.gridfree" : "state.importing", locale)}
+          </span>`;
+
+    // This hour's price against the day's mean: a colour before a number.
+    const price = config.head_price ? numberOf(stateOf(hass, config.entities.price_import)) : undefined;
+    const mean = this._priceMean;
+    const priceTone =
+      price === undefined || mean === undefined
+        ? ""
+        : price < mean * 0.9
+          ? "cheap"
+          : price > mean * 1.1
+            ? "dear"
+            : "";
+    const priceTag =
+      price !== undefined
+        ? this._linked(
+            config.entities.price_import,
+            html`<span class="head-price ${priceTone}">${formatMoney(price, locale)} €/kWh</span>`
+          )
+        : nothing;
 
     return html`
       <!-- One class swaps the grid token for the whole card, so the same
            kilowatts wear the same colour wherever they appear. -->
       <ha-card style="--sst-scale: ${config.text_scale}; --sst-night: ${(1 - config.night_dim / 100).toFixed(2)}"
-        class="${(config.ring.import_red && flow.fromGrid > 0) || alarm ? "import-alarm" : ""} ${
-          config.night_dim > 0 && stateOf(hass, "sun.sun")?.state === "below_horizon" ? "night" : ""
+        class="${(config.ring.import_red && flow.fromGrid > 0) || (config.ring.import_switch && alarm) ? "import-alarm" : ""} ${
+          config.night_dim > 0 && sunDown ? "night" : ""
         }">
-        ${config.title || showChip
-          ? html`<div class="head ${config.title ? "" : "bare"} ${
+        ${config.title || showChip || price !== undefined
+          ? html`<div class="head ${config.title || price !== undefined ? "" : "bare"} ${
               // Two columns reach the top corners, so there is no corner left
               // for the chip to float into.
               !config.title &&
+              price === undefined &&
               config.ring.facts === "none" &&
               config.sections.ring &&
               config.ring.columns !== "two"
                 ? "float"
                 : ""
             }">
-              ${config.title ? html`<p class="title">${config.title}</p>` : nothing}
-              ${showChip
-                ? html`<span class="chip ${gridfree ? "gridfree" : "importing"}">
-                    ${localize(gridfree ? "state.gridfree" : "state.importing", locale)}
-                  </span>`
+              ${config.title || price !== undefined
+                ? html`<span class="head-left">${config.title ? html`<p class="title">${config.title}</p>` : nothing}${priceTag}</span>`
                 : nothing}
+              ${showChip ? chip : nothing}
             </div>`
           : nothing}
-        ${config.sections.ring ? this._renderRing(flow, locale, alarm) : nothing}
+        ${config.head_sunbar && !config.sections.chart ? this._renderSunbar(sunDown, locale) : nothing}
+        ${config.sections.ring ? this._renderRing(flow, locale, config.ring.import_switch && alarm) : nothing}
         ${config.sections.chart ? this._renderChart(locale) : nothing}
         ${config.sections.week ? this._renderWeek(locale) : nothing}
         ${config.sections.battery ? this._renderBattery(locale) : nothing}
@@ -721,7 +768,7 @@ export class PowerOriginCard extends LitElement {
    */
   private _importAlarm(flow: Flow): boolean {
     const config = this._config as ResolvedConfig;
-    if (!config.ring.import_switch) return false;
+    if (!config.ring.import_switch && !config.chip_alarm) return false;
     const ON = 2 * 60 * 1000;
     const OFF = 5 * 60 * 1000;
     const now = Date.now();
@@ -752,6 +799,46 @@ export class PowerOriginCard extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.clearTimeout(this._importTimer);
+  }
+
+  /**
+   * The sun's day as a line under the heading: sunrise to sunset with the sun
+   * where it stands, or, once it is down, the night with the moon. For a
+   * card without the day chart, which draws the same day at length.
+   */
+  private _renderSunbar(sunDown: boolean, locale: string) {
+    const hass = this._hass as HomeAssistant;
+    const times = sunTimes(stateOf(hass, "sun.sun"));
+    const now = Date.now();
+    let from: number | undefined;
+    let to: number | undefined;
+    if (sunDown) {
+      const night = this._nightSoFar();
+      if (night) {
+        const total = night.hoursLeft / (1 - night.done);
+        from = now - night.done * total * 3600000;
+        to = now + night.hoursLeft * 3600000;
+      }
+    } else {
+      from = times.rising?.getTime();
+      to = times.setting?.getTime();
+    }
+    if (from === undefined || to === undefined || to <= from) return nothing;
+    const done = Math.min(1, Math.max(0, (now - from) / (to - from)));
+    return html`
+      <div class="sunbar ${sunDown ? "night" : ""}">
+        <span class="sunbar-track">
+          <span class="sunbar-done" style="width: ${(done * 100).toFixed(1)}%"></span>
+          <i class="sunbar-mark" style="left: ${(done * 100).toFixed(1)}%"
+            ><ha-icon icon="${sunDown ? "mdi:weather-night" : "mdi:white-balance-sunny"}"></ha-icon
+          ></i>
+        </span>
+        <div class="sunbar-ends">
+          <span>${formatClock(new Date(from), locale)}</span>
+          <span>${formatClock(new Date(to), locale)}</span>
+        </div>
+      </div>
+    `;
   }
 
   private _renderRing(flow: Flow, locale: string, alarm = false) {
