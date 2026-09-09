@@ -100,6 +100,9 @@ export class PowerOriginCard extends LitElement {
   private _weekFetched = 0;
   /** The day a tap picked in the week block. */
   private _weekPick?: number;
+  /** The last twelve months' balances, negative when a month earned, current month last. */
+  private _moneyMonths?: Array<{ start: number; balance: number }>;
+  private _moneyFetched = 0;
   /** When the current grid draw began, when it was last seen, and whether the switch is thrown. */
   private _importSince?: number;
   private _importLast?: number;
@@ -291,6 +294,7 @@ export class PowerOriginCard extends LitElement {
       !this._needsPeak() &&
       !this._needsHours() &&
       !config.sections.week &&
+      !this._wantsMoneyHistory() &&
       !devicesNeed
     ) {
       return;
@@ -358,6 +362,7 @@ export class PowerOriginCard extends LitElement {
       await this._fetchDevices(hass, config);
       await this._fetchBestDay(hass, solarId, divisor);
       await this._fetchWeek(hass, config);
+      await this._fetchMoneyHistory(hass, config);
       this._error = undefined;
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
@@ -483,6 +488,93 @@ export class PowerOriginCard extends LitElement {
     }
     this._bestDay = byHour;
     this._bestKwh = byHour.reduce((sum, kw) => sum + kw, 0);
+  }
+
+  private _wantsMoneyHistory(): boolean {
+    const config = this._config;
+    if (!config) return false;
+    return (
+      config.sections.today && config.today.money && (config.today.month || config.today.payoff_year)
+    );
+  }
+
+  /**
+   * Twelve months of money, one figure per month, from whichever sensors
+   * carry it: the balance, the two sides, or the two energies priced. The
+   * month so far is the last row; the year's pace is all of them.
+   */
+  private async _fetchMoneyHistory(hass: HomeAssistant, config: ResolvedConfig): Promise<void> {
+    if (!this._wantsMoneyHistory()) {
+      this._moneyMonths = undefined;
+      return;
+    }
+    const HOUR = 60 * 60 * 1000;
+    if (Date.now() - this._moneyFetched < HOUR) return;
+    this._moneyFetched = Date.now();
+
+    const e = config.entities;
+    const ids = (
+      e.cost_today
+        ? [e.cost_today]
+        : e.cost_export_today || e.cost_import_today
+          ? [e.cost_export_today, e.cost_import_today]
+          : [e.export_today, e.import_today]
+    ).filter((id): id is string => Boolean(id));
+    if (ids.length === 0) return;
+
+    const start = new Date();
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    start.setMonth(start.getMonth() - 11);
+    type Rows = Record<string, Array<Record<string, unknown>>>;
+    const rows = (await cachedStatistics(
+      ids,
+      HOUR,
+      () =>
+        hass.callWS<Rows>({
+          type: "recorder/statistics_during_period",
+          start_time: start.toISOString(),
+          end_time: new Date().toISOString(),
+          statistic_ids: ids,
+          period: "month",
+          types: ["change"]
+        }) as never,
+      "money-months"
+    )) as unknown as Rows;
+
+    const buy = numberOf(stateOf(hass, e.price_import)) ?? 0;
+    const sell = numberOf(stateOf(hass, e.price_export)) ?? 0;
+    const change = (id: string | undefined, month: number): number | undefined => {
+      if (!id) return undefined;
+      const row = (rows?.[id] ?? []).find((r) => {
+        const at = new Date(Date.parse(String(r.start)));
+        const want = new Date(month);
+        return at.getFullYear() === want.getFullYear() && at.getMonth() === want.getMonth();
+      });
+      const value = Number(row?.change);
+      if (!Number.isFinite(value)) return undefined;
+      return unitOf(stateOf(hass, id)).toLowerCase() === "wh" ? value / 1000 : value;
+    };
+    const months: Array<{ start: number; balance: number }> = [];
+    for (let index = 0; index < 12; index += 1) {
+      const at = new Date(start);
+      at.setMonth(start.getMonth() + index);
+      const month = at.getTime();
+      let balance: number | undefined;
+      if (e.cost_today) {
+        balance = change(e.cost_today, month);
+      } else if (e.cost_export_today || e.cost_import_today) {
+        const out = change(e.cost_export_today, month);
+        const inn = change(e.cost_import_today, month);
+        if (out !== undefined || inn !== undefined) balance = (inn ?? 0) - (out ?? 0);
+      } else {
+        const out = change(e.export_today, month);
+        const inn = change(e.import_today, month);
+        if (out !== undefined || inn !== undefined) balance = (inn ?? 0) * buy - (out ?? 0) * sell;
+      }
+      if (balance !== undefined) months.push({ start: month, balance });
+    }
+    this._moneyMonths = months;
   }
 
   /**
@@ -3104,9 +3196,73 @@ export class PowerOriginCard extends LitElement {
     const earned = balance < 0;
     const { exported, imported } = money;
 
-    const paidOff = config.today.amortisation
-      ? numberOf(stateOf(hass, config.entities.amortisation))
-      : undefined;
+    const paidOff =
+      config.today.amortisation || config.today.payoff_year
+        ? numberOf(stateOf(hass, config.entities.amortisation))
+        : undefined;
+
+    // The month so far: the same sign as the day, a longer breath.
+    const now = new Date();
+    const thisMonth = this._moneyMonths?.find((m) => {
+      const at = new Date(m.start);
+      return at.getFullYear() === now.getFullYear() && at.getMonth() === now.getMonth();
+    });
+    const month =
+      config.today.month && thisMonth
+        ? html`<span class="money-month"
+            ><b>${thisMonth.balance < 0 ? "+" : "−"}${formatMoney(Math.abs(thisMonth.balance), locale)} €</b>
+            ${new Intl.DateTimeFormat(locale, { month: "short" }).format(now)}</span
+          >`
+        : nothing;
+
+    // Not bought against sold: the house's own share of the day, priced,
+    // against what left for the grid.
+    const houseKwh = energyKwh(stateOf(hass, config.entities.house_today));
+    const importKwh = energyKwh(stateOf(hass, config.entities.import_today));
+    const buy = numberOf(stateOf(hass, config.entities.price_import));
+    const notBought =
+      houseKwh !== undefined && importKwh !== undefined && buy !== undefined
+        ? Math.max(0, houseKwh - importKwh) * buy
+        : undefined;
+    const sold = exported;
+    const split =
+      config.today.split && notBought !== undefined && sold !== undefined && notBought + sold > 0
+        ? html`<div class="split">
+            <div class="split-bar">
+              <span class="saved" style="width: ${((100 * notBought) / (notBought + sold)).toFixed(1)}%"></span>
+              <span class="sold" style="width: ${((100 * sold) / (notBought + sold)).toFixed(1)}%"></span>
+            </div>
+            <div class="split-keys">
+              <span><i class="saved" style="background: var(--sst-leaf)"></i>${localize("money.not_bought", locale)}
+                <b>${formatMoney(notBought, locale)} €</b></span>
+              <span><i style="background: var(--sst-sun)"></i>${localize("money.sold", locale)}
+                <b>${formatMoney(sold, locale)} €</b></span>
+            </div>
+          </div>`
+        : nothing;
+
+    // The year it is paid off: what is left, over this year's pace.
+    const months = this._moneyMonths ?? [];
+    const earnedYear = months.reduce((sum, m) => sum + Math.max(0, -m.balance), 0);
+    const covered = months.length ? (now.getTime() - months[0].start) / (24 * 3600000) : 0;
+    const pace = covered > 30 ? (earnedYear / covered) * 365 : undefined;
+    const investment = config.today.investment;
+    const payoffYear =
+      config.today.payoff_year && paidOff !== undefined && investment > 0 && pace !== undefined && pace > 0
+        ? new Date(now.getTime() + ((investment * (1 - paidOff / 100)) / pace) * 365 * 24 * 3600000).getFullYear()
+        : undefined;
+    const payoff =
+      config.today.payoff_year && paidOff !== undefined && investment > 0
+        ? html`<div class="payoff">
+            <div class="payoff-bar"><span style="width: ${Math.min(100, Math.max(0, paidOff)).toFixed(1)}%"></span></div>
+            <div class="payoff-line">
+              <b>${formatNumber((investment * paidOff) / 100, locale, 0)} €</b> ${localize("money.of", locale)}
+              ${formatNumber(investment, locale, 0)} €${pace !== undefined
+                ? html` · <b>${formatNumber(pace, locale, 0)} €</b> ${localize("money.a_year", locale)}`
+                : nothing}
+            </div>
+          </div>`
+        : nothing;
 
     const breakdown =
       config.today.breakdown && (exported !== undefined || imported !== undefined)
@@ -3122,26 +3278,33 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="money">
-        ${this._linked(
-          config.entities.cost_today,
-          html`<span class="money-v ${earned ? "plus" : "minus"}">
-            ${earned ? "+" : "−"}${formatMoney(Math.abs(balance), locale)}
-            <small>${localize(earned ? "today.earned" : "today.paid", locale)}</small>
-          </span>`
-        )}
+        <span>
+          ${this._linked(
+            config.entities.cost_today,
+            html`<span class="money-v ${earned ? "plus" : "minus"}">
+              ${earned ? "+" : "−"}${formatMoney(Math.abs(balance), locale)}
+              <small>${localize(earned ? "today.earned" : "today.paid", locale)}</small>
+            </span>`
+          )}
+          ${month}
+        </span>
         ${breakdown}
         ${
-          paidOff === undefined
+          paidOff === undefined || (!config.today.amortisation && !config.today.payoff_year)
             ? nothing
             : this._linked(
                 config.entities.amortisation,
                 html`<span class="corner"
-                  >${formatNumber(paidOff, locale, 0)} %
+                  >${formatNumber(paidOff, locale, 0)} %${payoffYear !== undefined
+                    ? html` · ${payoffYear}`
+                    : nothing}
                   <span class="dim">${localize("stat.amortisation", locale)}</span></span
                 >`
               )
         }
       </div>
+      ${split}
+      ${payoff}
     `;
   }
 

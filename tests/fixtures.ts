@@ -194,6 +194,40 @@ function statistics(scenario: Scenario, ids: string[], period?: string, startTim
     return out;
   }
 
+  // Months: what each money and energy meter grew per month, and the roof's peak.
+  if (period === "month") {
+    const first = new Date(Date.parse(startTime ?? midnight.toISOString()));
+    first.setDate(1);
+    first.setHours(0, 0, 0, 0);
+    for (const id of ids) {
+      if (!known.has(id)) continue;
+      const rows: Array<Record<string, unknown>> = [];
+      for (let index = 0; index < 12; index += 1) {
+        const at = new Date(first);
+        at.setMonth(first.getMonth() + index);
+        if (at.getTime() > now) break;
+        rows.push({
+          start: at.toISOString(),
+          max: id === IDS.solar ? scenario.pv * 1.1 : scenario.house,
+          change:
+            id === IDS.cost_today
+              ? scenario.cost * 20
+              : id === IDS.cost_export_today
+                ? 1.2 * 20
+                : id === IDS.cost_import_today
+                  ? 0.02 * 20
+                  : id === IDS.export_today
+                    ? scenario.exportToday * 20
+                    : id === IDS.import_today
+                      ? scenario.importToday * 20
+                      : null
+        });
+      }
+      out[id] = rows;
+    }
+    return out;
+  }
+
   // Hours of one day, for the best day's outline.
   if (period === "hour" && startTime) {
     const first = new Date(Date.parse(startTime));

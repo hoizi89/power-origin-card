@@ -105,7 +105,11 @@ export const DEFAULTS = {
     origin_style: "bar" as const,
     breakdown: false,
     amortisation: false,
-    stats: ["peak", "autarky", "export", "import"] as TodayStat[]
+    stats: ["peak", "autarky", "export", "import"] as TodayStat[],
+    month: false,
+    split: false,
+    payoff_year: false,
+    investment: 0
   }
 };
 
@@ -253,7 +257,11 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       breakdown: config.today?.breakdown ?? DEFAULTS.today.breakdown,
       amortisation: config.today?.amortisation ?? DEFAULTS.today.amortisation,
       stats: config.today?.stats?.length ? config.today.stats : DEFAULTS.today.stats,
-      stats_chosen: Boolean(config.today?.stats?.length)
+      stats_chosen: Boolean(config.today?.stats?.length),
+      month: config.today?.month ?? DEFAULTS.today.month,
+      split: config.today?.split ?? DEFAULTS.today.split,
+      payoff_year: config.today?.payoff_year ?? DEFAULTS.today.payoff_year,
+      investment: config.today?.investment ?? DEFAULTS.today.investment
     }
   };
 }
@@ -1133,6 +1141,40 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             )
           ]
         },
+        {
+          type: "grid",
+          schema: [
+            ...only((resolved) => money(resolved) && resolved.today.money, {
+              name: "month",
+              selector: { boolean: {} }
+            }),
+            // The split needs what was not bought: the house's day less the grid's, priced.
+            ...only(
+              (resolved) =>
+                money(resolved) &&
+                resolved.today.money &&
+                Boolean(
+                  resolved.entities.house_today &&
+                    resolved.entities.import_today &&
+                    resolved.entities.price_import
+                ),
+              { name: "split", selector: { boolean: {} } }
+            ),
+            ...only(
+              (resolved) =>
+                money(resolved) && resolved.today.money && Boolean(resolved.entities.amortisation),
+              { name: "payoff_year", selector: { boolean: {} } }
+            )
+          ]
+        },
+        ...only(
+          (resolved) =>
+            money(resolved) && resolved.today.money && Boolean(resolved.entities.amortisation),
+          {
+            name: "investment",
+            selector: { number: { min: 0, max: 200000, step: 100, mode: "box", unit_of_measurement: "€" } }
+          }
+        ),
         ...only(
           (resolved) => resolved.today.origin_bar,
           {
@@ -1246,6 +1288,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     extra: t("editor.extra"),
     money: t("editor.money"),
     breakdown: t("editor.breakdown"),
+    month: t("editor.month"),
+    split: t("editor.split"),
+    payoff_year: t("editor.payoff_year"),
+    investment: t("editor.investment"),
     origin_bar: t("editor.origin_bar"),
     origin_style: t("editor.origin_style"),
     battery_out_today: t("editor.battery_out_today"),
@@ -1299,6 +1345,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     layers: t("editor.help_layers"),
     best_day: t("editor.help_best_day"),
     curve: t("editor.help_curve"),
+    month: t("editor.help_month"),
+    split: t("editor.help_split"),
+    payoff_year: t("editor.help_payoff_year"),
+    investment: t("editor.help_investment"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
     mode: t("editor.help_mode"),

@@ -270,6 +270,14 @@ export interface TodayOptions {
   /** How far the system has paid for itself, in the corner beside the balance. */
   amortisation?: boolean;
   stats?: TodayStat[];
+  /** The month so far, small beside the day. */
+  month?: boolean;
+  /** The day's money split into what was not bought and what was sold. */
+  split?: boolean;
+  /** The year the system will have paid for itself, at this year's pace. */
+  payoff_year?: boolean;
+  /** What the system cost, in euros; needed for the year. */
+  investment?: number;
 }
 
 export interface PowerOriginCardConfig {

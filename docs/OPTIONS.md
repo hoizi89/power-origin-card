@@ -165,6 +165,10 @@ today:
 | `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house), `flow` (what went in and out today, with the cycles; needs `battery_in_today` and `battery_out_today`). |
 | `battery.curve` | `false` | The charge as a small curve under the bar: at night since sunset and dashed on to where it will stand at sunrise, by day since midnight and dashed on to full while charging. The reserve is a floor line. Costs the same query as `range`. |
 | `today.stats` | `[peak, autarky, export, import]` | Which four values appear at the bottom. |
+| `today.month` | `false` | The month so far, small under the day's balance, from twelve months of the money sensors (the balance, the two sides, or the two energies priced). One query an hour. |
+| `today.split` | `false` | The day's money split into what was not bought (the house's own share, priced) and what was sold, as a two-colour bar. Needs the daily house and import meters and the import price. |
+| `today.payoff_year` | `false` | Beside the paid-off share, the year the system will have paid for itself at this year's pace, with a bar and the figures. Needs the paid-off sensor and `today.investment`. |
+| `today.investment` | `0` | What the system cost, in euros; only used for the year. |
 
 Options that cannot take effect in the current mode are **not shown in the editor at all** — no switch that does nothing.
 

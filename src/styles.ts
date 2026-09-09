@@ -659,6 +659,107 @@ export const cardStyles = css`
     align-self: flex-start;
   }
 
+  /* The month, small under the day: the same sign, a longer breath. */
+  .money-month {
+    display: block;
+    font-family: var(--sst-mono);
+    font-size: calc(10.5px * var(--sst-scale));
+    letter-spacing: 0.04em;
+    color: var(--sst-muted);
+    margin-top: 5px;
+  }
+
+  .money-month b {
+    color: var(--sst-ink);
+    font-weight: 500;
+  }
+
+  /* Not bought against sold: two colours for two kinds of money. */
+  .split {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .split-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--sst-track);
+  }
+
+  .split-bar span {
+    transition: width 0.6s ease;
+  }
+
+  .split-bar .saved {
+    background: var(--sst-leaf);
+  }
+
+  .split-bar .sold {
+    background: var(--sst-sun);
+  }
+
+  .split-keys {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-family: var(--sst-mono);
+    font-size: calc(10.5px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+
+  .split-keys span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .split-keys i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .split-keys b {
+    color: var(--sst-ink);
+    font-weight: 500;
+  }
+
+  /* How far along, and how far to go, in years as well as percent. */
+  .payoff {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .payoff-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--sst-track);
+    overflow: hidden;
+  }
+
+  .payoff-bar span {
+    display: block;
+    height: 100%;
+    background: var(--sst-leaf);
+    transition: width 0.6s ease;
+  }
+
+  .payoff-line {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    letter-spacing: 0.04em;
+    color: var(--sst-muted);
+  }
+
+  .payoff-line b {
+    color: var(--sst-ink);
+    font-weight: 500;
+  }
+
   .money-k {
     font-family: var(--sst-mono);
     font-size: calc(9.5px * var(--sst-scale));

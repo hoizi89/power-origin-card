@@ -545,6 +545,35 @@ shots["wohin"] = {
     }`
 };
 
+shots["money"] = {
+  width: 2 * 400 + 16,
+  body: `const row = document.createElement("div");
+    row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(2, 400px)"; row.style.gap = "16px";
+    stage.append(row);
+    for (const cfg of [
+      { today: { money: true, month: true, split: true, stats: ["peak", "autarky", "export", "import"] } },
+      { today: { money: true, amortisation: true, payoff_year: true, investment: 13900, stats: ["peak", "autarky", "export", "import"] } }
+    ]) {
+      const cell = document.createElement("div"); row.append(cell);
+      const ids = freshIds();
+      const el = document.createElement("power-origin-card");
+      el.setConfig({ type: "custom:power-origin-card", title: "", chip: "never", entities: { ...ids },
+        sections: { ring: false, chart: false, battery: false, today: true }, ...cfg });
+      const h = hass(ids, MIDDAY, false);
+      const base = h.callWS;
+      h.callWS = async (m) => {
+        if (m.type === "recorder/statistics_during_period" && m.period === "month") {
+          const out = {}; const first = new Date(m.start_time);
+          for (const id of m.statistic_ids) out[id] = Array.from({ length: 12 }, (_, i) => { const d = new Date(first); d.setMonth(first.getMonth() + i); return { start: d.toISOString(), change: id === ids.cost_today ? -(40 + 70 * Math.max(0, Math.sin(((d.getMonth() - 1) / 12) * Math.PI))) * (i === 11 ? 0.3 : 1) : 0 }; });
+          return out;
+        }
+        return base(m);
+      };
+      el.hass = h;
+      cell.append(el);
+    }`
+};
+
 for (const [name, shot] of Object.entries(shots)) {
   fs.writeFileSync(here + name + ".html", page(shot.body, shot.width, shot.pre));
 }
