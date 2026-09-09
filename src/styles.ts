@@ -966,8 +966,8 @@ export const cardStyles = css`
     background: var(--sst-track);
     margin-top: 2px;
   }
-  .wohin.both .wohin-bar {
-    height: 20px;
+  .wohin-both .wohin-bar {
+    height: 16px;
   }
   .wohin-seg {
     position: relative;

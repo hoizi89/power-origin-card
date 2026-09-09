@@ -135,6 +135,8 @@ Left, a bar: the house load now, split by device, with the part no device accoun
 
 Two periods, one setting: **now**, averaged over a window (fifteen minutes by default) so a kettle does not light up as a hog, or **today**, read from each device's meter since midnight. Grouping by **room** sums the devices standing in one, from the device registry. Anything under a threshold folds into the rest, and at most a handful are named — both adjustable.
 
+Each device gets the icon you gave its entity in Home Assistant; without one, the card reads an icon off the name — heat pump, dishwasher, fridge, lights, NAS — and falls back to a plug.
+
 Consumers are the house, and the house has no colour on this card. The block is told apart by brightness alone, so it stays quiet beside the sun, the battery and the grid.
 
 ---

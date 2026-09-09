@@ -260,4 +260,5 @@ devices:
 | `devices.group` | `device` | `area` sums devices by the room they stand in. |
 | `devices.limit` | `5` | How many devices get a name; the others fold into the rest. |
 | `devices.threshold` | `25` | Watts below which a device is not named. Shown for `now` only. |
+| *(icons)* | | The icon set on the entity in Home Assistant wins; otherwise one is read off the name, with a plug as the fallback. No card setting needed. |
 | `devices.names`, `devices.energy` | | Written by the adopt button: the dashboard's name and meter for each sensor. Data, not settings. |

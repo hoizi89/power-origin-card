@@ -1678,7 +1678,9 @@ export class PowerOriginCard extends LitElement {
       const name =
         config.devices.names[id] ?? (hass.states?.[id]?.attributes?.friendly_name as string) ?? id;
       const watts = today ? kwhOf(id) : meanWatts(id);
-      return { id, name, watts, icon: iconFor(name, id), area: areaOf(id) };
+      const own =
+        (hass.states?.[id]?.attributes?.icon as string | undefined) ?? hass.entities?.[id]?.icon;
+      return { id, name, watts, icon: own || iconFor(name, id), area: areaOf(id) };
     });
     const rooms = config.devices.group === "area";
     if (rooms) readings = byArea(readings, localize("devices.nowhere", locale));
@@ -1757,7 +1759,7 @@ export class PowerOriginCard extends LitElement {
       : nothing;
 
     return html`
-      <div class="row wohin ${style}">
+      <div class="row wohin wohin-${style}">
         <div class="row-head">
           <span class="row-title">${localize("devices.title", locale)}</span>
           <span class="row-note"

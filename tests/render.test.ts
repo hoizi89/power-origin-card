@@ -996,3 +996,26 @@ describe("when the house sensor is silent", () => {
     expect(text).toContain(IDS.house);
   });
 });
+
+describe("the devices block and the rest of the card", () => {
+  it("never borrows a class the card already uses for something else", async () => {
+    for (const style of ["bar", "icons", "both"]) {
+      const { root } = await render(
+        baseConfig({ devices: { list: ["sensor.desk_power"], style: style as "bar" } }),
+        SCENARIOS[0]
+      );
+      const block = root.querySelector(".wohin")!;
+      expect(block.classList.contains("wohin-" + style)).toBe(true);
+      expect(block.classList.contains(style)).toBe(false);
+    }
+  });
+
+  it("takes the icon the owner set on the entity before guessing one", async () => {
+    const scenario = SCENARIOS[0];
+    const { root } = await render(
+      baseConfig({ devices: { list: ["sensor.desk_power"], style: "icons" } }),
+      { ...scenario, name: scenario.name }
+    );
+    expect(root.querySelector(".dev ha-icon")!.getAttribute("icon")).toBe("mdi:desktop-tower-monitor");
+  });
+});

@@ -14,7 +14,7 @@ export interface HomeAssistant {
   callWS<T>(message: Record<string, unknown>): Promise<T>;
   callApi<T>(method: string, path: string): Promise<T>;
   /** The registries the frontend carries, for the room a device stands in. */
-  entities?: Record<string, { area_id?: string | null; device_id?: string | null }>;
+  entities?: Record<string, { area_id?: string | null; device_id?: string | null; icon?: string | null }>;
   devices?: Record<string, { area_id?: string | null }>;
   areas?: Record<string, { name: string }>;
 }
