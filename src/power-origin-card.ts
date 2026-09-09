@@ -32,7 +32,7 @@ import type {
 import {
   energyKwh,
   formatClock,
-  formatEnergy,
+  formatEnergy, formatEnergyFine,
   formatMoney,
   formatNumber,
   formatPower,
@@ -315,7 +315,10 @@ export class PowerOriginCard extends LitElement {
     const showChip = config.chip === "always" || (config.chip === "gridfree" && gridfree);
 
     return html`
-      <ha-card style="--sst-scale: ${config.text_scale}">
+      <!-- One class swaps the grid token for the whole card, so the same
+           kilowatts wear the same colour wherever they appear. -->
+      <ha-card style="--sst-scale: ${config.text_scale}"
+        class="${config.ring.import_red && flow.fromGrid > 0 ? "import-alarm" : ""}">
         ${config.title || showChip
           ? html`<div class="head ${config.title ? "" : "bare"} ${
               // Two columns reach the top corners, so there is no corner left
@@ -1997,25 +2000,25 @@ export class PowerOriginCard extends LitElement {
       }
       case "export": {
         const exported = energyKwh(stateOf(hass, config.entities.export_today));
-        if (exported !== undefined) value = formatEnergy(exported, locale);
+        if (exported !== undefined) value = formatEnergyFine(exported, locale);
         break;
       }
       case "import": {
-        if (imported !== undefined) value = formatEnergy(imported, locale);
+        if (imported !== undefined) value = formatEnergyFine(imported, locale);
         break;
       }
       case "solar": {
         const produced = energyKwh(stateOf(hass, config.entities.solar_today));
-        if (produced !== undefined) value = formatEnergy(produced, locale);
+        if (produced !== undefined) value = formatEnergyFine(produced, locale);
         break;
       }
       case "house": {
-        if (house !== undefined) value = formatEnergy(house, locale);
+        if (house !== undefined) value = formatEnergyFine(house, locale);
         break;
       }
       case "forecast": {
         const expected = energyKwh(stateOf(hass, config.entities.forecast));
-        if (expected !== undefined) value = formatEnergy(expected, locale);
+        if (expected !== undefined) value = formatEnergyFine(expected, locale);
         break;
       }
       case "amortisation": {

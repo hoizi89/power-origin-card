@@ -57,6 +57,11 @@ export function formatPower(value: number, locale: string): string {
   return formatNumber(value, locale, Math.abs(value) < 10 ? 2 : 1);
 }
 
+/** Kilowatt hours in a tile: a small figure keeps two decimals, so 0.12 is not 0.1. */
+export function formatEnergyFine(value: number, locale: string): string {
+  return formatNumber(value, locale, Math.abs(value) < 10 ? 2 : Math.abs(value) < 100 ? 1 : 0);
+}
+
 export function formatEnergy(value: number, locale: string): string {
   return formatNumber(value, locale, Math.abs(value) < 100 ? 1 : 0);
 }

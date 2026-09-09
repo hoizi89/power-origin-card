@@ -16,6 +16,12 @@ export const cardStyles = css`
     display: block;
   }
 
+  /* Chosen, not inferred: the grid is still the participant the colour names,
+     the colour just says it is the one you pay for right now. */
+  ha-card.import-alarm {
+    --sst-grid: var(--power-origin-import-color, #e5484d);
+  }
+
   ha-card {
     position: relative;
     container-type: inline-size;

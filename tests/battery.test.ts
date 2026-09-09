@@ -161,3 +161,14 @@ describe("sunriseReach", () => {
     expect(sunriseReach(9, 0)).toBeUndefined();
   });
 });
+
+import { formatEnergyFine } from "../src/values";
+
+describe("a small kilowatt hour in a tile", () => {
+  it("keeps two decimals below ten, one below a hundred, none above", () => {
+    expect(formatEnergyFine(0.12, "de")).toBe("0,12");
+    expect(formatEnergyFine(9.6, "de")).toBe("9,60");
+    expect(formatEnergyFine(16.84, "de")).toBe("16,8");
+    expect(formatEnergyFine(123.4, "de")).toBe("123");
+  });
+});

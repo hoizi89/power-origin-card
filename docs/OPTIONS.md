@@ -134,6 +134,7 @@ today:
 | `ring.rings` | `single` | One ring, two rings, or the clock. |
 | `ring.inner` | `icon` | Behind the centre figure: `icon`, `load` for the day's consumption curve, or `none`. |
 | `ring.meter_today` | `false` | A faint band for how far the needle swung today, in both directions. |
+| `ring.import_red` | `false` | While the house draws from the grid, the grid wears red instead of blue everywhere on the card. The shade is `--power-origin-import-color`. |
 | `ring.meter_marks` | `true` | Small arrows at the two ends of a needle column, so which end means which needs no reading. |
 | `ring.meter_second_scope` | `all` | Which boundary the second column watches, when it is a needle. Set it to the other one, or both needles draw the same picture. |
 | `ring.clock_marks` | `true` | Sun and moon on the clock dial, so it is clear which way round it reads. |

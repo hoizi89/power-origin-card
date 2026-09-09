@@ -1019,3 +1019,18 @@ describe("the devices block and the rest of the card", () => {
     expect(root.querySelector(".dev ha-icon")!.getAttribute("icon")).toBe("mdi:desktop-tower-monitor");
   });
 });
+
+describe("the grid in red", () => {
+  const foggy = () => SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+
+  it("wears red only while drawing, and only when asked", async () => {
+    const off = await render(baseConfig(), foggy());
+    expect(off.root.querySelector("ha-card")!.classList.contains("import-alarm")).toBe(false);
+
+    const on = await render(baseConfig({ ring: { import_red: true } }), foggy());
+    expect(on.root.querySelector("ha-card")!.classList.contains("import-alarm")).toBe(true);
+
+    const exporting = await render(baseConfig({ ring: { import_red: true } }), SCENARIOS[0]);
+    expect(exporting.root.querySelector("ha-card")!.classList.contains("import-alarm")).toBe(false);
+  });
+});

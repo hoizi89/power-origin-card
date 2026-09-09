@@ -146,6 +146,8 @@ export interface RingOptions {
   rings?: RingStyle;
   inner?: RingInner;
   clock_marks?: boolean;
+  /** While the house draws from the grid, the grid wears red instead of blue. */
+  import_red?: boolean;
 }
 
 /** Configurations written before the facts option existed. */

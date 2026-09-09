@@ -53,7 +53,8 @@ export const DEFAULTS = {
     size: "auto" as const,
     rings: "single" as const,
     inner: "icon" as const,
-    clock_marks: true
+    clock_marks: true,
+    import_red: false
   },
   chart: {
     style: "area" as const,
@@ -661,6 +662,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           name: "clock_marks",
           selector: { boolean: {} }
         }),
+        { name: "import_red", selector: { boolean: {} } },
         {
           name: "inner",
           selector: {
@@ -1051,6 +1053,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     rings: t("editor.ring_style"),
     inner: t("editor.inner"),
     clock_marks: t("editor.clock_marks"),
+    import_red: t("editor.import_red"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     compare: t("editor.compare"),
@@ -1101,6 +1104,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     size: t("editor.help_size"),
     rings: t("editor.help_ring_style"),
     clock_marks: t("editor.help_clock_marks"),
+    import_red: t("editor.help_import_red"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
     mode: t("editor.help_mode"),
