@@ -32,6 +32,21 @@ const base = (): PowerOriginCardConfig => ({
   devices: { list: ["sensor.desk_power", "sensor.nas_power", "sensor.fridge_power", "sensor.oven_power"] }
 });
 
+/* The other shape a card takes: a roof by day and the night by night on the
+ * left, the battery on the right, the day as a clock outside. */
+const baseNight = (): PowerOriginCardConfig => ({
+  ...base(),
+  ring: {
+    columns: "two",
+    meter_shows: "roof",
+    meter_dark: "night",
+    meter_second_shows: "battery",
+    rings: "dayclock",
+    night: "countdown"
+  },
+  battery: { capacity: 13100, reserve: 15, sunrise_mark: true, curve: true }
+});
+
 function fields(config: PowerOriginCardConfig): Field[] {
   const out: Field[] = [];
   const walk = (items: Array<Record<string, unknown>>, path: string[]) => {
@@ -160,8 +175,12 @@ describe("every setting the editor offers changes something", () => {
     expect(differing, "tokens that change between two identical renders:\n" + differing.join("\n")).toEqual([]);
   });
 
-  it("in at least one ordinary situation", async () => {
-    const config = base();
+  for (const [name, make] of [
+    ["the usual card", base],
+    ["a card with roof, night and battery columns", baseNight]
+  ] as const)
+  it(`in at least one ordinary situation, on ${name}`, async () => {
+    const config = make();
     const tried = SCENARIOS.filter((s) =>
       [
         "sunny afternoon",

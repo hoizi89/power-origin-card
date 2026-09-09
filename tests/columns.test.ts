@@ -126,6 +126,31 @@ describe("blocks for the columns that fill from one end", () => {
   });
 });
 
+describe("the drawing chosen in the editor", () => {
+  it("reaches the night column by night and the roof column by day", async () => {
+    const cfg = (drawn: "blocks" | "bar") =>
+      config({ ring: { meter: true, meter_shows: "roof", meter_dark: "night", meter_drawn: drawn, meter_steps: 12 } });
+    // Blocks are one cell per hour; a body is a handful of rectangles.
+    const nightBlocks = await mount(cfg("blocks"), evening);
+    expect(nightBlocks.root.querySelectorAll(".meter rect").length).toBeGreaterThan(8);
+    const nightBar = await mount(cfg("bar"), evening);
+    expect(nightBar.root.querySelectorAll(".meter rect").length).toBeLessThan(6);
+    expect(nightBar.root.querySelector(".night-past")).toBeTruthy();
+    const dayBlocks = await mount(cfg("blocks"), day);
+    expect(dayBlocks.root.querySelectorAll(".meter .meter-off").length).toBe(12);
+    const dayBar = await mount(cfg("bar"), day);
+    expect(dayBar.root.querySelectorAll(".meter .meter-off").length).toBe(0);
+  });
+
+  it("still reads a drawing kept under the old key", async () => {
+    const { root } = await mount(
+      config({ ring: { meter: true, meter_shows: "roof", meter_style: "blocks", meter_steps: 8 } }),
+      day
+    );
+    expect(root.querySelectorAll(".meter .meter-off").length).toBe(8);
+  });
+});
+
 describe("a column that says nothing", () => {
   it("leaves the ring the room", async () => {
     const { root } = await mount(config({ ring: { meter: true, meter_shows: "none" } }), day);
