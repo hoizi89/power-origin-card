@@ -4,3 +4,4 @@ cachesnpm/
 *.log
 Screens/
 tools/*.html
+tools/*.png
