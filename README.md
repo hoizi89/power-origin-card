@@ -163,7 +163,7 @@ filled but dimmed, so a bar that reads full is not read as available.
 | `battery.reserve_line` | marks where the reserve begins |
 | `battery.extra` | a second figure to the right: the day’s low and high, cycles today, what was not bought, or what was given out |
 | `battery.runtime` | how long the charge lasts, or when it is full |
-| `battery.full_from` | where the full time comes from: the charge rate of the last quarter hour, or the hourly forecast up to sunset. Either way a time that would land after sunset is not shown; the bar says “not full today” and, from the forecast, where the charge will stand at sunset |
+| `battery.full_from` | where the full time comes from: the charge rate of the last quarter hour, or the hourly forecast up to sunset. Either way a time that would land after sunset is not shown; the bar says “not full today” and, from the forecast, where the charge will stand at sunset. On a day the forecast is unsure of, its own two edges land far apart and the bar says a span rather than an hour |
 
 The bar gives up width for whatever stands to its right, and only ever one thing does.
 Everything but the low and high is worked out from readings the card already holds.

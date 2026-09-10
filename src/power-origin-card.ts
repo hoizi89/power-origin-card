@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, svg } from "lit";
-import { batteryView, fullFromForecast, fullVerdict, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
+import { batteryView, fullFromForecast, fullSpan, fullVerdict, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
 import { chartBars } from "./bars";
 import { CHART_BOX, chartGeometry } from "./chart";
 import { CARD_TYPE, resolveConfig, stubConfig } from "./config";
@@ -1776,11 +1776,25 @@ export class PowerOriginCard extends LitElement {
       if (slots.length) {
         const headroom = capacityKwh * Math.max(0, (100 - view.soc) / 100);
         const load = this._series?.houseAverage ?? powerKw(stateOf(hass, config.entities.house)) ?? 0;
-        const found = fullFromForecast(slots, now, headroom, load, sunUp ? setting : undefined);
+        const until = sunUp ? setting : undefined;
+        const found = fullFromForecast(slots, now, headroom, load, until);
+        const span = fullSpan(slots, now, headroom, load, until);
         if (found.at) {
           view.at = found.at;
           view.hours = (found.at.getTime() - now.getTime()) / 3600000;
           view.full = "forecast";
+          // An hour named to the minute out of a day that could go either way
+          // is a claim, not an answer. Past two hours apart, say the span; with
+          // no pessimistic end at all, say what it depends on.
+          const APART = 2 * 3600 * 1000;
+          if (span.edges && span.early) {
+            if (!span.late) view.full = "if_it_clears";
+            else if (span.late.getTime() - span.early.getTime() > APART) {
+              view.full = "between";
+              view.early = span.early;
+              view.late = span.late;
+            }
+          }
         } else {
           view.at = undefined;
           view.hours = undefined;
@@ -3021,7 +3035,13 @@ export class PowerOriginCard extends LitElement {
         : `${formatNumber(view.availableKwh, locale, 1)} kWh ${localize("battery.stored", locale)}`;
 
     if (view.mode === "charging") {
-      if (view.at) {
+      if (view.full === "between" && view.early && view.late) {
+        parts.push(
+          `${localize("battery.full_between", locale)} ${formatClock(view.early, locale)} ${localize("battery.and", locale)} ${formatClock(view.late, locale)}`
+        );
+      } else if (view.full === "if_it_clears") {
+        parts.push(localize("battery.full_if_it_clears", locale));
+      } else if (view.at) {
         const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
         parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
       } else if (view.full === "not_today") {

@@ -148,10 +148,16 @@ function hourlyRows(dayOffset: number, peakKw: number) {
   const midnight = new Date();
   midnight.setHours(0, 0, 0, 0);
   midnight.setDate(midnight.getDate() + dayOffset);
-  return Array.from({ length: 24 }, (_, hour) => ({
-    period_start: new Date(midnight.getTime() + hour * 3600000).toISOString(),
-    pv_estimate: Number((peakKw * Math.max(0, Math.sin(((hour - 6.5) / 13) * Math.PI))).toFixed(3))
-  }));
+  return Array.from({ length: 24 }, (_, hour) => {
+    const kw = peakKw * Math.max(0, Math.sin(((hour - 6.5) / 13) * Math.PI));
+    return {
+      period_start: new Date(midnight.getTime() + hour * 3600000).toISOString(),
+      pv_estimate: Number(kw.toFixed(3)),
+      // A day the forecast is fairly sure of: the two edges sit close.
+      pv_estimate10: Number((kw * 0.85).toFixed(3)),
+      pv_estimate90: Number((kw * 1.15).toFixed(3))
+    };
+  });
 }
 
 function statistics(scenario: Scenario, ids: string[], period?: string, startTime?: string) {

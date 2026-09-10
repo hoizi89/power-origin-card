@@ -28,7 +28,10 @@ export interface BatteryView {
   at?: Date;
   power?: number;
   /** Where the full time came from, or why there is none. */
-  full?: "rate" | "forecast" | "not_today";
+  full?: "rate" | "forecast" | "not_today" | "between" | "if_it_clears";
+  /** The two ends of the span, when the forecast's own edges land far apart. */
+  early?: Date;
+  late?: Date;
   /** Where the charge will stand at sunset when full is not on today's cards. */
   socAtSunset?: number;
 }
@@ -126,6 +129,9 @@ export interface ForecastSlot {
   start: number;
   /** Expected roof output through the hour, in kW. */
   kw: number;
+  /** The forecast's own pessimistic and optimistic edges for the hour, in kW. */
+  low?: number;
+  high?: number;
 }
 
 /**
@@ -139,7 +145,8 @@ export function fullFromForecast(
   now: Date,
   headroomKwh: number,
   loadKw: number,
-  sunset?: Date
+  sunset?: Date,
+  edge: "kw" | "low" | "high" = "kw"
 ): { at?: Date; reachedKwh: number } {
   const HOUR = 3600 * 1000;
   const end = sunset ? sunset.getTime() : Number.POSITIVE_INFINITY;
@@ -149,7 +156,7 @@ export function fullFromForecast(
     const from = Math.max(slot.start, now.getTime());
     const to = Math.min(slot.start + HOUR, end);
     if (to <= from) continue;
-    const surplus = Math.max(0, slot.kw - loadKw);
+    const surplus = Math.max(0, (slot[edge] ?? slot.kw) - loadKw);
     const gain = (surplus * (to - from)) / HOUR;
     if (headroomKwh > 0 && reached + gain >= headroomKwh) {
       const share = surplus > 0 ? (headroomKwh - reached) / surplus : 0;
@@ -165,6 +172,27 @@ export function fullFromForecast(
  * Past today's sunset the line runs through the night, and past a day it says
  * nothing at all. Both are the same answer: not today.
  */
+/**
+ * How sure the hour is. A forecast that publishes edges is asked how far
+ * apart its own two answers land; the hour it names means little when the
+ * pessimistic day never fills and the optimistic one fills by lunch.
+ */
+export function fullSpan(
+  slots: ForecastSlot[],
+  now: Date,
+  headroomKwh: number,
+  loadKw: number,
+  sunset?: Date
+): { early?: Date; late?: Date; edges: boolean } {
+  const edges = slots.some((slot) => slot.low !== undefined && slot.high !== undefined);
+  if (!edges) return { edges: false };
+  return {
+    early: fullFromForecast(slots, now, headroomKwh, loadKw, sunset, "high").at,
+    late: fullFromForecast(slots, now, headroomKwh, loadKw, sunset, "low").at,
+    edges: true
+  };
+}
+
 export function fullVerdict(
   at: Date | undefined,
   now: Date,

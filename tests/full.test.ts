@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { batteryView, fullFromForecast, fullVerdict } from "../src/battery";
+import { batteryView, fullFromForecast, fullSpan, fullVerdict } from "../src/battery";
 import { CARD_TYPE } from "../src/config";
 import { clearStatisticsCache } from "../src/stats";
 import type { PowerOriginCardConfig } from "../src/types";
@@ -38,6 +38,41 @@ describe("the full time from the forecast", () => {
     const found = fullFromForecast(slots, at(13), 3, 3.5);
     expect(found.at).toBeUndefined();
     expect(found.reachedKwh).toBe(0);
+  });
+});
+
+describe("how sure the hour is", () => {
+  const sure = [
+    { start: at(13).getTime(), kw: 3, low: 2.7, high: 3.3 },
+    { start: at(14).getTime(), kw: 3, low: 2.7, high: 3.3 }
+  ];
+  // The pessimistic day barely clears the house, the optimistic one races.
+  const wobbly = Array.from({ length: 8 }, (_, i) => ({
+    start: at(13 + i).getTime(),
+    kw: 3,
+    low: 1.4,
+    high: 6
+  }));
+
+  it("says nothing about a span when the forecast publishes no edges", () => {
+    expect(fullSpan([{ start: at(13).getTime(), kw: 3 }], at(13), 2, 1).edges).toBe(false);
+  });
+
+  it("keeps the two ends close on a day the forecast is sure of", () => {
+    const span = fullSpan(sure, at(13), 2, 1);
+    expect(span.edges).toBe(true);
+    expect(span.late!.getTime() - span.early!.getTime()).toBeLessThan(2 * HOUR);
+  });
+
+  it("pulls them apart when the two answers disagree", () => {
+    const span = fullSpan(wobbly, at(13), 2, 1);
+    expect(span.late!.getTime() - span.early!.getTime()).toBeGreaterThan(2 * HOUR);
+  });
+
+  it("leaves the late end open when the pessimistic day never fills", () => {
+    const span = fullSpan(wobbly, at(13), 8, 1, at(17));
+    expect(span.early).toBeDefined();
+    expect(span.late).toBeUndefined();
   });
 });
 
