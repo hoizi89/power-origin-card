@@ -3042,7 +3042,7 @@ export class PowerOriginCard extends LitElement {
                     height="${tall}" rx="${radius}"></rect>
               ${
                 segment.fill > 0
-                  ? svg`<rect class="bat-fill cell ${tone} ${held ? "held" : ""} ${night ? "night" : ""}"
+                  ? svg`<rect class="bat-fill cell ${tone} ${held ? "held" : ""}"
                               style="--i: ${index}"
                               x="${x}" y="${top}"
                               width="${Math.max(3, width * segment.fill)}" height="${tall}"

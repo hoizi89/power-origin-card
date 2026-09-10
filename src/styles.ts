@@ -1296,15 +1296,6 @@ export const cardStyles = css`
   }
 
   /* What the night will use stands back; what the morning keeps stays bright. */
-  .bat-fill.night {
-    opacity: 0.6;
-  }
-
-  .bat-night {
-    fill: var(--ha-card-background, #000);
-    opacity: 0.6;
-  }
-
   /* The charge over the night: what happened as a line, what will happen
      dashed, and the floor of the reserve to read both against. */
   .bat-curve {
