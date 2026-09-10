@@ -1381,7 +1381,13 @@ export const cardStyles = css`
     margin-top: 2px;
   }
 
-  /* Without its heading the block starts where the line above ends. */
+  /* Without its heading the block needs no line of its own either; it
+     hangs a little under whatever stands above. */
+  .wohin.bare {
+    border-top: 0;
+    padding-top: 0;
+  }
+
   .wohin.bare .wohin-rows,
   .wohin.bare .wohin-band,
   .wohin.bare .wohin-strip {

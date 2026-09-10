@@ -114,6 +114,7 @@ today:
 
 | Option | Default | What it does |
 | --- | --- | --- |
+| `sections.order` | ring, chart, week, battery, today, devices | The blocks top to bottom. Name the ones you want first, in that order; the rest follow as usual. In the wide shape the ring keeps its side whatever the order says. |
 | `text_scale` | `1` | Multiplies every type size at once. |
 | `shape` | `standard` | The card's shape: `standard` as it is; `wide` with the ring and its columns on the left and the day, the battery and the rest on the right, for a panel; `compact` as one row — the ring small, three figures (roof, grid, battery) and the chip. |
 | `wide_from` | `640` | From this many pixels of card width the wide shape takes hold; narrower it stacks as usual, and below 560 px it stacks in any case, since two columns need the room. |

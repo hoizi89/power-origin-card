@@ -821,15 +821,20 @@ export class PowerOriginCard extends LitElement {
               const ring = config.sections.ring
                 ? this._renderRing(flow, locale, config.ring.import_switch && alarm, quiet)
                 : nothing;
-              const rest = html`
-                ${config.sections.chart ? this._renderChart(locale, quiet) : nothing}
-                ${config.sections.week && !quiet ? this._renderWeek(locale) : nothing}
-                ${config.sections.battery ? this._renderBattery(locale) : nothing}
-                ${config.sections.today && !quiet ? this._renderToday(flow, locale) : nothing}
-                ${config.sections.devices && !quiet ? this._renderDevices(locale) : nothing}`;
+              const blocks = {
+                ring,
+                chart: config.sections.chart ? this._renderChart(locale, quiet) : nothing,
+                week: config.sections.week && !quiet ? this._renderWeek(locale) : nothing,
+                battery: config.sections.battery ? this._renderBattery(locale) : nothing,
+                today: config.sections.today && !quiet ? this._renderToday(flow, locale) : nothing,
+                devices: config.sections.devices && !quiet ? this._renderDevices(locale) : nothing
+              };
+              const order = config.sections.order;
+              // Wide keeps the ring on its own side, whatever the order says.
               return config.shape === "wide" && this._wideOn
-                ? html`<div class="side">${ring}</div><div class="main">${rest}</div>`
-                : html`${ring}${rest}`;
+                ? html`<div class="side">${ring}</div>
+                    <div class="main">${order.filter((b) => b !== "ring").map((b) => blocks[b])}</div>`
+                : html`${order.map((b) => blocks[b])}`;
             })()}
       </ha-card>
     `;
@@ -1704,13 +1709,21 @@ export class PowerOriginCard extends LitElement {
     const height = METER_HEIGHT * shareNow;
     const shadow = METER_HEIGHT * sharePeak;
 
+    // Today's best is a mark at its height inside the column; only when it is
+    // the top of the column itself does it stand above as the figure.
+    const peakAtTop = sharePeak >= 0.995;
     return html`
       <div class="meter-block">
-        ${showPeak && peak > 0
+        ${showPeak && peak > 0 && peakAtTop
           ? html`<span class="meter-top">${formatPower(peak, locale)} kW</span>`
           : nothing}
         <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.roof", locale)}">
+          ${showPeak && peak > 0 && !peakAtTop
+            ? svg`<line class="range-mark" x1="4" x2="84"
+                y1="${(METER_HEIGHT * (1 - sharePeak)).toFixed(1)}"
+                y2="${(METER_HEIGHT * (1 - sharePeak)).toFixed(1)}"></line>`
+            : nothing}
           ${drawn === "blocks"
             ? this._cells(shareNow, "fill-sun", steps, { shadow: sharePeak })
             : svg`

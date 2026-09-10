@@ -125,6 +125,8 @@ The card has three shapes (`shape`): as it is; `wide`, with the ring and its col
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/shapes.png" alt="The wide shape for a panel, the compact row, and the quiet night" width="700">
 
+Any block can be switched off, and the blocks can stand in any order: `sections.order` names the ones you want first, the rest follow as usual.
+
 ## The corner
 
 The chip in the corner can say the day's self-supplied share instead of the state (`chip_shows: autarky`), and it can turn red with the kilowatts once the house has drawn from the grid for two minutes (`chip_alarm`), letting go five minutes after the draw ends. Beside the title, `head_price` puts this hour's import price, green under the day's mean and red over it. Without the day chart, `head_sunbar` draws the sun's day as a line under the heading, and the night at night.

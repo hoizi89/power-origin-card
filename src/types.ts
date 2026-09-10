@@ -121,7 +121,11 @@ export interface PowerOriginEntities {
   amortisation?: string;
 }
 
+export type BlockName = "ring" | "chart" | "week" | "battery" | "today" | "devices";
+
 export interface SectionToggles {
+  /** The blocks top to bottom; any not named follow in the usual order. */
+  order?: BlockName[];
   ring?: boolean;
   chart?: boolean;
   battery?: boolean;

@@ -208,7 +208,9 @@ describe("every setting the editor offers changes something", () => {
         get(resolved, field.path.slice(-1));
       // A number is judged as a field: one value that lands between two readings
       // proves nothing, and a limit above the count has nothing to cut.
-      const perValue = kind !== "number";
+      // A list picked in order is judged as a field too: its first
+      // alternative may well be the order the card already has.
+      const perValue = kind !== "number" && !(field.selector[kind] as Record<string, unknown>)?.multiple;
       let anyChanged = false;
       // A night subject equal to the day subject draws the same column twice;
       // that is the value being the same, not the setting being dead.

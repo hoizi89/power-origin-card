@@ -1,5 +1,6 @@
 import { localize } from "./localize";
 import type {
+  BlockName,
   LegacyRingOptions,
   MeterDrawn,
   MeterShows,
@@ -29,7 +30,8 @@ export const DEFAULTS = {
   battery_invert: false,
   grid_invert: false,
   sections: { ring: true, chart: true, battery: true, today: true,
-    devices: true, week: false },
+    devices: true, week: false,
+    order: ["ring", "chart", "week", "battery", "today", "devices"] as BlockName[] },
   ring: {
     center: "power" as const,
     center_dark: "power" as const,
@@ -235,7 +237,18 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     battery_invert:
       config.entities?.battery_invert ?? config.battery_invert ?? DEFAULTS.battery_invert,
     grid_invert: config.entities?.grid_invert ?? config.grid_invert ?? DEFAULTS.grid_invert,
-    sections: { ...DEFAULTS.sections, ...config.sections },
+    sections: {
+      ...DEFAULTS.sections,
+      ...config.sections,
+      // Named blocks come first in the order named; the rest keep their places.
+      order: (() => {
+        const all = DEFAULTS.sections.order;
+        const chosen = (config.sections?.order ?? []).filter(
+          (block, index, list) => all.includes(block) && list.indexOf(block) === index
+        );
+        return [...chosen, ...all.filter((block) => !chosen.includes(block))];
+      })()
+    },
     ring: {
       ...DEFAULTS.ring,
       ...config.ring,
@@ -871,6 +884,24 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               selector: { boolean: {} }
             })
           ]
+        },
+        // Picked in the order they should stand; what is not picked follows.
+        {
+          name: "order",
+          selector: {
+            select: {
+              multiple: true,
+              mode: "dropdown",
+              options: [
+                { value: "ring", label: t("editor.section_ring") },
+                { value: "chart", label: t("editor.section_chart") },
+                { value: "battery", label: t("editor.section_battery") },
+                { value: "today", label: t("editor.section_today") },
+                { value: "devices", label: t("editor.section_devices") },
+                { value: "week", label: t("editor.section_week") }
+              ]
+            }
+          }
         }
       ]
     },
@@ -1482,6 +1513,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     price_import: t("editor.price_import"),
     price_export: t("editor.price_export"),
     sections: t("editor.sections"),
+    order: t("editor.order"),
     ring: t("editor.section_ring"),
     chart: t("editor.section_chart"),
     battery: t("editor.section_battery"),
@@ -1606,6 +1638,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     animate: t("editor.help_animate"),
     full_from: t("editor.help_full_from"),
     palette: t("editor.help_palette"),
+    order: t("editor.help_order"),
     limit: t("editor.help_limit"),
     head: t("editor.help_devices_head"),
     colours: t("editor.help_devices_colours"),
