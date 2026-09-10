@@ -67,19 +67,23 @@ export const cardStyles = css`
     justify-content: flex-end;
   }
 
-  /* With nothing to the right of the ring the chip has a whole row to itself,
-     which is a row of height for one word. It floats into the corner instead. */
-  @container (min-width: 340px) {
-    .head.bare.float {
-      position: absolute;
-      top: 14px;
-      right: 16px;
-      z-index: 1;
-    }
+  /* The chip in the ring's own corner: one word never takes a row of its
+     own, and it goes where the ring goes. */
+  .ring-block.chipped {
+    position: relative;
+  }
 
-    /* and the pair steps aside far enough not to sit under it */
-    .head.bare.float + .ring-block {
-      padding-right: 26px;
+  .ring-block.chipped > .chip {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+  }
+
+  @container (max-width: 339px) {
+    .ring-block.chipped > .chip {
+      position: static;
+      align-self: flex-end;
     }
   }
 
@@ -716,14 +720,23 @@ export const cardStyles = css`
     fill: var(--sst-track);
   }
 
+  /* The money keeps its panel wherever it stands: the figures belong
+     together. Only as the card's foot does it reach the edges. */
   .today {
-    margin: 2px -16px 0;
-    padding: 14px 16px 15px;
-    background: var(--sst-inset);
-    border-top: 1px solid var(--sst-hairline);
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-top: 2px;
+    padding: 14px;
+    border-radius: 10px;
+    background: var(--sst-inset);
+  }
+
+  .today.foot {
+    margin: 2px -16px 0;
+    padding: 14px 16px 15px;
+    border-radius: 0;
+    border-top: 1px solid var(--sst-hairline);
   }
 
   /* A day in credit is worth a hairline of its own. */

@@ -40,6 +40,33 @@ async function mount(cfg: PowerOriginCardConfig, scenario: Scenario, width = 900
   return { element, root: element.shadowRoot as ShadowRoot };
 }
 
+describe("the chip and the foot", () => {
+  it("rides in the ring's corner when the head would hold nothing else", async () => {
+    const bare = await mount(
+      config({ title: undefined, ring: { facts: "none", columns: "one", meter_shows: "grid" } }),
+      day
+    );
+    expect(bare.root.querySelector(".ring-block.chipped > .chip")).toBeTruthy();
+    expect(bare.root.querySelector(".head")).toBeNull();
+
+    const titled = await mount(
+      config({ ring: { facts: "none", columns: "one", meter_shows: "grid" } }),
+      day
+    );
+    expect(titled.root.querySelector(".head .chip")).toBeTruthy();
+    expect(titled.root.querySelector(".ring-block.chipped")).toBeNull();
+  });
+
+  it("lets the day reach the card edges only where it stands last", async () => {
+    const last = await mount(config({ sections: { devices: false } }), day);
+    expect(last.root.querySelector(".today.foot")).toBeTruthy();
+    // Moved up the order it keeps its panel but stops being the foot.
+    const middle = await mount(config({ sections: { order: ["today"] as never } }), day);
+    expect(middle.root.querySelector(".today")).toBeTruthy();
+    expect(middle.root.querySelector(".today.foot")).toBeNull();
+  });
+});
+
 describe("the order of the blocks", () => {
   it("puts the named ones first and lets the rest follow", async () => {
     const { blockOrder, resolveConfig } = await import("../src/config");
