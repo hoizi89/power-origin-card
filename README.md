@@ -174,15 +174,15 @@ Everything but the low and high is worked out from readings the card already hol
 
 The ring says where the house's power comes from. This block says where it goes.
 
-<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/devices.png" alt="The house load split by device: a bar with icons, and an icon row with levels" width="700">
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/devices.png" alt="The house load split by device: rows with a bar each, and the same as one band" width="700">
 
-Left, a bar: the house load now, split by device, with the part no device accounts for as *rest* — which is often the most interesting number on it. Right, the same as icons with a level each; what is off goes dim. Names and watts appear on tap.
+A bar chart lying down: one device a row, the biggest first, with a bar for its share of the house and the figure beside it. The part no device accounts for is the last row, *rest*, with how many devices it holds — often the most interesting number on it. The same ranking is also there as one band with the names below, or as icons on a grid with a level each; what is off goes dim.
 
 **You configure nothing.** Home Assistant's Energy dashboard already lists your devices with a live power sensor each; the editor's *Take what the Energy dashboard knows* button adopts them, names included. The card never searches your sensors on its own — that list holds phase readings, switches at 0.0 and a fitness tracker's watts per kilo, and none of those are devices.
 
-Four ways to look at them, each off by default: `devices.style: tiles` for one tile per device, readable from across the room; `devices.top` for the biggest as a row of its own, with how long it has been drawing and what it cost today; `devices.spark` for a line per device over the last hour; and by room (`devices.group: area`), where a tap on a room opens the devices standing in it. An icon can be chosen per device in the editor, under *Icons*.
+Three more ways to look at them, each off by default: `devices.top` for the biggest as a row of its own, with how long it has been drawing and what it cost today; `devices.spark` for a line per device over the last hour in place of its bar; and by room (`devices.group: area`), where a tap on a room opens the devices standing in it. An icon can be chosen per device in the editor, under *Icons*.
 
-<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/wohin.png" alt="The devices as tiles, as rows with the biggest on top and a line each, and by room" width="700">
+<img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/wohin.png" alt="The devices as icons on a grid, as rows with the biggest on top and a line each, and by room" width="700">
 
 Two periods, one setting: **now**, averaged over a window (fifteen minutes by default) so a kettle does not light up as a hog, or **today**, read from each device's meter since midnight. Grouping by **room** sums the devices standing in one, from the device registry. Anything under a threshold folds into the rest, and at most a handful are named — both adjustable.
 

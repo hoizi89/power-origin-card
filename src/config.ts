@@ -102,7 +102,7 @@ export const DEFAULTS = {
     mode: "now" as const,
     window: 15,
     energy: {} as Record<string, string>,
-    style: "both" as const,
+    style: "rows" as const,
     values: true,
     group: "device" as const,
     limit: 5,
@@ -277,7 +277,14 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       mode: config.devices?.mode ?? DEFAULTS.devices.mode,
       window: config.devices?.window ?? DEFAULTS.devices.window,
       energy: { ...DEFAULTS.devices.energy, ...config.devices?.energy },
-      style: config.devices?.style ?? DEFAULTS.devices.style,
+      // The bar and the bar-with-names were two names for one strip; the
+      // tiles said what the rows say now. A card written for any of them reads.
+      style: (() => {
+        const chosen = config.devices?.style;
+        if (chosen === "bar" || chosen === "both") return "band" as const;
+        if (chosen === "tiles") return "rows" as const;
+        return chosen ?? DEFAULTS.devices.style;
+      })(),
       values: config.devices?.values ?? DEFAULTS.devices.values,
       group: config.devices?.group ?? DEFAULTS.devices.group,
       limit: config.devices?.limit ?? DEFAULTS.devices.limit,
@@ -1270,10 +1277,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 select: {
                   mode: "dropdown",
                   options: [
-                    { value: "both", label: t("editor.devices_both") },
-                    { value: "bar", label: t("editor.devices_bar") },
-                    { value: "icons", label: t("editor.devices_icons") },
-                    { value: "tiles", label: t("editor.devices_tiles") }
+                    { value: "rows", label: t("editor.devices_rows") },
+                    { value: "band", label: t("editor.devices_band") },
+                    { value: "icons", label: t("editor.devices_icons") }
                   ]
                 }
               }
@@ -1281,12 +1287,14 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             {
               type: "grid",
               schema: [
-                ...only((resolved) => resolved.devices.mode === "now", {
-                  name: "top",
-                  selector: { boolean: {} }
-                }),
+                // The biggest as a row of its own sits above a list; icons are
+                // no list. A line each needs a row to sit in.
                 ...only(
                   (resolved) => resolved.devices.mode === "now" && resolved.devices.style !== "icons",
+                  { name: "top", selector: { boolean: {} } }
+                ),
+                ...only(
+                  (resolved) => resolved.devices.mode === "now" && resolved.devices.style === "rows",
                   { name: "spark", selector: { boolean: {} } }
                 )
               ]

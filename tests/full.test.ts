@@ -173,8 +173,8 @@ describe("what the battery block says while charging", () => {
   it("says where the charge will stand at sunset when the forecast cannot fill it", async () => {
     const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
     const { note } = await mount(config({ battery: { full_from: "forecast" } }), hungry);
-    expect(note()).toContain("Heute nicht mehr voll");
-    expect(note()).toMatch(/etwa \d+ % bei Sonnenuntergang/);
+    expect(note()).not.toContain("Heute nicht mehr voll");
+    expect(note()).toMatch(/Etwa \d+ % bei Sonnenuntergang/);
   });
 });
 

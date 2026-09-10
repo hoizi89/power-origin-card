@@ -911,9 +911,9 @@ describe("where the power goes", () => {
     });
 
   it("splits the house into the named devices and the rest", async () => {
-    const { root, text } = await render(withDevices({ style: "bar" }), SCENARIOS[0]);
-    expect(root.querySelectorAll(".wohin-seg:not(.rest)").length).toBe(1);
-    expect(root.querySelector(".wohin-seg.rest")).toBeTruthy();
+    const { root, text } = await render(withDevices({ style: "band" }), SCENARIOS[0]);
+    expect(root.querySelectorAll(".wohin-band i:not(.rest)").length).toBe(1);
+    expect(root.querySelector(".wohin-band i.rest")).toBeTruthy();
     expect(text).toContain("Rest");
     expect(text).toContain("167 W");
     expect(text).not.toContain("ghost");
@@ -999,9 +999,9 @@ describe("when the house sensor is silent", () => {
 
 describe("the devices block and the rest of the card", () => {
   it("never borrows a class the card already uses for something else", async () => {
-    for (const style of ["bar", "icons", "both"]) {
+    for (const style of ["rows", "icons", "band"]) {
       const { root } = await render(
-        baseConfig({ devices: { list: ["sensor.desk_power"], style: style as "bar" } }),
+        baseConfig({ devices: { list: ["sensor.desk_power"], style: style as "rows" } }),
         SCENARIOS[0]
       );
       const block = root.querySelector(".wohin")!;

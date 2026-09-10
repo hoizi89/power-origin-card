@@ -286,9 +286,9 @@ devices:
 | `devices.list` | `[]` | The live power sensors, one per device. The editor's adopt button takes them from the Energy dashboard's device list. |
 | `devices.mode` | `now` | `now` averages each sensor over the window; `today` sums each device's meter since midnight. Offered only once meters are known. |
 | `devices.window` | `15` | Minutes the live readings are averaged over. |
-| `devices.style` | `both` | `both` a bar with the names below carrying their icons, `bar` a plain bar, `icons` an icon per device with a level, `tiles` one tile per device — icon, name and watts, the biggest first, the quiet ones dim. |
+| `devices.style` | `rows` | `rows` a bar chart lying down: icon, name, a bar for the share of the house and the figure, one device a row, the rest last with how many it holds. `band` the house load as one strip, the biggest first, with the names below keyed by shade. `icons` an icon per device on a fixed grid, with a level and the figure under the ones that draw. The older `bar` and `both` read as `band`, `tiles` as `rows`. |
 | `devices.top` | `false` | The biggest device as a row of its own above the list, with how long it has been drawing (from its last three hours, five minutes at a time) and what it cost today (its meter times the import price). It leaves the list below, so it never stands there twice. |
-| `devices.spark` | `false` | A line per device for the last hour beside its name: the fridge's rhythm, the heat pump's ramp, the kettle's spike. Turns the name list into rows. |
+| `devices.spark` | `false` | A line per device for the last hour in place of its bar: the fridge's rhythm, the heat pump's ramp, the kettle's spike. Rows only. |
 | `devices.icons` | `{}` | An icon chosen per device, by entity — in the editor one field per device under *Icons*, written as `icon:<entity>` keys. A chosen icon beats the one set on the entity, which beats the one read off the name. |
 | `devices.values` | `true` | Print watts (or kWh) beside the names. |
 | `devices.group` | `device` | `area` sums devices by the room they stand in; a tap on a room opens the devices standing in it. |

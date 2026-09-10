@@ -310,7 +310,7 @@ const shots = {
     const row = document.createElement("div");
     row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(2, 400px)"; row.style.gap = "16px";
     stage.append(row);
-    for (const style of ["both", "icons"]) {
+    for (const style of ["rows", "band"]) {
       const cell = document.createElement("div"); row.append(cell);
       const ids = freshIds();
       const el = document.createElement("power-origin-card");
@@ -318,10 +318,19 @@ const shots = {
         type: "custom:power-origin-card", title: "", chip: "never",
         entities: { ...ids },
         sections: { ring: false, chart: false, battery: false, today: false, devices: true },
-        devices: { list: DEV.map((d) => d[0]), names: Object.fromEntries(DEV.map((d) => [d[0], d[1]])), style, values: style === "both" }
+        devices: { list: DEV.map((d) => d[0]), names: Object.fromEntries(DEV.map((d) => [d[0], d[1]])), style, values: true }
       });
       const h = hass(ids, { ...MIDDAY, house: 3420 }, false);
       for (const [id, , w] of DEV) h.states[id] = entity(id, w, "W", "power");
+      // The recorder answers each device with its own draw, not the house's.
+      const mine = Object.fromEntries(DEV.map((d) => [d[0], d[2]]));
+      mine[ids.house] = 3420;
+      const base = h.callWS;
+      h.callWS = async (m) => {
+        const out = await base(m);
+        if (m.type === "recorder/statistics_during_period") for (const id of m.statistic_ids) if (out[id] && id in mine) out[id] = out[id].map((r) => ({ ...r, mean: mine[id] }));
+        return out;
+      };
       el.hass = h;
       cell.append(el);
     }`
@@ -519,9 +528,9 @@ shots["wohin"] = {
     row.style.display = "grid"; row.style.gridTemplateColumns = "repeat(3, 300px)"; row.style.gap = "14px";
     stage.append(row);
     for (const cfg of [
-      { devices: { style: "tiles" } },
-      { devices: { style: "both", top: true, spark: true, energy: { "sensor.wp_power": "sensor.wp_energy" } } },
-      { devices: { style: "bar", group: "area" } }
+      { devices: { style: "icons" } },
+      { devices: { style: "rows", top: true, spark: true, energy: { "sensor.wp_power": "sensor.wp_energy" } } },
+      { devices: { style: "rows", group: "area" } }
     ]) {
       const cell = document.createElement("div"); row.append(cell);
       const ids = freshIds();

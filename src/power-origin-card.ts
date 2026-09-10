@@ -1831,11 +1831,13 @@ export class PowerOriginCard extends LitElement {
       const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
       parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
     } else if (view.full === "not_today") {
-      parts.push(localize("battery.not_full_today", locale));
+      // Where it ends up at sunset says on its own that full is not on today's cards.
       if (view.socAtSunset !== undefined) {
         parts.push(
           `${localize("battery.about", locale)} ${formatNumber(view.socAtSunset, locale, 0)} % ${localize("battery.at_sunset", locale)}`
         );
+      } else {
+        parts.push(localize("battery.not_full_today", locale));
       }
     }
     return parts;
@@ -3235,11 +3237,11 @@ export class PowerOriginCard extends LitElement {
     // The ring's centre is the house load already; the head repeats nothing.
     const houseShown = house !== undefined && !(config.sections.ring && this._centreShown === "power");
 
-    // The biggest as a row of its own: since when it has been drawing, and
-    // what it cost today. It leaves the list, or it would stand there twice.
     const hass = this._hass as HomeAssistant;
     const price = numberOf(stateOf(hass, config.entities.price_import));
-    const topRow = !today && config.devices.top && !rooms ? ranking.named[0] : undefined;
+    // The biggest as a row of its own: since when it has been drawing, and
+    // what it cost today. It leaves the list, or it would stand there twice.
+    const topRow = !today && config.devices.top && !rooms && style !== "icons" ? ranking.named[0] : undefined;
     const listed = topRow ? ranking.named.slice(1) : ranking.named;
     const seriesOf = (id: string) => this._deviceSeries?.[id] ?? [];
     const toWatts = (id: string, value: number) =>
@@ -3286,7 +3288,7 @@ export class PowerOriginCard extends LitElement {
         .join(" ");
       return html`<svg class="spark" viewBox="0 0 60 18" aria-hidden="true"><polyline points="${points}"></polyline></svg>`;
     };
-    const showSpark = !today && config.devices.spark && style !== "icons";
+    const showSpark = !today && config.devices.spark && style === "rows";
 
     // Rooms open on a tap to the devices standing in them.
     const members = (r: DeviceReading) =>
@@ -3301,79 +3303,69 @@ export class PowerOriginCard extends LitElement {
       this._openArea = this._openArea === r.name ? undefined : r.name;
     };
 
-    const tiles = style === "tiles"
-      ? html`<div class="wohin-grid">
-          ${[...listed, ...ranking.small].map((r) => {
-            const on = (r.watts ?? 0) >= (today ? 0.1 : config.devices.threshold);
-            return tap(
-              r,
-              html`<div class="tile ${on ? "" : "off"} ${rooms ? "room" : ""}" @click=${openRoom(r)}>
-                <ha-icon icon="${r.icon}"></ha-icon>
-                <span class="tile-name">${r.name}</span>
-                <b>${w(r.watts ?? 0)}</b>
-                ${members(r)}
-              </div>`
-            );
-          })}
-        </div>`
-      : nothing;
+    // Every share is of the house; without a house reading, of the biggest.
+    const whole = house && house > 0 ? house : Math.max(1, ranking.named[0]?.watts ?? 1);
+    const share = (watts: number) => `${Math.min(100, (100 * watts) / whole).toFixed(1)}%`;
+    const restCount = ranking.small.length;
+    const restLabel = restCount
+      ? `${localize("devices.rest", locale)} · ${restCount} ${localize(restCount === 1 ? "devices.one" : "devices.many", locale)}`
+      : localize("devices.rest", locale);
 
-    const bar = style !== "icons" && style !== "tiles" && house
-      ? html`<div class="wohin-bar">
-          ${ranking.named.map(
-            (r, i) => html`<span class="wohin-seg"
-              style="width: ${((100 * (r.watts ?? 0)) / house).toFixed(2)}%; opacity: ${(1 - i * 0.15).toFixed(2)}"
-              title="${r.name} ${w(r.watts ?? 0)}"
-            ></span>`
+    // Rows: a bar chart lying down, one device a line, the rest as the last.
+    const rowsBlock = style === "rows"
+      ? html`<div class="wohin-rows">
+          ${listed.map((r) =>
+            tap(
+              r,
+              html`<div class="wr ${rooms ? "room" : ""}" @click=${openRoom(r)}>
+                <ha-icon icon="${r.icon}"></ha-icon>
+                <span class="wr-name">${r.name}</span>
+                ${showSpark ? spark(r.id) : html`<span class="wr-bar"><i style="width: ${share(r.watts ?? 0)}"></i></span>`}
+                ${values ? html`<b>${w(r.watts ?? 0)}</b>` : nothing}
+              </div>${members(r)}`
+            )
           )}
           ${ranking.rest
-            ? html`<span class="wohin-seg rest" style="width: ${((100 * ranking.rest) / house).toFixed(2)}%"></span>`
+            ? html`<div class="wr rest">
+                <span></span>
+                <span class="wr-name">${restLabel}</span>
+                ${showSpark ? html`<span></span>` : html`<span class="wr-bar"><i style="width: ${share(ranking.rest)}"></i></span>`}
+                ${values ? html`<b>${w(ranking.rest)}</b>` : nothing}
+              </div>`
             : nothing}
         </div>`
       : nothing;
 
-    const keys = style === "icons" || style === "tiles"
-      ? nothing
-      : showSpark
-        ? html`<div class="wohin-rows">
-            ${listed.map((r) =>
+    // Band: the house load as one strip, the biggest first, the legend keyed by shade.
+    const shade = (i: number) => Math.max(0.25, 1 - i * 0.18).toFixed(2);
+    const bandBlock = style === "band"
+      ? html`<div class="wohin-band">
+            ${ranking.named.map(
+              (r, i) => html`<i style="width: ${share(r.watts ?? 0)}; opacity: ${shade(i)}" title="${r.name} ${w(r.watts ?? 0)}"></i>`
+            )}
+            ${ranking.rest ? html`<i class="rest" style="width: ${share(ranking.rest)}"></i>` : nothing}
+          </div>
+          <div class="wohin-legend">
+            ${listed.map((r, i) =>
               tap(
                 r,
-                html`<div class="wohin-row ${rooms ? "room" : ""}" @click=${openRoom(r)}>
-                  <ha-icon icon="${r.icon}"></ha-icon>
-                  <span class="wohin-row-name">${r.name}</span>
-                  ${spark(r.id)}
-                  ${values ? html`<b>${w(r.watts ?? 0)}</b>` : nothing}
-                </div>${members(r)}`
+                html`<span class="${rooms ? "room" : ""}" @click=${openRoom(r)}
+                  ><i class="sw" style="opacity: ${shade(i + (topRow ? 1 : 0))}"></i>${r.name}${values
+                    ? html` <b>${w(r.watts ?? 0)}</b>`
+                    : nothing}</span
+                >${members(r)}`
               )
             )}
             ${ranking.rest
-              ? html`<div class="wohin-row rest"><span class="wohin-row-name">${localize("devices.rest", locale)}</span>${values
-                  ? html`<b>${w(ranking.rest)}</b>`
-                  : nothing}</div>`
+              ? html`<span class="rest">${localize("devices.rest", locale)}${values ? html` <b>${w(ranking.rest)}</b>` : nothing}</span>`
               : nothing}
           </div>`
-        : html`<div class="wohin-keys">
-            ${listed.map((r) =>
-              tap(
-                r,
-                html`<span class="${rooms ? "room" : ""}" @click=${openRoom(r)}>${style === "both"
-                    ? html`<ha-icon icon="${r.icon}"></ha-icon>`
-                    : nothing}${r.name}${values
-                  ? html` <b>${w(r.watts ?? 0)}</b>`
-                  : nothing}</span>${members(r)}`
-              )
-            )}
-            ${ranking.rest
-              ? html`<span class="rest">${localize("devices.rest", locale)}${values
-                  ? html` <b>${w(ranking.rest)}</b>`
-                  : nothing}</span>`
-              : nothing}
-          </div>`;
+      : nothing;
 
+    // Icons on a fixed grid, the level under each, the figure under the ones that draw.
     const top = ranking.named[0]?.watts || 1;
     const icons = style === "icons"
-      ? html`<div class="wohin-icons">
+      ? html`<div class="wohin-strip">
           ${[...ranking.named, ...ranking.small].map((r) => {
             const on = (r.watts ?? 0) >= (today ? 0.1 : config.devices.threshold);
             return tap(
@@ -3401,7 +3393,7 @@ export class PowerOriginCard extends LitElement {
               : nothing}</span
           >
         </div>
-        ${topBlock}${tiles}${bar}${keys}${icons}
+        ${topBlock}${rowsBlock}${bandBlock}${icons}
       </div>
     `;
   }

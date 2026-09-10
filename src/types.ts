@@ -236,7 +236,9 @@ export interface BatteryOptions {
   full_from?: BatteryFullFrom;
 }
 
-export type DevicesStyle = "icons" | "bar" | "both" | "tiles";
+export type DevicesStyle = "rows" | "band" | "icons";
+/** Names the block went by before: the two bars read as the band, the tiles as rows. */
+export type LegacyDevicesStyle = "bar" | "both" | "tiles";
 export type DevicesGroup = "device" | "area";
 export type DevicesMode = "now" | "today";
 
@@ -251,7 +253,7 @@ export interface DevicesOptions {
   window?: number;
   /** The meter behind each power sensor, by entity, for the day's total. */
   energy?: Record<string, string>;
-  style?: DevicesStyle;
+  style?: DevicesStyle | LegacyDevicesStyle;
   /** Print the watts beside the names. */
   values?: boolean;
   group?: DevicesGroup;
@@ -335,7 +337,7 @@ export interface ResolvedConfig extends Required<Omit<PowerOriginCardConfig, "ti
   chart: Required<ChartOptions>;
   battery: Required<BatteryOptions>;
   today: Required<TodayOptions> & { stats_chosen: boolean };
-  devices: Required<DevicesOptions>;
+  devices: Required<Omit<DevicesOptions, "style">> & { style: DevicesStyle };
 }
 
 export interface StatisticPoint {

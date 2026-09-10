@@ -72,13 +72,56 @@ describe("icons chosen for devices", () => {
   });
 });
 
-describe("tiles", () => {
-  it("stand one per device, the biggest first, the quiet ones dim", async () => {
-    const { root } = await mount(config({ style: "tiles" }), day);
-    const tiles = [...root.querySelectorAll(".tile")];
-    expect(tiles.length).toBe(4);
-    expect(tiles[0].textContent).toContain("oven");
-    expect(root.querySelectorAll(".tile.off").length).toBe(1);
+describe("rows", () => {
+  it("stand one per device, the biggest first, the rest last with its count", async () => {
+    const { root } = await mount(config({}), day);
+    const rows = [...root.querySelectorAll(".wr")];
+    expect(rows.length).toBeGreaterThan(2);
+    expect(rows[0].textContent).toContain("oven");
+    expect(rows[0].querySelector(".wr-bar i")).toBeTruthy();
+    // The rest stands last when the named devices leave any; a house the
+    // devices account for in full has none.
+    const rest = root.querySelectorAll(".wr.rest");
+    expect(rest.length).toBeLessThanOrEqual(1);
+    if (rest.length) {
+      expect(rows.at(-1)?.classList.contains("rest")).toBe(true);
+      expect(rows.at(-1)?.textContent).toMatch(/Rest/);
+    }
+  });
+
+  it("give the biggest the widest bar", async () => {
+    const { root } = await mount(config({}), day);
+    const widths = [...root.querySelectorAll(".wr:not(.rest) .wr-bar i")].map((i) =>
+      parseFloat((i as HTMLElement).style.width)
+    );
+    expect(widths[0]).toBeGreaterThan(widths[1]);
+  });
+});
+
+describe("the band", () => {
+  it("is one strip with a legend keyed by shade", async () => {
+    const { root } = await mount(config({ style: "band" }), day);
+    expect(root.querySelectorAll(".wohin-band i").length).toBeGreaterThan(2);
+    expect(root.querySelectorAll(".wohin-legend .sw").length).toBeGreaterThan(1);
+    expect(root.querySelector(".wohin-band ha-icon")).toBeNull();
+  });
+
+  it("is what the two old bars and the tiles become", () => {
+    for (const legacy of ["bar", "both"] as const) {
+      expect(resolveConfig(config({ style: legacy })).devices.style).toBe("band");
+    }
+    expect(resolveConfig(config({ style: "tiles" })).devices.style).toBe("rows");
+  });
+});
+
+describe("icons", () => {
+  it("sit on a grid, the quiet ones dim, the figure under the ones that draw", async () => {
+    const { root } = await mount(config({ style: "icons" }), day);
+    expect(root.querySelector(".wohin-strip")).toBeTruthy();
+    const devs = [...root.querySelectorAll(".dev")];
+    expect(devs.length).toBe(4);
+    expect(root.querySelectorAll(".dev.off").length).toBe(1);
+    expect(devs[0].querySelector("small")?.textContent).toMatch(/W/);
   });
 });
 
@@ -89,14 +132,14 @@ describe("the biggest as a row of its own", () => {
     expect(root.querySelector(".wohin-top")?.textContent).toContain("oven");
     expect(text()).toContain("seit");
     expect(text()).toContain("€ heute");
-    expect(root.querySelector(".wohin-keys")?.textContent).not.toContain("oven");
+    expect(root.querySelector(".wohin-rows")?.textContent).not.toContain("oven");
   });
 });
 
 describe("a line per device", () => {
   it("draws the last hour beside each name", async () => {
     const { root } = await mount(config({ spark: true }), day);
-    expect(root.querySelectorAll(".wohin-row").length).toBeGreaterThan(2);
+    expect(root.querySelectorAll(".wr").length).toBeGreaterThan(2);
     expect(root.querySelectorAll(".spark polyline").length).toBeGreaterThan(2);
   });
 });
@@ -105,7 +148,7 @@ describe("rooms", () => {
   it("open on a tap to the devices standing in them", async () => {
     const { element, root } = await mount(config({ group: "area" }), day);
     expect(root.querySelector(".wohin-sub")).toBeNull();
-    const room = [...root.querySelectorAll(".wohin-keys .room")].find((r) => r.textContent?.includes("Büro")) as HTMLElement;
+    const room = [...root.querySelectorAll(".wr.room")].find((r) => r.textContent?.includes("Büro")) as HTMLElement;
     room.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await element.updateComplete;
     expect(root.querySelector(".wohin-sub")?.textContent).toContain("desk");

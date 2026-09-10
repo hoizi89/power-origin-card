@@ -1374,27 +1374,96 @@ export const cardStyles = css`
 
   /* Where the power goes: the house split by device, in the house's own
      colour. Brightness tells the segments apart; no hue is spent here. */
-  .wohin-bar {
-    display: flex;
-    gap: 2px;
-    height: 8px;
-    border-radius: 4px;
+  /* Rows: a bar chart lying down. Icon, name, share of the house, the figure. */
+  .wohin-rows {
+    display: grid;
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .wr {
+    display: grid;
+    grid-template-columns: 18px minmax(72px, 32%) 1fr auto;
+    align-items: center;
+    gap: 8px;
+    --mdc-icon-size: 16px;
+    color: var(--sst-muted);
+  }
+
+  .wr.room {
+    cursor: pointer;
+  }
+
+  .wr-name {
+    font-size: calc(12.5px * var(--sst-scale));
+    color: var(--sst-ink);
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wr-bar {
+    height: 5px;
+    border-radius: 3px;
     background: var(--sst-track);
-    margin-top: 2px;
+    overflow: hidden;
   }
-  .wohin-style-both .wohin-bar {
-    height: 16px;
-  }
-  .wohin-seg {
-    position: relative;
+
+  .wr-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
     background: var(--sst-ink);
     transition: width 0.6s ease;
   }
-  .wohin-seg.rest {
+
+  .wr b {
+    font-family: var(--sst-mono);
+    font-size: calc(11px * var(--sst-scale));
+    font-weight: 500;
+    color: var(--sst-ink);
+    white-space: nowrap;
+    min-width: 52px;
+    text-align: right;
+  }
+
+  .wr .spark {
+    justify-self: end;
+  }
+
+  .wr.rest .wr-name,
+  .wr.rest b {
+    color: var(--sst-muted);
+  }
+
+  .wr.rest .wr-bar i {
+    background: var(--sst-muted);
+    opacity: 0.5;
+  }
+
+  /* Band: the house load as one strip, the biggest first, the legend keyed by shade. */
+  .wohin-band {
+    display: flex;
+    gap: 2px;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--sst-track);
+    margin-top: 4px;
+  }
+
+  .wohin-band i {
+    display: block;
+    height: 100%;
+    background: var(--sst-ink);
+    transition: width 0.6s ease;
+  }
+
+  .wohin-band i.rest {
     background: transparent;
   }
-  .wohin-keys {
+
+  .wohin-legend {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 14px;
@@ -1403,47 +1472,62 @@ export const cardStyles = css`
     font-size: calc(10.5px * var(--sst-scale));
     color: var(--sst-muted);
   }
-  .wohin-keys span {
+
+  .wohin-legend span {
     display: inline-flex;
     align-items: center;
     gap: 5px;
   }
-  .wohin-keys ha-icon {
-    --mdc-icon-size: 14px;
-    color: var(--sst-muted);
+
+  .wohin-legend .sw {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--sst-ink);
   }
-  .wohin-keys b {
+
+  .wohin-legend b {
     color: var(--sst-ink);
     font-weight: 500;
   }
-  .wohin-keys .rest {
+
+  .wohin-legend .rest {
     opacity: 0.6;
   }
-  .wohin-icons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    align-items: flex-end;
+
+  .wohin-legend .room {
+    cursor: pointer;
+  }
+
+  /* Icons on a fixed grid, so the last one is never the one cut off. */
+  .wohin-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 4px;
     margin-top: 6px;
   }
+
   .dev {
-    display: inline-flex;
+    display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
+    padding: 4px 0;
+    min-width: 0;
     color: var(--sst-ink);
-    --mdc-icon-size: 20px;
+    --mdc-icon-size: 18px;
   }
-  /* The level is a short bar under the icon, so the icon stays an icon. */
+
   .dev .lvl {
     display: block;
-    width: 28px;
-    height: 4px;
+    width: 26px;
+    height: 3px;
     border-radius: 2px;
     background: var(--sst-track);
     position: relative;
     overflow: hidden;
   }
+
   .dev .lvl b {
     position: absolute;
     left: 0;
@@ -1452,11 +1536,14 @@ export const cardStyles = css`
     display: block;
     background: var(--sst-ink);
   }
+
   .dev small {
     font-family: var(--sst-mono);
     font-size: calc(9.5px * var(--sst-scale));
     color: var(--sst-muted);
+    white-space: nowrap;
   }
+
   .dev.off {
     opacity: 0.32;
   }
@@ -1496,94 +1583,6 @@ export const cardStyles = css`
     white-space: nowrap;
   }
 
-  /* Tiles: readable from across the room, the biggest first. */
-  .wohin-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-    gap: 8px;
-    margin-top: 6px;
-  }
-
-  .tile {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px 10px;
-    border-radius: 9px;
-    background: var(--sst-inset);
-    min-width: 0;
-    --mdc-icon-size: 18px;
-    color: var(--sst-muted);
-  }
-
-  .tile.room {
-    cursor: pointer;
-  }
-
-  .tile-name {
-    font-family: var(--sst-mono);
-    font-size: calc(9.5px * var(--sst-scale));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .tile b {
-    font-size: calc(15px * var(--sst-scale));
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--sst-ink);
-  }
-
-  .tile.off {
-    opacity: 0.4;
-  }
-
-  /* Rows with a line each: the last hour of every device. */
-  .wohin-rows {
-    display: flex;
-    flex-direction: column;
-    margin-top: 6px;
-  }
-
-  .wohin-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 0;
-    border-bottom: 1px solid var(--sst-hairline);
-    --mdc-icon-size: 16px;
-    color: var(--sst-muted);
-  }
-
-  .wohin-row.room {
-    cursor: pointer;
-  }
-
-  .wohin-row-name {
-    flex: 1;
-    min-width: 0;
-    font-size: calc(12.5px * var(--sst-scale));
-    color: var(--sst-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .wohin-row b {
-    font-family: var(--sst-mono);
-    font-size: calc(11px * var(--sst-scale));
-    font-weight: 500;
-    color: var(--sst-ink);
-    white-space: nowrap;
-    min-width: 54px;
-    text-align: right;
-  }
-
-  .wohin-row.rest {
-    opacity: 0.6;
-  }
-
   .spark {
     width: 60px;
     height: 18px;
@@ -1599,11 +1598,6 @@ export const cardStyles = css`
   }
 
   /* A room opened: the devices standing in it, one step in. */
-  .wohin-keys .room,
-  .wohin-keys .room b {
-    cursor: pointer;
-  }
-
   .wohin-sub {
     display: flex;
     flex-wrap: wrap;
