@@ -1781,7 +1781,9 @@ export class PowerOriginCard extends LitElement {
       const slots = hourlyForecast(stateOf(hass, config.entities.forecast_hourly));
       if (slots.length) {
         const headroom = capacityKwh * Math.max(0, (100 - view.soc) / 100);
-        const load = this._series?.houseAverage ?? powerKw(stateOf(hass, config.entities.house)) ?? 0;
+        // Five hours of afternoon are not the last half hour: the oven that ran
+        // at noon has no say in the evening. The day since sunrise does.
+        const load = this._daylightLoad() ?? this._series?.houseAverage ?? powerKw(stateOf(hass, config.entities.house)) ?? 0;
         const until = sunUp ? setting : undefined;
         const found = fullFromForecast(slots, now, headroom, load, until);
         const span = fullSpan(slots, now, headroom, load, until);
@@ -1816,6 +1818,17 @@ export class PowerOriginCard extends LitElement {
       view.hours = undefined;
       view.full = "not_today";
     }
+  }
+
+  /** The house's mean draw since sunrise today, in kW; undefined before the day has readings. */
+  private _daylightLoad(): number | undefined {
+    const series = this._series;
+    if (!series) return undefined;
+    const rising = sunTimes(stateOf(this._hass, "sun.sun")).rising;
+    const since = rising ? rising.getTime() : startOfToday().getTime();
+    const samples = series.house.filter((_, i) => series.timestamps[i] >= since);
+    if (samples.length < 6) return undefined;
+    return samples.reduce((sum, kw) => sum + kw, 0) / samples.length;
   }
 
   /** The line about when it is full, in the words the forecast's certainty allows. */
