@@ -31,7 +31,7 @@ export const DEFAULTS = {
   grid_invert: false,
   sections: { ring: true, chart: true, battery: true, today: true,
     devices: true, week: false,
-    order: ["ring", "chart", "week", "battery", "today", "devices"] as BlockName[] },
+    order: [] as BlockName[] },
   ring: {
     center: "power" as const,
     center_dark: "power" as const,
@@ -127,6 +127,15 @@ export const DEFAULTS = {
     investment: 0
   }
 };
+
+/** Every block the card can stand, in the order it stands them unasked. */
+export const BLOCKS: BlockName[] = ["ring", "chart", "week", "battery", "today", "devices"];
+
+/** The blocks top to bottom: the ones named first, in that order, then the rest as usual. */
+export function blockOrder(resolved: ResolvedConfig): BlockName[] {
+  const chosen = resolved.sections.order;
+  return [...chosen, ...BLOCKS.filter((block) => !chosen.includes(block))];
+}
 
 export function assertConfig(config: PowerOriginCardConfig | undefined, locale?: string): void {
   if (!config?.entities?.house) {
@@ -240,13 +249,13 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     sections: {
       ...DEFAULTS.sections,
       ...config.sections,
-      // Named blocks come first in the order named; the rest keep their places.
+      // Only what was chosen, once each, and only blocks that are on: the
+      // editor shows this list back, so a block switched off leaves it.
       order: (() => {
-        const all = DEFAULTS.sections.order;
-        const chosen = (config.sections?.order ?? []).filter(
-          (block, index, list) => all.includes(block) && list.indexOf(block) === index
+        const on = { ...DEFAULTS.sections, ...config.sections };
+        return (config.sections?.order ?? []).filter(
+          (block, index, list) => BLOCKS.includes(block) && on[block] && list.indexOf(block) === index
         );
-        return [...chosen, ...all.filter((block) => !chosen.includes(block))];
       })()
     },
     ring: {
@@ -885,20 +894,22 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             })
           ]
         },
-        // Picked in the order they should stand; what is not picked follows.
+        // Picked in the order they should stand, or dragged into it; what is
+        // not picked follows. Only blocks that are on are offered.
         {
           name: "order",
           selector: {
             select: {
               multiple: true,
+              reorder: true,
               mode: "dropdown",
               options: [
-                { value: "ring", label: t("editor.section_ring") },
-                { value: "chart", label: t("editor.section_chart") },
-                { value: "battery", label: t("editor.section_battery") },
-                { value: "today", label: t("editor.section_today") },
-                { value: "devices", label: t("editor.section_devices") },
-                { value: "week", label: t("editor.section_week") }
+                ...only((r) => r.sections.ring, { value: "ring", label: t("editor.section_ring") }),
+                ...only((r) => r.sections.chart, { value: "chart", label: t("editor.section_chart") }),
+                ...only((r) => r.sections.battery, { value: "battery", label: t("editor.section_battery") }),
+                ...only((r) => r.sections.today, { value: "today", label: t("editor.section_today") }),
+                ...only((r) => r.sections.devices, { value: "devices", label: t("editor.section_devices") }),
+                ...only((r) => r.sections.week, { value: "week", label: t("editor.section_week") })
               ]
             }
           }

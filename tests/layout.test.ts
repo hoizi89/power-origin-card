@@ -42,13 +42,15 @@ async function mount(cfg: PowerOriginCardConfig, scenario: Scenario, width = 900
 
 describe("the order of the blocks", () => {
   it("puts the named ones first and lets the rest follow", async () => {
-    const { resolveConfig } = await import("../src/config");
+    const { blockOrder, resolveConfig } = await import("../src/config");
     const resolved = resolveConfig({
       type: "custom:power-origin-card",
       entities: { house: "sensor.h" },
-      sections: { order: ["devices", "ring", "devices"] as never }
+      sections: { week: false, order: ["devices", "week", "ring", "devices"] as never }
     });
-    expect(resolved.sections.order).toEqual(["devices", "ring", "chart", "week", "battery", "today"]);
+    // The list keeps what was chosen, once each, and only blocks that are on.
+    expect(resolved.sections.order).toEqual(["devices", "ring"]);
+    expect(blockOrder(resolved)).toEqual(["devices", "ring", "chart", "week", "battery", "today"]);
   });
 });
 

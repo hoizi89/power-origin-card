@@ -2,7 +2,7 @@ import { LitElement, html, nothing, svg } from "lit";
 import { batteryView, fullFromForecast, fullSpan, fullVerdict, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
 import { chartBars } from "./bars";
 import { CHART_BOX, chartGeometry } from "./chart";
-import { CARD_TYPE, resolveConfig, stubConfig } from "./config";
+import { blockOrder, CARD_TYPE, resolveConfig, stubConfig } from "./config";
 import {
   computeFlow,
   productionSegments,
@@ -829,7 +829,7 @@ export class PowerOriginCard extends LitElement {
                 today: config.sections.today && !quiet ? this._renderToday(flow, locale) : nothing,
                 devices: config.sections.devices && !quiet ? this._renderDevices(locale) : nothing
               };
-              const order = config.sections.order;
+              const order = blockOrder(config);
               // Wide keeps the ring on its own side, whatever the order says.
               return config.shape === "wide" && this._wideOn
                 ? html`<div class="side">${ring}</div>
