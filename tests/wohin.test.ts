@@ -125,6 +125,23 @@ describe("icons", () => {
   });
 });
 
+describe("the heading and the colours", () => {
+  it("can leave the heading away and start where the line above ends", async () => {
+    const { root } = await mount(config({ head: false }), day);
+    expect(root.querySelector(".wohin .row-head")).toBeNull();
+    expect(root.querySelector(".wohin")?.classList.contains("bare")).toBe(true);
+  });
+
+  it("give each device its own colour, fixed to its place in the list", async () => {
+    const plain = await mount(config({}), day);
+    expect(plain.root.querySelector(".wr")?.getAttribute("style")).not.toContain("--dev-colour");
+    const { root } = await mount(config({ colours: true, style: "icons" }), day);
+    const styles = [...root.querySelectorAll(".dev")].map((d) => d.getAttribute("style") ?? "");
+    expect(styles.every((s) => s.includes("--dev-colour"))).toBe(true);
+    expect(new Set(styles).size).toBe(styles.length);
+  });
+});
+
 describe("the biggest as a row of its own", () => {
   it("leaves the list, and says since when and what it cost", async () => {
     const { root, text } = await mount(config({ top: true }), day);

@@ -3303,6 +3303,15 @@ export class PowerOriginCard extends LitElement {
       this._openArea = this._openArea === r.name ? undefined : r.name;
     };
 
+    // A colour per device when asked, fixed to its place in the list so it
+    // never changes with the ranking; rooms take theirs in order.
+    const COLOURS = ["#4f7fe0", "#e2a63c", "#d9605a", "#55b5a6", "#9b6fe6", "#e089b5", "#b08a5a", "#7aa6f2"];
+    const tint = (r: DeviceReading, i: number) =>
+      config.devices.colours
+        ? `--dev-colour: ${COLOURS[(rooms ? i : Math.max(0, config.devices.list.indexOf(r.id))) % COLOURS.length]}`
+        : "";
+    const tinted = (r: DeviceReading, i: number) => (rooms ? i : Math.max(0, config.devices.list.indexOf(r.id)));
+
     // Every share is of the house; without a house reading, of the biggest.
     const whole = house && house > 0 ? house : Math.max(1, ranking.named[0]?.watts ?? 1);
     const share = (watts: number) => `${Math.min(100, (100 * watts) / whole).toFixed(1)}%`;
@@ -3317,7 +3326,7 @@ export class PowerOriginCard extends LitElement {
           ${listed.map((r) =>
             tap(
               r,
-              html`<div class="wr ${rooms ? "room" : ""}" @click=${openRoom(r)}>
+              html`<div class="wr ${rooms ? "room" : ""}" style="${tint(r, tinted(r, 0))}" @click=${openRoom(r)}>
                 <ha-icon icon="${r.icon}"></ha-icon>
                 <span class="wr-name">${r.name}</span>
                 ${showSpark ? spark(r.id) : html`<span class="wr-bar"><i style="width: ${share(r.watts ?? 0)}"></i></span>`}
@@ -3341,7 +3350,10 @@ export class PowerOriginCard extends LitElement {
     const bandBlock = style === "band"
       ? html`<div class="wohin-band">
             ${ranking.named.map(
-              (r, i) => html`<i style="width: ${share(r.watts ?? 0)}; opacity: ${shade(i)}" title="${r.name} ${w(r.watts ?? 0)}"></i>`
+              (r, i) => html`<i
+                style="width: ${share(r.watts ?? 0)}; opacity: ${config.devices.colours ? 1 : shade(i)}; ${tint(r, i)}"
+                title="${r.name} ${w(r.watts ?? 0)}"
+              ></i>`
             )}
             ${ranking.rest ? html`<i class="rest" style="width: ${share(ranking.rest)}"></i>` : nothing}
           </div>
@@ -3349,8 +3361,8 @@ export class PowerOriginCard extends LitElement {
             ${listed.map((r, i) =>
               tap(
                 r,
-                html`<span class="${rooms ? "room" : ""}" @click=${openRoom(r)}
-                  ><i class="sw" style="opacity: ${shade(i + (topRow ? 1 : 0))}"></i>${r.name}${values
+                html`<span class="${rooms ? "room" : ""}" style="${tint(r, i + (topRow ? 1 : 0))}" @click=${openRoom(r)}
+                  ><i class="sw" style="opacity: ${config.devices.colours ? 1 : shade(i + (topRow ? 1 : 0))}"></i>${r.name}${values
                     ? html` <b>${w(r.watts ?? 0)}</b>`
                     : nothing}</span
                 >${members(r)}`
@@ -3366,11 +3378,11 @@ export class PowerOriginCard extends LitElement {
     const top = ranking.named[0]?.watts || 1;
     const icons = style === "icons"
       ? html`<div class="wohin-strip">
-          ${[...ranking.named, ...ranking.small].map((r) => {
+          ${[...ranking.named, ...ranking.small].map((r, i) => {
             const on = (r.watts ?? 0) >= (today ? 0.1 : config.devices.threshold);
             return tap(
               r,
-              html`<span class="dev ${on ? "" : "off"}" title="${r.name} ${w(r.watts ?? 0)}"
+              html`<span class="dev ${on ? "" : "off"}" style="${tint(r, i)}" title="${r.name} ${w(r.watts ?? 0)}"
                 ><ha-icon icon="${r.icon}"></ha-icon
                 ><i class="lvl"><b style="width: ${Math.round((100 * (r.watts ?? 0)) / top)}%"></b></i
                 >${values && on ? html`<small>${w(r.watts ?? 0)}</small>` : nothing}</span
@@ -3381,18 +3393,20 @@ export class PowerOriginCard extends LitElement {
       : nothing;
 
     return html`
-      <div class="row wohin wohin-style-${style}">
-        <div class="row-head">
-          <span class="row-title">${localize("devices.title", locale)}</span>
-          <span class="row-note"
-            ><span class="dim">${period}</span>
-            ${houseShown
-              ? today
-                ? html`${formatEnergy(house, locale)} <span class="unit">kWh</span>`
-                : html`${formatPower(house / 1000, locale)} <span class="unit">kW</span>`
-              : nothing}</span
-          >
-        </div>
+      <div class="row wohin wohin-style-${style} ${config.devices.head ? "" : "bare"}">
+        ${config.devices.head
+          ? html`<div class="row-head">
+              <span class="row-title">${localize("devices.title", locale)}</span>
+              <span class="row-note"
+                ><span class="dim">${period}</span>
+                ${houseShown
+                  ? today
+                    ? html`${formatEnergy(house, locale)} <span class="unit">kWh</span>`
+                    : html`${formatPower(house / 1000, locale)} <span class="unit">kW</span>`
+                  : nothing}</span
+              >
+            </div>`
+          : nothing}
         ${topBlock}${rowsBlock}${bandBlock}${icons}
       </div>
     `;

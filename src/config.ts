@@ -104,6 +104,8 @@ export const DEFAULTS = {
     energy: {} as Record<string, string>,
     style: "rows" as const,
     values: true,
+    head: true,
+    colours: false,
     group: "device" as const,
     limit: 5,
     threshold: 25,
@@ -286,6 +288,8 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
         return chosen ?? DEFAULTS.devices.style;
       })(),
       values: config.devices?.values ?? DEFAULTS.devices.values,
+      head: config.devices?.head ?? DEFAULTS.devices.head,
+      colours: config.devices?.colours ?? DEFAULTS.devices.colours,
       group: config.devices?.group ?? DEFAULTS.devices.group,
       limit: config.devices?.limit ?? DEFAULTS.devices.limit,
       threshold: config.devices?.threshold ?? DEFAULTS.devices.threshold
@@ -1302,6 +1306,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             {
               type: "grid",
               schema: [
+                { name: "head", selector: { boolean: {} } },
+                { name: "colours", selector: { boolean: {} } }
+              ]
+            },
+            {
+              type: "grid",
+              schema: [
                 { name: "values", selector: { boolean: {} } },
                 {
                   name: "group",
@@ -1519,6 +1530,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     animate: t("editor.animate"),
     full_from: t("editor.full_from"),
     palette: t("editor.palette"),
+    head: t("editor.devices_head"),
+    colours: t("editor.devices_colours"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     compare: t("editor.compare"),
@@ -1593,6 +1606,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     animate: t("editor.help_animate"),
     full_from: t("editor.help_full_from"),
     palette: t("editor.help_palette"),
+    head: t("editor.help_devices_head"),
+    colours: t("editor.help_devices_colours"),
     columns: t("editor.help_columns"),
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),

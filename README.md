@@ -188,7 +188,7 @@ Two periods, one setting: **now**, averaged over a window (fifteen minutes by de
 
 Each device gets the icon you gave its entity in Home Assistant; without one, the card reads an icon off the name — heat pump, dishwasher, fridge, lights, NAS — and falls back to a plug.
 
-Consumers are the house, and the house has no colour on this card. The block is told apart by brightness alone, so it stays quiet beside the sun, the battery and the grid.
+Consumers are the house, and the house has no colour on this card. The block is told apart by brightness alone, so it stays quiet beside the sun, the battery and the grid. If you would rather tell them apart at a glance, `devices.colours` gives each device a colour of its own, fixed to its place in the list; and `devices.head: false` drops the heading, so the block starts where the line above ends.
 
 ---
 

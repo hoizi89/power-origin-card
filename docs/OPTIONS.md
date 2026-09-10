@@ -291,6 +291,8 @@ devices:
 | `devices.spark` | `false` | A line per device for the last hour in place of its bar: the fridge's rhythm, the heat pump's ramp, the kettle's spike. Rows only. |
 | `devices.icons` | `{}` | An icon chosen per device, by entity — in the editor one field per device under *Icons*, written as `icon:<entity>` keys. A chosen icon beats the one set on the entity, which beats the one read off the name. |
 | `devices.values` | `true` | Print watts (or kWh) beside the names. |
+| `devices.head` | `true` | The word and the period above the block. Off, the block starts where the line above ends. |
+| `devices.colours` | `false` | A colour per device on its bar, its segment, its swatch or its icon, fixed to the device's place in the list so it never changes with the ranking. Otherwise the block is told apart by brightness alone. |
 | `devices.group` | `device` | `area` sums devices by the room they stand in; a tap on a room opens the devices standing in it. |
 | `devices.limit` | `5` | How many devices get a name; the others fold into the rest. |
 | `devices.threshold` | `25` | Watts below which a device is not named. Shown for `now` only. |

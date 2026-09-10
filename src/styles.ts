@@ -1378,7 +1378,18 @@ export const cardStyles = css`
   .wohin-rows {
     display: grid;
     gap: 5px;
-    margin-top: 4px;
+    margin-top: 2px;
+  }
+
+  /* Without its heading the block starts where the line above ends. */
+  .wohin.bare .wohin-rows,
+  .wohin.bare .wohin-band,
+  .wohin.bare .wohin-strip {
+    margin-top: 0;
+  }
+
+  .wr > ha-icon {
+    color: var(--dev-colour, currentColor);
   }
 
   .wr {
@@ -1413,7 +1424,7 @@ export const cardStyles = css`
     display: block;
     height: 100%;
     border-radius: 3px;
-    background: var(--sst-ink);
+    background: var(--dev-colour, var(--sst-ink));
     transition: width 0.6s ease;
   }
 
@@ -1449,13 +1460,13 @@ export const cardStyles = css`
     border-radius: 3px;
     overflow: hidden;
     background: var(--sst-track);
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   .wohin-band i {
     display: block;
     height: 100%;
-    background: var(--sst-ink);
+    background: var(--dev-colour, var(--sst-ink));
     transition: width 0.6s ease;
   }
 
@@ -1483,7 +1494,7 @@ export const cardStyles = css`
     width: 8px;
     height: 8px;
     border-radius: 2px;
-    background: var(--sst-ink);
+    background: var(--dev-colour, var(--sst-ink));
   }
 
   .wohin-legend b {
@@ -1502,26 +1513,26 @@ export const cardStyles = css`
   /* Icons on a fixed grid, so the last one is never the one cut off. */
   .wohin-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
     gap: 4px;
-    margin-top: 6px;
+    margin-top: 2px;
   }
 
   .dev {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 4px 0;
+    gap: 5px;
+    padding: 2px 0;
     min-width: 0;
-    color: var(--sst-ink);
-    --mdc-icon-size: 18px;
+    color: var(--dev-colour, var(--sst-ink));
+    --mdc-icon-size: 22px;
   }
 
   .dev .lvl {
     display: block;
-    width: 26px;
-    height: 3px;
+    width: 32px;
+    height: 4px;
     border-radius: 2px;
     background: var(--sst-track);
     position: relative;
@@ -1534,13 +1545,14 @@ export const cardStyles = css`
     top: 0;
     bottom: 0;
     display: block;
-    background: var(--sst-ink);
+    background: var(--dev-colour, var(--sst-ink));
   }
 
   .dev small {
     font-family: var(--sst-mono);
-    font-size: calc(9.5px * var(--sst-scale));
-    color: var(--sst-muted);
+    font-size: calc(11px * var(--sst-scale));
+    font-weight: 500;
+    color: var(--sst-ink);
     white-space: nowrap;
   }
 

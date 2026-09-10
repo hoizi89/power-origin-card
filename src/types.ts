@@ -254,6 +254,10 @@ export interface DevicesOptions {
   /** The meter behind each power sensor, by entity, for the day's total. */
   energy?: Record<string, string>;
   style?: DevicesStyle | LegacyDevicesStyle;
+  /** The word and the period above the block. */
+  head?: boolean;
+  /** A colour per device, as the Energy dashboard gives them; otherwise brightness alone. */
+  colours?: boolean;
   /** Print the watts beside the names. */
   values?: boolean;
   group?: DevicesGroup;
