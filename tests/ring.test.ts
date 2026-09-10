@@ -147,11 +147,11 @@ describe("tapping the ring", () => {
 });
 
 describe("the charge at sunrise, on the bar", () => {
-  it("marks the level and dims the cells the night will use", async () => {
+  it("marks the level with the sun alone and leaves the cells as they are", async () => {
     const { root } = await render(config({ battery: { sunrise_mark: true, capacity: 13100 } }), evening);
     expect(root.querySelector(".bat-sun")).toBeTruthy();
-    expect(root.querySelector(".bat-sun")).toBeTruthy();
-    expect(root.querySelectorAll(".bat-fill.night").length).toBeGreaterThan(0);
+    // A dimmed cell means the reserve, and nothing else.
+    expect(root.querySelectorAll(".bat-fill.night").length).toBe(0);
   });
 
   it("has nothing to say while the battery charges", async () => {

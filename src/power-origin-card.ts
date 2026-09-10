@@ -3036,7 +3036,6 @@ export class PowerOriginCard extends LitElement {
             // Held back: full of power, none of it available.
             const held = reserve > 0 && ((index + 1) / all.length) * 100 <= reserve;
             // Spoken for: the night takes it before the sun is back.
-            const night = dawn !== undefined && (index / all.length) * 100 >= dawn.at;
             return svg`
               <rect class="fill-off" x="${x}" y="${top}" width="${width}"
                     height="${tall}" rx="${radius}"></rect>
