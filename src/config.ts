@@ -391,6 +391,17 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   /** A price is what turns a kilowatt into a decision; without one there is no money view. */
   const prices = (resolved: ResolvedConfig) =>
     Boolean(resolved.entities.price_import || resolved.entities.price_export);
+  /**
+   * Two settings to a row. A group of a dozen single-file boxes reads as a
+   * list of everything; in pairs it reads as a handful of decisions. A field
+   * that is currently hidden takes no slot, so the rows close up.
+   */
+  const inPairs = (items: Array<Record<string, unknown>>) => {
+    const rows: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < items.length; i += 2) rows.push({ type: "grid", schema: items.slice(i, i + 2) });
+    return rows;
+  };
+
   const cell = (resolved: ResolvedConfig) => Boolean(resolved.entities.battery_soc);
   const cellTimed = (resolved: ResolvedConfig) =>
     Boolean(resolved.entities.battery_soc && resolved.entities.battery_power);
@@ -859,7 +870,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       name: "ring",
       title: t("editor.ring_settings"),
       icon: "mdi:circle-slice-8",
-      schema: [
+      schema: inPairs([
         {
           name: "center",
           selector: {
@@ -992,7 +1003,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
-      ]
+      ])
     }
     ),
     ...only(
@@ -1134,25 +1145,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               name: "segments",
               selector: { number: { min: 0, max: 20, mode: "box" } }
             }),
-            { name: "runtime", selector: { boolean: {} } },
             { name: "percent", selector: { boolean: {} } },
-            // A forecast can see the evening, which the rate cannot; offered
-            // only once there is a forecast by the hour to read.
-            ...only(
-              (resolved) => cellTimed(resolved) && resolved.battery.runtime && Boolean(resolved.entities.forecast_hourly),
-              {
-                name: "full_from",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "rate", label: t("editor.full_rate") },
-                      { value: "forecast", label: t("editor.full_forecast") }
-                    ]
-                  }
-                }
-              }
-            ),
             ...only((resolved) => resolved.battery_reserve > 0, {
               name: "reserve_line",
               selector: { boolean: {} }
@@ -1163,6 +1156,34 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             )
           ]
         },
+        // How long it lasts and how long it took to say so belong together.
+        {
+          type: "grid",
+          schema: [
+            { name: "runtime", selector: { boolean: {} } },
+            ...only((resolved) => resolved.battery.runtime, {
+              name: "runtime_window",
+              selector: { number: { min: 5, max: 120, step: 5, mode: "box", unit_of_measurement: "min" } }
+            })
+          ]
+        },
+        // A forecast can see the evening, which the rate cannot; offered only
+        // once there is a forecast by the hour to read.
+        ...only(
+          (resolved) => cellTimed(resolved) && resolved.battery.runtime && Boolean(resolved.entities.forecast_hourly),
+          {
+            name: "full_from",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "rate", label: t("editor.full_rate") },
+                  { value: "forecast", label: t("editor.full_forecast") }
+                ]
+              }
+            }
+          }
+        ),
         // What the bar says about the night sits together, since it is one thought.
         ...only(cell, {
           type: "expandable",
@@ -1202,10 +1223,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
-        ...only((resolved) => resolved.battery.runtime, {
-          name: "runtime_window",
-          selector: { number: { min: 5, max: 120, step: 5, unit_of_measurement: "min" } }
-        })
       ]
     }
     ),
