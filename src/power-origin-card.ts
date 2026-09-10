@@ -1762,7 +1762,7 @@ export class PowerOriginCard extends LitElement {
    * straight line, which is dropped once it runs past the sunset or a day.
    */
   private _refineFull(view: BatteryView): void {
-    if (view.mode !== "charging" || view.soc === undefined) return;
+    if (view.soc === undefined || view.soc >= 99) return;
     const config = this._config as ResolvedConfig;
     const hass = this._hass as HomeAssistant;
     const now = new Date();
@@ -1770,6 +1770,12 @@ export class PowerOriginCard extends LitElement {
     const sunUp = sun?.state === "above_horizon";
     const setting = sunTimes(sun, now).setting;
     const capacityKwh = config.battery_capacity ? config.battery_capacity / 1000 : undefined;
+
+    // A battery resting by day, because the house is eating the roof, still
+    // has a day ahead of it; the forecast can say whether that day fills it.
+    // The rate cannot, so its straight line stays with charging.
+    const resting = view.mode === "idle" && sunUp;
+    if (view.mode !== "charging" && !resting) return;
 
     if (config.battery.full_from === "forecast" && config.entities.forecast_hourly && capacityKwh) {
       const slots = hourlyForecast(stateOf(hass, config.entities.forecast_hourly));
@@ -1805,11 +1811,34 @@ export class PowerOriginCard extends LitElement {
       }
     }
 
-    if (fullVerdict(view.at, now, setting, sunUp) === "not_today") {
+    if (view.mode === "charging" && fullVerdict(view.at, now, setting, sunUp) === "not_today") {
       view.at = undefined;
       view.hours = undefined;
       view.full = "not_today";
     }
+  }
+
+  /** The line about when it is full, in the words the forecast's certainty allows. */
+  private _fullWords(view: BatteryView, locale: string): string[] {
+    const parts: string[] = [];
+    if (view.full === "between" && view.early && view.late) {
+      parts.push(
+        `${localize("battery.full_between", locale)} ${formatClock(view.early, locale)} ${localize("battery.and", locale)} ${formatClock(view.late, locale)}`
+      );
+    } else if (view.full === "if_it_clears") {
+      parts.push(localize("battery.full_if_it_clears", locale));
+    } else if (view.at) {
+      const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
+      parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
+    } else if (view.full === "not_today") {
+      parts.push(localize("battery.not_full_today", locale));
+      if (view.socAtSunset !== undefined) {
+        parts.push(
+          `${localize("battery.about", locale)} ${formatNumber(view.socAtSunset, locale, 0)} % ${localize("battery.at_sunset", locale)}`
+        );
+      }
+    }
+    return parts;
   }
 
   /** How long the battery lasts, when it is the one carrying the house. */
@@ -3035,23 +3064,7 @@ export class PowerOriginCard extends LitElement {
         : `${formatNumber(view.availableKwh, locale, 1)} kWh ${localize("battery.stored", locale)}`;
 
     if (view.mode === "charging") {
-      if (view.full === "between" && view.early && view.late) {
-        parts.push(
-          `${localize("battery.full_between", locale)} ${formatClock(view.early, locale)} ${localize("battery.and", locale)} ${formatClock(view.late, locale)}`
-        );
-      } else if (view.full === "if_it_clears") {
-        parts.push(localize("battery.full_if_it_clears", locale));
-      } else if (view.at) {
-        const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
-        parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
-      } else if (view.full === "not_today") {
-        parts.push(localize("battery.not_full_today", locale));
-        if (view.socAtSunset !== undefined) {
-          parts.push(
-            `${localize("battery.about", locale)} ${formatNumber(view.socAtSunset, locale, 0)} % ${localize("battery.at_sunset", locale)}`
-          );
-        }
-      }
+      parts.push(...this._fullWords(view, locale));
       if (view.power !== undefined) {
         parts.push(
           `${localize("battery.charging", locale)} ${formatPower(Math.abs(view.power), locale)} kW`
@@ -3087,6 +3100,8 @@ export class PowerOriginCard extends LitElement {
       }
     } else {
       parts.push(localize(view.mode === "full" ? "battery.full" : "battery.resting", locale));
+      // Resting by day, the forecast still knows how the day ends for it.
+      if (view.mode === "idle") parts.push(...this._fullWords(view, locale));
       // At the ceiling the stored figure just repeats the capacity in the header.
       if (stored && view.mode !== "full") parts.push(stored);
     }

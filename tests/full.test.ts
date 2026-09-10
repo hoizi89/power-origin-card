@@ -178,6 +178,22 @@ describe("what the battery block says while charging", () => {
   });
 });
 
+describe("a battery resting by day", () => {
+  const resting: Scenario = { ...charging, name: "resting by day", battery: -20 };
+
+  it("says only that it rests when the rate is all there is", async () => {
+    const { note } = await mount(config(), resting);
+    expect(note()).toContain("Bereit");
+    expect(note()).not.toMatch(/Voll/);
+  });
+
+  it("still hears from the forecast how its day ends", async () => {
+    const { note } = await mount(config({ battery: { full_from: "forecast" } }), resting);
+    expect(note()).toContain("Bereit");
+    expect(note()).toMatch(/Voll gegen 14:0\d/);
+  });
+});
+
 describe("the traffic-light colours", () => {
   it("are one class on the card, and absent unless asked", async () => {
     const plain = await mount(config(), charging);
