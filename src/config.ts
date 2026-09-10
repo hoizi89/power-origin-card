@@ -1155,7 +1155,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         },
         {
           name: "height",
-          selector: { number: { min: 50, max: 200, step: 5, mode: "slider" } }
+          selector: { number: { min: 30, max: 120, step: 5, mode: "slider" } }
         }
       ]
     }
