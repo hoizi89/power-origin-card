@@ -1511,11 +1511,26 @@ export const cardStyles = css`
   }
 
   /* Icons on a fixed grid, so the last one is never the one cut off. */
+  /* The columns fit the devices there are: five spread across the width, a
+     dozen wrap. With a handful the icons may grow into the room. */
   .wohin-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
     gap: 4px;
     margin-top: 2px;
+  }
+
+  .wohin-strip.few .dev {
+    --mdc-icon-size: 28px;
+    gap: 6px;
+  }
+
+  .wohin-strip.few .dev .lvl {
+    width: 40px;
+  }
+
+  .wohin-strip.few .dev small {
+    font-size: calc(12px * var(--sst-scale));
   }
 
   .dev {

@@ -123,6 +123,13 @@ describe("icons", () => {
     expect(root.querySelectorAll(".dev.off").length).toBe(1);
     expect(devs[0].querySelector("small")?.textContent).toMatch(/W/);
   });
+
+  it("stand no more than the limit, since they have no rest to fold into", async () => {
+    const { root } = await mount(config({ style: "icons", limit: 2 }), day);
+    expect(root.querySelectorAll(".dev").length).toBe(2);
+    // A handful may grow into the room.
+    expect(root.querySelector(".wohin-strip")?.classList.contains("few")).toBe(true);
+  });
 });
 
 describe("the heading and the colours", () => {

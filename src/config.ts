@@ -1606,6 +1606,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     animate: t("editor.help_animate"),
     full_from: t("editor.help_full_from"),
     palette: t("editor.help_palette"),
+    limit: t("editor.help_limit"),
     head: t("editor.help_devices_head"),
     colours: t("editor.help_devices_colours"),
     columns: t("editor.help_columns"),

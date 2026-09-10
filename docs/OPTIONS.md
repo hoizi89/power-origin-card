@@ -294,7 +294,7 @@ devices:
 | `devices.head` | `true` | The word and the period above the block. Off, the block starts where the line above ends. |
 | `devices.colours` | `false` | A colour per device on its bar, its segment, its swatch or its icon, fixed to the device's place in the list so it never changes with the ranking. Otherwise the block is told apart by brightness alone. |
 | `devices.group` | `device` | `area` sums devices by the room they stand in; a tap on a room opens the devices standing in it. |
-| `devices.limit` | `5` | How many devices get a name; the others fold into the rest. |
+| `devices.limit` | `5` | How many devices get a name in rows and band; the others fold into the rest. Icons have no rest, so they show no more than this. |
 | `devices.threshold` | `25` | Watts below which a device is not named. Shown for `now` only. |
 | *(icons)* | | Without a chosen icon, the one set on the entity in Home Assistant wins; otherwise one is read off the name, with a plug as the fallback. |
 | `devices.names`, `devices.energy` | | Written by the adopt button: the dashboard's name and meter for each sensor. Data, not settings. |

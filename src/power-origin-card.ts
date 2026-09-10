@@ -3376,9 +3376,11 @@ export class PowerOriginCard extends LitElement {
 
     // Icons on a fixed grid, the level under each, the figure under the ones that draw.
     const top = ranking.named[0]?.watts || 1;
+    // The icons have no rest to fold into, so the limit is simply how many stand.
+    const standing = [...ranking.named, ...ranking.small].slice(0, Math.max(1, config.devices.limit));
     const icons = style === "icons"
-      ? html`<div class="wohin-strip">
-          ${[...ranking.named, ...ranking.small].map((r, i) => {
+      ? html`<div class="wohin-strip ${standing.length <= 4 ? "few" : ""}">
+          ${standing.map((r, i) => {
             const on = (r.watts ?? 0) >= (today ? 0.1 : config.devices.threshold);
             return tap(
               r,
