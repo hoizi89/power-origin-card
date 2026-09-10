@@ -29,7 +29,7 @@ export type BatteryStyle = "segments" | "solid" | "bar";
 /** Where the full time comes from: the charge rate right now, or the hourly forecast. */
 export type BatteryFullFrom = "rate" | "forecast";
 /** The three source colours as one set. */
-export type Palette = "standard" | "traffic";
+export type Palette = "standard" | "traffic" | "safe" | "muted";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 /** The subset of Lovelace's action config this card acts on. */

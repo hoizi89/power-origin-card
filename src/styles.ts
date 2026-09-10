@@ -30,6 +30,22 @@ export const cardStyles = css`
     --sst-grid: #e5484d;
   }
 
+  /* Green against red is the pair most eyes trip over, so this set never
+     asks anyone to tell those two apart. */
+  ha-card.palette-safe {
+    --sst-sun: #ffb000;
+    --sst-leaf: #648fff;
+    --sst-grid: #dc267f;
+  }
+
+  /* A panel on a bedroom wall: the same three participants, none of them
+     shouting. */
+  ha-card.palette-muted {
+    --sst-sun: #b8933a;
+    --sst-leaf: #6f9c82;
+    --sst-grid: #7c879b;
+  }
+
   ha-card {
     position: relative;
     container-type: inline-size;

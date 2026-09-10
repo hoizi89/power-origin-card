@@ -6,7 +6,7 @@
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/card.png" alt="Midday: two rings, the day beside them, and what the day earned" width="430">
 
-The ring splits the house load into its sources. Sun gold, battery green, grid blue — the colour always names the participant that is not the house, everywhere on the card. If you would rather see red the moment the house draws from the grid, one switch (`ring.import_red`) makes the grid wear red instead of blue for exactly as long as that lasts — on the ring, the column and the bar alike. And if your household reads colours as a traffic light, `palette: traffic` makes the sun yellow, the battery orange and the grid red, everywhere at once. Beside it a column with a middle: surplus climbs, grid draw sinks.
+The ring splits the house load into its sources. Sun gold, battery green, grid blue — the colour always names the participant that is not the house, everywhere on the card. If you would rather see red the moment the house draws from the grid, one switch (`ring.import_red`) makes the grid wear red instead of blue for exactly as long as that lasts — on the ring, the column and the bar alike. The three colours come as a set: `palette: traffic` reads as a traffic light, `safe` never asks anyone to tell green from red, `muted` keeps a wall panel quiet. Beside it a column with a middle: surplus climbs, grid draw sinks.
 
 Three rules it is built on:
 

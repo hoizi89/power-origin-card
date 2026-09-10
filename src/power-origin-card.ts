@@ -793,7 +793,7 @@ export class PowerOriginCard extends LitElement {
       <ha-card style="--sst-scale: ${config.text_scale}; --sst-night: ${(1 - config.night_dim / 100).toFixed(2)}"
         class="${(config.ring.import_red && flow.fromGrid > 0) || (config.ring.import_switch && alarm) ? "import-alarm" : ""} ${
           config.shape === "wide" && this._wideOn ? "wide" : ""
-        } ${config.night_dim > 0 && sunDown ? "night" : ""} ${config.palette === "traffic" ? "palette-traffic" : ""}">
+        } ${config.night_dim > 0 && sunDown ? "night" : ""} ${config.palette === "standard" ? "" : "palette-" + config.palette}">
         ${config.title || showChip || price !== undefined
           ? html`<div class="head ${config.title || price !== undefined ? "" : "bare"} ${
               // Two columns reach the top corners, so there is no corner left

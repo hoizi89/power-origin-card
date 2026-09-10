@@ -117,7 +117,7 @@ today:
 | `text_scale` | `1` | Multiplies every type size at once. |
 | `shape` | `standard` | The card's shape: `standard` as it is; `wide` with the ring and its columns on the left and the day, the battery and the rest on the right, for a panel; `compact` as one row — the ring small, three figures (roof, grid, battery) and the chip. |
 | `wide_from` | `640` | From this many pixels of card width the wide shape takes hold; narrower it stacks as usual, and below 560 px it stacks in any case, since two columns need the room. |
-| `palette` | `standard` | `traffic` turns the three source colours into a traffic light everywhere at once: sun yellow, battery orange, grid red. The standard set follows the Energy dashboard: sun gold, battery green, grid blue. |
+| `palette` | `standard` | The three source colours as one set, everywhere at once. `standard` follows the Energy dashboard: sun gold, battery green, grid blue. `traffic` reads as a traffic light: sun yellow, battery orange, grid red. `safe` never asks anyone to tell green from red: sun amber, battery blue, grid magenta. `muted` is the same three at low saturation, for a panel on a wall. Each colour can still be set on its own through the theme variables. |
 | `night_layout` | `same` | `quiet` once the sun is down: the columns, the week, the tiles and the devices step aside, and the ring, the battery and one line about the day remain. Pairs with `night_dim`. |
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
 | `chip_shows` | `state` | What the chip says: `state` (grid-free or from grid) or `autarky` — the day's self-supplied share from the daily meters, green from 80 %, the grid's colour below. |

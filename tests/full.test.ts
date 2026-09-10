@@ -146,8 +146,10 @@ describe("what the battery block says while charging", () => {
 describe("the traffic-light colours", () => {
   it("are one class on the card, and absent unless asked", async () => {
     const plain = await mount(config(), charging);
-    expect(plain.root.querySelector("ha-card")?.classList.contains("palette-traffic")).toBe(false);
-    const traffic = await mount(config({ palette: "traffic" }), charging);
-    expect(traffic.root.querySelector("ha-card")?.classList.contains("palette-traffic")).toBe(true);
+    expect([...(plain.root.querySelector("ha-card") as HTMLElement).classList].some((c) => c.startsWith("palette-"))).toBe(false);
+    for (const set of ["traffic", "safe", "muted"] as const) {
+      const picked = await mount(config({ palette: set }), charging);
+      expect(picked.root.querySelector("ha-card")?.classList.contains("palette-" + set), set).toBe(true);
+    }
   });
 });

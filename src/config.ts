@@ -646,8 +646,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     : leftColumn;
 
   /* The top of the form is one group like the others, open by default, in
-     rows that read as pairs: what the card is called and how big; the chip
-     and what it says; a tap and the shape; the night. */
+     rows that read as pairs: what the card is called and how big; a tap and
+     the shape; the colours and the night. The chip sits with the corner. */
   const schema = [
     {
       type: "expandable",
@@ -663,36 +663,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           name: "text_scale",
           selector: { number: { min: 0.8, max: 2, step: 0.05, mode: "box" } }
         }
-      ]
-    },
-    {
-      type: "grid",
-      schema: [
-        {
-          name: "chip",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "always", label: t("editor.chip_always") },
-                { value: "gridfree", label: t("editor.chip_gridfree") },
-                { value: "never", label: t("editor.chip_never") }
-              ]
-            }
-          }
-        },
-        ...only((resolved) => resolved.chip !== "never", {
-          name: "chip_shows",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "state", label: t("editor.chip_state") },
-                { value: "autarky", label: t("editor.chip_autarky") }
-              ]
-            }
-          }
-        })
       ]
     },
     {
@@ -721,6 +691,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         })
       ]
     },
+    // Two dropdowns pair in one row; a slider in half a row leaves its help
+    // text four words wide, so it gets the whole width to itself.
     {
       type: "grid",
       schema: [
@@ -731,16 +703,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               mode: "dropdown",
               options: [
                 { value: "standard", label: t("editor.palette_standard") },
-                { value: "traffic", label: t("editor.palette_traffic") }
+                { value: "traffic", label: t("editor.palette_traffic") },
+                { value: "safe", label: t("editor.palette_safe") },
+                { value: "muted", label: t("editor.palette_muted") }
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      type: "grid",
-      schema: [
+        },
         {
           name: "night_layout",
           selector: {
@@ -752,10 +721,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
-        { name: "night_dim", selector: { number: { min: 0, max: 50, step: 5, mode: "slider" } } }
+        }
       ]
-    }
+    },
+    { name: "night_dim", selector: { number: { min: 0, max: 50, step: 5, mode: "slider" } } }
       ]
     },
     {
@@ -763,6 +732,36 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       title: t("editor.head_settings"),
       icon: "mdi:page-layout-header",
       schema: [
+        {
+          type: "grid",
+          schema: [
+            {
+              name: "chip",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "always", label: t("editor.chip_always") },
+                    { value: "gridfree", label: t("editor.chip_gridfree") },
+                    { value: "never", label: t("editor.chip_never") }
+                  ]
+                }
+              }
+            },
+            ...only((resolved) => resolved.chip !== "never", {
+              name: "chip_shows",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "state", label: t("editor.chip_state") },
+                    { value: "autarky", label: t("editor.chip_autarky") }
+                  ]
+                }
+              }
+            })
+          ]
+        },
         {
           type: "grid",
           schema: [
