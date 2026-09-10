@@ -22,6 +22,7 @@ export const DEFAULTS = {
   shape: "standard" as const,
   wide_from: 640,
   night_layout: "same" as const,
+  palette: "standard" as const,
   tap_action: { action: "more-info" as const },
   battery_capacity: 0,
   battery_reserve: 0,
@@ -92,7 +93,8 @@ export const DEFAULTS = {
     extra: "none" as const,
     sunrise_mark: false,
     curve: false,
-    animate: false
+    animate: false,
+    full_from: "rate" as const
   },
   devices: {
     list: [] as string[],
@@ -218,6 +220,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     shape: config.shape ?? DEFAULTS.shape,
     wide_from: config.wide_from ?? DEFAULTS.wide_from,
     night_layout: config.night_layout ?? DEFAULTS.night_layout,
+    palette: config.palette ?? DEFAULTS.palette,
     tap_action: config.tap_action ?? DEFAULTS.tap_action,
     // The two used to sit at the top level. They belong to the battery and
     // live there now; a card written before that still reads.
@@ -722,6 +725,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       type: "grid",
       schema: [
         {
+          name: "palette",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "standard", label: t("editor.palette_standard") },
+                { value: "traffic", label: t("editor.palette_traffic") }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      type: "grid",
+      schema: [
+        {
           name: "night_layout",
           selector: {
             select: {
@@ -1117,6 +1137,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }),
             { name: "runtime", selector: { boolean: {} } },
             { name: "percent", selector: { boolean: {} } },
+            // A forecast can see the evening, which the rate cannot; offered
+            // only once there is a forecast by the hour to read.
+            ...only(
+              (resolved) => cellTimed(resolved) && resolved.battery.runtime && Boolean(resolved.entities.forecast_hourly),
+              {
+                name: "full_from",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "rate", label: t("editor.full_rate") },
+                      { value: "forecast", label: t("editor.full_forecast") }
+                    ]
+                  }
+                }
+              }
+            ),
             ...only((resolved) => resolved.battery_reserve > 0, {
               name: "reserve_line",
               selector: { boolean: {} }
@@ -1456,6 +1493,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     import_switch: t("editor.import_switch"),
     autarky_colours: t("editor.autarky_colours"),
     animate: t("editor.animate"),
+    full_from: t("editor.full_from"),
+    palette: t("editor.palette"),
     consumption: t("editor.consumption"),
     show_forecast: t("editor.show_forecast"),
     compare: t("editor.compare"),
@@ -1528,6 +1567,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     import_switch: t("editor.help_import_switch"),
     autarky_colours: t("editor.help_autarky_colours"),
     animate: t("editor.help_animate"),
+    full_from: t("editor.help_full_from"),
+    palette: t("editor.help_palette"),
     columns: t("editor.help_columns"),
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),

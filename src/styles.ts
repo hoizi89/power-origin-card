@@ -22,6 +22,14 @@ export const cardStyles = css`
     --sst-grid: var(--power-origin-import-color, #e5484d);
   }
 
+  /* One set for the whole card: the sun as the sun, the battery as energy
+     that went through a converter twice, the grid as the one that costs. */
+  ha-card.palette-traffic {
+    --sst-sun: #f2c200;
+    --sst-leaf: #f28c28;
+    --sst-grid: #e5484d;
+  }
+
   ha-card {
     position: relative;
     container-type: inline-size;

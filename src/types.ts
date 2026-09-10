@@ -26,6 +26,10 @@ export type RingNight = "same" | "countdown";
 export type RingTap = "entity" | "cycle";
 export type BatteryExtra = "none" | "range" | "cycles" | "saved" | "given" | "sunrise" | "flow";
 export type BatteryStyle = "segments" | "solid" | "bar";
+/** Where the full time comes from: the charge rate right now, or the hourly forecast. */
+export type BatteryFullFrom = "rate" | "forecast";
+/** The three source colours as one set. */
+export type Palette = "standard" | "traffic";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 /** The subset of Lovelace's action config this card acts on. */
@@ -229,6 +233,7 @@ export interface BatteryOptions {
   curve?: boolean;
   /** A slow wave through the cells, towards the cap while charging and away from it while discharging. */
   animate?: boolean;
+  full_from?: BatteryFullFrom;
 }
 
 export type DevicesStyle = "icons" | "bar" | "both" | "tiles";
@@ -306,6 +311,8 @@ export interface PowerOriginCardConfig {
   wide_from?: number;
   /** Once the sun is down: as it is, or quiet — the columns, the tiles and the devices go. */
   night_layout?: "same" | "quiet";
+  /** `traffic`: sun yellow, battery orange, grid red, everywhere at once. */
+  palette?: Palette;
   tap_action?: ActionConfig;
   battery_capacity?: number;
   battery_reserve?: number;

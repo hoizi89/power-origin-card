@@ -271,6 +271,17 @@ export function dayTotal(
   return Number.isFinite(change) ? change : undefined;
 }
 
+/** What a sensor averaged over the last minutes of its day rows, in its own unit. */
+export function recentMean(rows: StatisticPoint[] | undefined, minutes: number, now = Date.now()): number | undefined {
+  if (!rows?.length) return undefined;
+  const since = now - minutes * 60000;
+  const means = rows
+    .filter((row) => row.start >= since)
+    .map((row) => row.mean)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  return means.length ? means.reduce((a, b) => a + b, 0) / means.length : undefined;
+}
+
 /** How much each meter grew since midnight, in its own unit. */
 export async function fetchTodayChange(
   hass: HomeAssistant,

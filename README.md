@@ -6,7 +6,7 @@
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/card.png" alt="Midday: two rings, the day beside them, and what the day earned" width="430">
 
-The ring splits the house load into its sources. Sun gold, battery green, grid blue — the colour always names the participant that is not the house, everywhere on the card. If you would rather see red the moment the house draws from the grid, one switch (`ring.import_red`) makes the grid wear red instead of blue for exactly as long as that lasts — on the ring, the column and the bar alike. Beside it a column with a middle: surplus climbs, grid draw sinks.
+The ring splits the house load into its sources. Sun gold, battery green, grid blue — the colour always names the participant that is not the house, everywhere on the card. If you would rather see red the moment the house draws from the grid, one switch (`ring.import_red`) makes the grid wear red instead of blue for exactly as long as that lasts — on the ring, the column and the bar alike. And if your household reads colours as a traffic light, `palette: traffic` makes the sun yellow, the battery orange and the grid red, everywhere at once. Beside it a column with a middle: surplus climbs, grid draw sinks.
 
 Three rules it is built on:
 
@@ -163,6 +163,7 @@ filled but dimmed, so a bar that reads full is not read as available.
 | `battery.reserve_line` | marks where the reserve begins |
 | `battery.extra` | a second figure to the right: the day’s low and high, cycles today, what was not bought, or what was given out |
 | `battery.runtime` | how long the charge lasts, or when it is full |
+| `battery.full_from` | where the full time comes from: the charge rate of the last quarter hour, or the hourly forecast up to sunset. Either way a time that would land after sunset is not shown; the bar says “not full today” and, from the forecast, where the charge will stand at sunset |
 
 The bar gives up width for whatever stands to its right, and only ever one thing does.
 Everything but the low and high is worked out from readings the card already holds.

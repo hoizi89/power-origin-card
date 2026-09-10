@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, svg } from "lit";
-import { batteryView, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
+import { batteryView, fullFromForecast, fullVerdict, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
 import { chartBars } from "./bars";
 import { CHART_BOX, chartGeometry } from "./chart";
 import { CARD_TYPE, resolveConfig, stubConfig } from "./config";
@@ -19,7 +19,7 @@ import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, startOfToday, toMillis } from "./stats";
+import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, recentMean, startOfToday, toMillis } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -99,6 +99,8 @@ export class PowerOriginCard extends LitElement {
   private _bestDay?: number[];
   private _bestKwh?: number;
   private _bestFetched = 0;
+  /** The battery's power over the last quarter hour, in kW, the sign as the sensor gives it. */
+  private _cellMean?: number;
   /** The last seven days, today last. */
   private _week?: WeekDay[];
   private _weekFetched = 0;
@@ -340,7 +342,8 @@ export class PowerOriginCard extends LitElement {
       // Grid and battery ride along in the same query: the hourly views need
       // them, and a second request would cost another recorder scan.
       const gridId = this._needsHours() ? config.entities.grid_power : undefined;
-      const cellId = this._needsHours() ? config.entities.battery_power : undefined;
+      // The runtime reads the battery too, for a rate that a cloud cannot flip.
+      const cellId = this._needsHours() || config.battery.runtime ? config.entities.battery_power : undefined;
       const socId =
         config.battery.extra === "range" || (config.sections.battery && config.battery.curve)
           ? config.entities.battery_soc
@@ -361,6 +364,13 @@ export class PowerOriginCard extends LitElement {
         new Date(),
         config.battery.runtime_window
       );
+      this._cellMean = cellId
+        ? (() => {
+            const mean = recentMean(stats[cellId], 15);
+            const perKw = unitOf(stateOf(hass, cellId)).toLowerCase() === "kw" ? 1 : 1000;
+            return mean === undefined ? undefined : mean / perKw;
+          })()
+        : undefined;
       // A percentage, so it is read as it comes.
       this._socRange = socId ? extremes(stats[socId] ?? []) : undefined;
       this._socRows = socId ? stats[socId] : undefined;
@@ -783,7 +793,7 @@ export class PowerOriginCard extends LitElement {
       <ha-card style="--sst-scale: ${config.text_scale}; --sst-night: ${(1 - config.night_dim / 100).toFixed(2)}"
         class="${(config.ring.import_red && flow.fromGrid > 0) || (config.ring.import_switch && alarm) ? "import-alarm" : ""} ${
           config.shape === "wide" && this._wideOn ? "wide" : ""
-        } ${config.night_dim > 0 && sunDown ? "night" : ""}">
+        } ${config.night_dim > 0 && sunDown ? "night" : ""} ${config.palette === "traffic" ? "palette-traffic" : ""}">
         ${config.title || showChip || price !== undefined
           ? html`<div class="head ${config.title || price !== undefined ? "" : "bare"} ${
               // Two columns reach the top corners, so there is no corner left
@@ -1728,17 +1738,64 @@ export class PowerOriginCard extends LitElement {
     const soc = numberOf(stateOf(hass, config.entities.battery_soc));
     const rawPower = powerKw(stateOf(hass, config.entities.battery_power));
     const power = rawPower === undefined ? undefined : config.battery_invert ? -rawPower : rawPower;
+    const rawMean = this._cellMean;
+    const averagePower =
+      rawMean === undefined ? undefined : config.battery_invert ? -rawMean : rawMean;
     const view = batteryView({
       soc,
       power,
+      averagePower,
       capacity: config.battery_capacity || undefined,
       reserve: config.battery_reserve,
       averageLoad: this._series?.houseAverage,
       loadSpread: this._series?.houseSpread
     });
+    this._refineFull(view);
     const sunrise = sunTimes(stateOf(hass, "sun.sun")).nextRising;
     const hoursToSunrise = sunrise ? (sunrise.getTime() - Date.now()) / 3600000 : undefined;
     return { view, soc, usableKwh: view.availableKwh, sunrise, hoursToSunrise };
+  }
+
+  /**
+   * The full time, checked against the day. From the forecast when asked:
+   * the roof minus the house, hour by hour until sunset. Otherwise the rate's
+   * straight line, which is dropped once it runs past the sunset or a day.
+   */
+  private _refineFull(view: BatteryView): void {
+    if (view.mode !== "charging" || view.soc === undefined) return;
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const now = new Date();
+    const sun = stateOf(hass, "sun.sun");
+    const sunUp = sun?.state === "above_horizon";
+    const setting = sunTimes(sun, now).setting;
+    const capacityKwh = config.battery_capacity ? config.battery_capacity / 1000 : undefined;
+
+    if (config.battery.full_from === "forecast" && config.entities.forecast_hourly && capacityKwh) {
+      const slots = hourlyForecast(stateOf(hass, config.entities.forecast_hourly));
+      if (slots.length) {
+        const headroom = capacityKwh * Math.max(0, (100 - view.soc) / 100);
+        const load = this._series?.houseAverage ?? powerKw(stateOf(hass, config.entities.house)) ?? 0;
+        const found = fullFromForecast(slots, now, headroom, load, sunUp ? setting : undefined);
+        if (found.at) {
+          view.at = found.at;
+          view.hours = (found.at.getTime() - now.getTime()) / 3600000;
+          view.full = "forecast";
+        } else {
+          view.at = undefined;
+          view.hours = undefined;
+          view.full = "not_today";
+          view.socAtSunset = Math.min(100, view.soc + (found.reachedKwh / capacityKwh) * 100);
+        }
+        return;
+      }
+    }
+
+    if (fullVerdict(view.at, now, setting, sunUp) === "not_today") {
+      view.at = undefined;
+      view.hours = undefined;
+      view.full = "not_today";
+    }
   }
 
   /** How long the battery lasts, when it is the one carrying the house. */
@@ -2629,27 +2686,15 @@ export class PowerOriginCard extends LitElement {
   }
 
   private _renderBattery(locale: string) {
-    const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
-    const soc = numberOf(stateOf(hass, config.entities.battery_soc));
+    const { view, soc } = this._batteryFacts();
     if (soc === undefined) return nothing;
-
-    const rawPower = powerKw(stateOf(hass, config.entities.battery_power));
-    const power =
-      rawPower === undefined ? undefined : config.battery_invert ? -rawPower : rawPower;
-
-    const view = batteryView({
-      soc,
-      power,
-      capacity: config.battery_capacity || undefined,
-      reserve: config.battery_reserve,
-      averageLoad: this._series?.houseAverage,
-      loadSpread: this._series?.houseSpread
-    });
 
     if (!config.battery.runtime) {
       view.hours = undefined;
       view.at = undefined;
+      view.full = undefined;
+      view.socAtSunset = undefined;
     }
 
     const tone =
@@ -2976,7 +3021,17 @@ export class PowerOriginCard extends LitElement {
         : `${formatNumber(view.availableKwh, locale, 1)} kWh ${localize("battery.stored", locale)}`;
 
     if (view.mode === "charging") {
-      if (view.at) parts.push(`${localize("battery.full_at", locale)} ${formatClock(view.at, locale)}`);
+      if (view.at) {
+        const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
+        parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
+      } else if (view.full === "not_today") {
+        parts.push(localize("battery.not_full_today", locale));
+        if (view.socAtSunset !== undefined) {
+          parts.push(
+            `${localize("battery.about", locale)} ${formatNumber(view.socAtSunset, locale, 0)} % ${localize("battery.at_sunset", locale)}`
+          );
+        }
+      }
       if (view.power !== undefined) {
         parts.push(
           `${localize("battery.charging", locale)} ${formatPower(Math.abs(view.power), locale)} kW`

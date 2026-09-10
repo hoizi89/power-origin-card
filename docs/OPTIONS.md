@@ -117,6 +117,7 @@ today:
 | `text_scale` | `1` | Multiplies every type size at once. |
 | `shape` | `standard` | The card's shape: `standard` as it is; `wide` with the ring and its columns on the left and the day, the battery and the rest on the right, for a panel; `compact` as one row — the ring small, three figures (roof, grid, battery) and the chip. |
 | `wide_from` | `640` | From this many pixels of card width the wide shape takes hold; narrower it stacks as usual, and below 560 px it stacks in any case, since two columns need the room. |
+| `palette` | `standard` | `traffic` turns the three source colours into a traffic light everywhere at once: sun yellow, battery orange, grid red. The standard set follows the Energy dashboard: sun gold, battery green, grid blue. |
 | `night_layout` | `same` | `quiet` once the sun is down: the columns, the week, the tiles and the devices step aside, and the ring, the battery and one line about the day remain. Pairs with `night_dim`. |
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
 | `chip_shows` | `state` | What the chip says: `state` (grid-free or from grid) or `autarky` — the day's self-supplied share from the daily meters, green from 80 %, the grid's colour below. |
@@ -167,6 +168,7 @@ today:
 | `battery.style` | `segments` | `segments`, `solid`, or `bar` without a casing. |
 | `battery.segments` | `0` | `0` gives one block per kilowatt hour of capacity. |
 | `battery.runtime_window` | `30` | Minutes averaged before dividing. |
+| `battery.full_from` | `rate` | Where the full time comes from while charging. `rate` divides what is missing by the charge rate of the last quarter hour, and says nothing past today's sunset or past a day: “not full today” instead of a clock time that lies in tomorrow. `forecast` reads the hourly forecast from now to sunset, the house's average load taken off, and names the hour it fills; when it does not, it says where the charge will stand at sunset. Offered once `forecast_hourly` is set. |
 | `battery.percent` | `true` | The charge as a figure beside the heading. The bar says it too, so this is the number and not the picture. |
 | `battery.reserve_line` | `true` | A dashed line where the reserve begins, so a bar that reads full does not hide power that never comes out. Shown only when a reserve is set. |
 | `battery.sunrise_mark` | `false` | A sun under the bar where the charge will stand at sunrise, worked out from today's average load; the cells the night will use stand back. Shown while the battery carries the house. |

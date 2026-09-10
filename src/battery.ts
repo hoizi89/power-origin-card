@@ -11,6 +11,8 @@ export interface BatteryInput {
   averageLoad?: number;
   /** Spread of that mean, relative. Above the threshold the estimate is dropped. */
   loadSpread?: number;
+  /** The battery's power averaged over the last while, same sign as `power`, in kW. */
+  averagePower?: number;
 }
 
 export type BatteryMode = "charging" | "discharging" | "full" | "idle" | "unknown";
@@ -25,6 +27,10 @@ export interface BatteryView {
   /** The clock time that goes with `hours`. */
   at?: Date;
   power?: number;
+  /** Where the full time came from, or why there is none. */
+  full?: "rate" | "forecast" | "not_today";
+  /** Where the charge will stand at sunset when full is not on today's cards. */
+  socAtSunset?: number;
 }
 
 const FULL_SOC = 99;
@@ -58,8 +64,14 @@ export function batteryView(input: BatteryInput, now = new Date()): BatteryView 
   const view: BatteryView = { mode, soc, availableKwh: usableKwh, power };
 
   if (mode === "charging" && headroomKwh !== undefined && power !== undefined) {
-    const rate = Math.abs(power);
-    if (rate > IDLE_KW) view.hours = headroomKwh / rate;
+    // A cloud passing over the roof is not a change of plan; the last quarter
+    // hour is, as long as it was charging too.
+    const average = input.averagePower;
+    const rate = average !== undefined && average < -IDLE_KW ? Math.abs(average) : Math.abs(power);
+    if (rate > IDLE_KW) {
+      view.hours = headroomKwh / rate;
+      view.full = "rate";
+    }
   }
 
   if (mode === "discharging" && usableKwh !== undefined && usableKwh > 0) {
@@ -108,6 +120,61 @@ export function sunriseReach(
   const ratio = hours / hoursToSunrise;
   if (ratio < 1.15) return "tight";
   return ratio < 1.6 ? "ok" : "easy";
+}
+
+export interface ForecastSlot {
+  start: number;
+  /** Expected roof output through the hour, in kW. */
+  kw: number;
+}
+
+/**
+ * When the roof, minus the house, has filled what is missing. The forecast is
+ * read hour by hour from now, the part of this hour already gone left out. The
+ * sunset ends the search: what is not full by then is not full today, and the
+ * charge it reaches by then is the honest answer instead.
+ */
+export function fullFromForecast(
+  slots: ForecastSlot[],
+  now: Date,
+  headroomKwh: number,
+  loadKw: number,
+  sunset?: Date
+): { at?: Date; reachedKwh: number } {
+  const HOUR = 3600 * 1000;
+  const end = sunset ? sunset.getTime() : Number.POSITIVE_INFINITY;
+  let reached = 0;
+  const ordered = [...slots].sort((a, b) => a.start - b.start);
+  for (const slot of ordered) {
+    const from = Math.max(slot.start, now.getTime());
+    const to = Math.min(slot.start + HOUR, end);
+    if (to <= from) continue;
+    const surplus = Math.max(0, slot.kw - loadKw);
+    const gain = (surplus * (to - from)) / HOUR;
+    if (headroomKwh > 0 && reached + gain >= headroomKwh) {
+      const share = surplus > 0 ? (headroomKwh - reached) / surplus : 0;
+      return { at: new Date(from + share * HOUR), reachedKwh: headroomKwh };
+    }
+    reached += gain;
+  }
+  return { reachedKwh: reached };
+}
+
+/**
+ * A full time worked out from the rate is a straight line; the sun is not.
+ * Past today's sunset the line runs through the night, and past a day it says
+ * nothing at all. Both are the same answer: not today.
+ */
+export function fullVerdict(
+  at: Date | undefined,
+  now: Date,
+  sunset: Date | undefined,
+  sunUp: boolean
+): "time" | "not_today" {
+  if (!at) return "time";
+  if (at.getTime() - now.getTime() > 24 * 3600 * 1000) return "not_today";
+  if (sunUp && sunset && now < sunset && at > sunset) return "not_today";
+  return "time";
 }
 
 export function segmentCount(configured: number, capacityWh: number): number {
