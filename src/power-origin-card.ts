@@ -12,7 +12,7 @@ import {
   type Flow
 } from "./flow";
 import { pickFromEnergy, type EnergyPrefs } from "./energy";
-import { hourlyForecastAll, type ForecastHour } from "./forecast";
+import { hourlyForecastAll, shortfall, snowSeason, type ForecastHour } from "./forecast";
 import { byArea, iconFor, rankDevices, type DeviceReading } from "./devices";
 import { fetchRecentMeans, fetchRecentSeries, fetchTodayChange, runMinutes } from "./stats";
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
@@ -2633,6 +2633,17 @@ export class PowerOriginCard extends LitElement {
     const forecast = forecastValue !== undefined && forecastValue >= 0.05 ? forecastValue : undefined;
 
     const tomorrow = this._kwhOf(config.entities.forecast_tomorrow);
+    // A roof far behind its forecast by day is worth a word: in the snow
+    // months a question, the rest of the year the bare fact.
+    const behind =
+      !sunDown && config.chart.show_forecast && config.entities.forecast_hourly.length > 0
+        ? shortfall(
+            this._hoursOf(config.entities.forecast_hourly),
+            produced,
+            sunTimes(stateOf(hass, "sun.sun")).rising,
+            new Date()
+          ).short
+        : false;
     const note = [
       produced !== undefined
         ? html`<span class="key-solar">${formatEnergy(produced, locale)}
@@ -2645,6 +2656,9 @@ export class PowerOriginCard extends LitElement {
       forecast !== undefined
         ? html` · ${formatEnergy(forecast, locale)}
             <span class="dim">${localize("chart.forecast", locale)}</span>`
+        : nothing,
+      behind
+        ? html` · <span class="dim">${localize(snowSeason(new Date()) ? "chart.snow" : "chart.shortfall", locale)}</span>`
         : nothing,
       // After sunset the day is done; tomorrow’s expectation is the one figure
       // that still looks ahead, and it stands beside today, not instead of it.

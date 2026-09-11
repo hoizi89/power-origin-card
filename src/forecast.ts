@@ -68,6 +68,37 @@ export function hourlyForecast(entity: HassEntity | undefined): ForecastHour[] {
  * are added too, and kept only where every forecast publishes them, since a
  * span with one side missing is no span.
  */
+/**
+ * Whether the roof is far behind what the forecast expected of the day so
+ * far: at least a kilowatt hour expected since sunrise, two hours into the
+ * day, and less than a quarter of it delivered. Snow, fog, or an inverter
+ * that has stopped — the card cannot tell which, only that something is up.
+ */
+export function shortfall(
+  hours: ForecastHour[],
+  producedKwh: number | undefined,
+  sunrise: Date | undefined,
+  now: Date
+): { expectedKwh: number; short: boolean } {
+  if (!sunrise || producedKwh === undefined) return { expectedKwh: 0, short: false };
+  const from = sunrise.getTime();
+  const to = now.getTime();
+  let expected = 0;
+  for (const hour of hours) {
+    const start = Math.max(hour.start, from);
+    const end = Math.min(hour.start + HOUR, to);
+    if (end > start) expected += (hour.kw * (end - start)) / HOUR;
+  }
+  const short = to - from >= 2 * HOUR && expected >= 1 && producedKwh < expected * 0.25;
+  return { expectedKwh: expected, short };
+}
+
+/** The months a roof can be under snow, in the northern half of the world. */
+export function snowSeason(now: Date): boolean {
+  const month = now.getMonth() + 1;
+  return month >= 11 || month <= 3;
+}
+
 export function hourlyForecastAll(entities: Array<HassEntity | undefined>): ForecastHour[] {
   const each = entities.map(hourlyForecast).filter((hours) => hours.length > 0);
   if (each.length <= 1) return each[0] ?? [];

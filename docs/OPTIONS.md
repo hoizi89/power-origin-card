@@ -108,7 +108,7 @@ today:
 | `price_import`, `price_export` | A fixed price per kWh, used only to work the money out — see below. |
 | `amortisation` | How much of the system has paid for itself, in percent. |
 
-`forecast_hourly` is a sensor, or a list of them for several roof faces, whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`); after sunset the card reads `forecast_tomorrow` the same way.
+With the hours known, the line under the chart also says *below forecast* once the roof has delivered less than a quarter of what the forecast expected since sunrise, two hours into the day and a kilowatt hour or more; from November to March it asks *snow on the roof?* instead. `forecast_hourly` is a sensor, or a list of them for several roof faces, whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`); after sunset the card reads `forecast_tomorrow` the same way.
 
 ### Card
 

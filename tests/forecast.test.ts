@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { hourlyForecastAll } from "../src/forecast";
+import { hourlyForecastAll, shortfall, snowSeason } from "../src/forecast";
 import type { HassEntity } from "../src/types";
 
-const at = (hour: number) => new Date(2026, 5, 15, hour, 0, 0).getTime();
+const at = (hour: number, minute = 0) => new Date(2026, 5, 15, hour, minute, 0).getTime();
 
 const face = (id: string, rows: Array<Record<string, unknown>>): HassEntity => ({
   entity_id: id,
@@ -14,6 +14,35 @@ const hour = (h: number, kw: number, edges?: [number, number]) => ({
   period_start: new Date(at(h)).toISOString(),
   pv_estimate: kw,
   ...(edges ? { pv_estimate10: edges[0], pv_estimate90: edges[1] } : {})
+});
+
+describe("a roof far behind its forecast", () => {
+  const sunrise = new Date(at(6));
+  const day = [hour(6, 1), hour(7, 2), hour(8, 3), hour(9, 4)];
+  const hours = hourlyForecastAll([face("sensor.f", day)]);
+
+  it("is short once two hours in, a kilowatt hour expected, and under a quarter delivered", () => {
+    // By nine: 1 + 2 + 3 = 6 kWh expected.
+    expect(shortfall(hours, 0.5, sunrise, new Date(at(9))).short).toBe(true);
+    expect(shortfall(hours, 2, sunrise, new Date(at(9))).short).toBe(false);
+  });
+
+  it("says nothing early in the day, or with little expected, or without a reading", () => {
+    expect(shortfall(hours, 0, sunrise, new Date(at(7, 30))).short).toBe(false);
+    expect(shortfall([hour(6, 0.2), hour(7, 0.2)], 0, sunrise, new Date(at(9))).short).toBe(false);
+    expect(shortfall(hours, undefined, sunrise, new Date(at(9))).short).toBe(false);
+    expect(shortfall(hours, 0, undefined, new Date(at(9))).short).toBe(false);
+  });
+
+  it("counts only the part of the hours the day has reached", () => {
+    expect(shortfall(hours, 0, sunrise, new Date(at(8, 30))).expectedKwh).toBeCloseTo(4.5, 5);
+  });
+
+  it("asks about snow from November to March", () => {
+    expect(snowSeason(new Date(2026, 0, 15))).toBe(true);
+    expect(snowSeason(new Date(2026, 10, 1))).toBe(true);
+    expect(snowSeason(new Date(2026, 5, 15))).toBe(false);
+  });
 });
 
 describe("several roof faces as one forecast", () => {
