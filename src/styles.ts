@@ -16,6 +16,11 @@ export const cardStyles = css`
     display: block;
   }
 
+  /* The figures in the dashboard's own face, for a card that should not stand out. */
+  ha-card.font-system {
+    --sst-mono: var(--ha-font-family-body, var(--primary-font-family, sans-serif));
+  }
+
   /* Chosen, not inferred: the grid is still the participant the colour names,
      the colour just says it is the one you pay for right now. */
   ha-card.import-alarm {
@@ -1337,6 +1342,10 @@ export const cardStyles = css`
 
   .bat-sun path {
     fill: none;
+  }
+
+  .bat-moon {
+    fill: var(--sst-muted);
   }
 
   .bat-extra {

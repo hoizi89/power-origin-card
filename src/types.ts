@@ -30,6 +30,10 @@ export type BatteryStyle = "segments" | "solid" | "bar";
 export type BatteryFullFrom = "rate" | "forecast";
 /** The three source colours as one set. */
 export type Palette = "standard" | "traffic" | "safe" | "muted";
+/** The face the figures wear: monospace, or the dashboard's own. */
+export type FigureFont = "mono" | "system";
+/** Where the device list comes from: the configuration, or the Energy dashboard as it stands. */
+export type DevicesSource = "list" | "energy";
 export type ChartStyle = "area" | "bars";
 export type MeterScope = "grid" | "all";
 /** The subset of Lovelace's action config this card acts on. */
@@ -103,11 +107,12 @@ export interface PowerOriginEntities {
   house_today?: string;
   export_today?: string;
   import_today?: string;
-  forecast?: string;
-  /** What the roof expects tomorrow, in kWh; read after sunset. */
-  forecast_tomorrow?: string;
-  /** A sensor carrying the day's forecast by hour in its attributes, the way Solcast does. */
-  forecast_hourly?: string;
+  /** Energy still expected today, in kWh. Several, one per roof face, are added up. */
+  forecast?: string | string[];
+  /** What the roof expects tomorrow, in kWh; read after sunset. Several are added up. */
+  forecast_tomorrow?: string | string[];
+  /** A sensor carrying the day's forecast by hour in its attributes, the way Solcast does. Several are added up. */
+  forecast_hourly?: string | string[];
   cost_today?: string;
   cost_export_today?: string;
   cost_import_today?: string;
@@ -120,6 +125,13 @@ export interface PowerOriginEntities {
   /** How far the system has paid for itself, in percent. */
   amortisation?: string;
 }
+
+/** The entities as the card reads them: the forecasts always as lists, empty when unset. */
+export type ResolvedEntities = Omit<PowerOriginEntities, "forecast" | "forecast_tomorrow" | "forecast_hourly"> & {
+  forecast: string[];
+  forecast_tomorrow: string[];
+  forecast_hourly: string[];
+};
 
 export type BlockName = "ring" | "chart" | "week" | "battery" | "today" | "devices";
 
@@ -247,6 +259,8 @@ export type DevicesGroup = "device" | "area";
 export type DevicesMode = "now" | "today";
 
 export interface DevicesOptions {
+  /** `energy` follows the Energy dashboard's device list, refreshed every hour; the list below is then not read. Unset, a list of your own means `list`, none means `energy`. */
+  source?: DevicesSource;
   /** Live power sensors, one per device. */
   list?: string[];
   /** What the Energy dashboard calls each one, by entity. */
@@ -323,6 +337,8 @@ export interface PowerOriginCardConfig {
   night_layout?: "same" | "quiet";
   /** `traffic`: sun yellow, battery orange, grid red, everywhere at once. */
   palette?: Palette;
+  /** `system` sets the figures in Home Assistant's own font instead of monospace. */
+  font?: FigureFont;
   tap_action?: ActionConfig;
   battery_capacity?: number;
   battery_reserve?: number;
@@ -339,7 +355,7 @@ export interface PowerOriginCardConfig {
 
 export interface ResolvedConfig extends Required<Omit<PowerOriginCardConfig, "title" | "entities">> {
   title?: string;
-  entities: PowerOriginEntities;
+  entities: ResolvedEntities;
   sections: Required<SectionToggles>;
   ring: Required<RingOptions>;
   chart: Required<ChartOptions>;

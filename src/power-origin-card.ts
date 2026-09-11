@@ -1,5 +1,5 @@
 import { LitElement, html, nothing, svg } from "lit";
-import { batteryView, fullFromForecast, fullSpan, fullVerdict, segmentCount, segments, sunriseReach, type BatteryView } from "./battery";
+import { batteryView, fullFromForecast, fullSpan, fullVerdict, segmentCount, segments, sunriseReach, type BatteryMode, type BatteryView } from "./battery";
 import { chartBars } from "./bars";
 import { CHART_BOX, chartGeometry } from "./chart";
 import { blockOrder, CARD_TYPE, resolveConfig, stubConfig } from "./config";
@@ -12,7 +12,7 @@ import {
   type Flow
 } from "./flow";
 import { pickFromEnergy, type EnergyPrefs } from "./energy";
-import { hourlyForecast, type ForecastHour } from "./forecast";
+import { hourlyForecastAll, type ForecastHour } from "./forecast";
 import { byArea, iconFor, rankDevices, type DeviceReading } from "./devices";
 import { fetchRecentMeans, fetchRecentSeries, fetchTodayChange, runMinutes } from "./stats";
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
@@ -44,8 +44,7 @@ import {
   numberOf,
   powerKw,
   stateOf,
-  unitOf
-} from "./values";
+  unitOf, sumEnergyKwh } from "./values";
 
 let gradientSeq = 0;
 
@@ -58,6 +57,8 @@ const CELL = html`<svg class="meter-glyph" viewBox="0 0 24 24" aria-hidden="true
 </svg>`;
 
 const REFRESH_MS = 2 * 60 * 1000;
+/** How often the Energy dashboard is asked for its device list. */
+const ENERGY_MS = 60 * 60 * 1000;
 
 export class PowerOriginCard extends LitElement {
   static properties = {
@@ -101,6 +102,10 @@ export class PowerOriginCard extends LitElement {
   private _bestFetched = 0;
   /** The battery's power over the last quarter hour, in kW, the sign as the sensor gives it. */
   private _cellMean?: number;
+  /** Whether the roof counted as producing last time; the dusk keeps it until the sun settles it. */
+  private _producing?: boolean;
+  /** What the battery was doing last time, so its word does not flip on a few watts. */
+  private _batteryMode?: BatteryMode;
   /** The last seven days, today last. */
   private _week?: WeekDay[];
   private _weekFetched = 0;
@@ -125,6 +130,8 @@ export class PowerOriginCard extends LitElement {
   /** What the centre shows this render, so the blocks below repeat nothing. */
   private _centreShown: RingCenter | "runtime" = "power";
   private _peakFetched = 0;
+  /** When the Energy dashboard's device list was last taken over. */
+  private _energyFetched = 0;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
   private readonly _clipId = `po-clip-${gradientSeq}`;
 
@@ -164,6 +171,7 @@ export class PowerOriginCard extends LitElement {
     this._bestFetched = 0;
     this._weekFetched = 0;
     this._moneyFetched = 0;
+    this._energyFetched = 0;
     this._cycleAt = undefined;
     this._measure();
     if (this._config.ring.tap === "cycle") {
@@ -306,6 +314,33 @@ export class PowerOriginCard extends LitElement {
     );
   }
 
+  /**
+   * The devices as the Energy dashboard lists them, taken over once an hour
+   * when the card is set to follow it: a device added there is here by the
+   * next hour, and nobody keeps two lists. What the dashboard does not know
+   * leaves the last list standing.
+   */
+  private async _followEnergy(hass: HomeAssistant, config: ResolvedConfig): Promise<void> {
+    if (config.devices.source !== "energy") return;
+    if (Date.now() - this._energyFetched < ENERGY_MS) return;
+    this._energyFetched = Date.now();
+    try {
+      const prefs = await hass.callWS<EnergyPrefs>({ type: "energy/get_prefs" });
+      const devices = pickFromEnergy(prefs).devices ?? [];
+      const list = devices.map((d) => d.id);
+      if (list.join() === config.devices.list.join()) return;
+      config.devices.list = list;
+      config.devices.names = Object.fromEntries(devices.map((d) => [d.id, d.name]));
+      config.devices.energy = Object.fromEntries(
+        devices.filter((d) => d.energy).map((d) => [d.id, d.energy as string])
+      );
+      this._lastFetch = 0;
+      this.requestUpdate();
+    } catch {
+      // No dashboard to follow: the list stays as it was.
+    }
+  }
+
   private async _maybeFetch(): Promise<void> {
     const hass = this._hass;
     const config = this._config;
@@ -316,6 +351,7 @@ export class PowerOriginCard extends LitElement {
         config.ring.meter_second_scale === 0 ||
         config.ring.meter_style === "roof" ||
         config.ring.meter_second === "roof");
+    await this._followEnergy(hass, config);
     const devicesNeed = this._wantsDevices();
     if (
       !config.sections.chart &&
@@ -805,7 +841,7 @@ export class PowerOriginCard extends LitElement {
       <ha-card style="--sst-scale: ${config.text_scale}; --sst-night: ${(1 - config.night_dim / 100).toFixed(2)}"
         class="${(config.ring.import_red && flow.fromGrid > 0) || (config.ring.import_switch && alarm) ? "import-alarm" : ""} ${
           config.shape === "wide" && this._wideOn ? "wide" : ""
-        } ${config.night_dim > 0 && sunDown ? "night" : ""} ${config.palette === "standard" ? "" : "palette-" + config.palette}">
+        } ${config.night_dim > 0 && sunDown ? "night" : ""} ${config.font === "system" ? "font-system" : ""} ${config.palette === "standard" ? "" : "palette-" + config.palette}">
         ${config.title || (showChip && !chipRidesRing) || price !== undefined
           ? html`<div class="head ${config.title || price !== undefined ? "" : "bare"}">
               ${config.title || price !== undefined
@@ -972,12 +1008,30 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /**
+   * Whether the roof counts as producing. At dusk the inverter hands out its
+   * last watts around any single threshold, and the ring would flip with every
+   * reading; so there are two, and between them the last answer stands. The
+   * sun has the final word: once it is below the horizon the day is over,
+   * whatever the meter still reads.
+   */
+  private _isProducing(flow: Flow): boolean {
+    if (stateOf(this._hass, "sun.sun")?.state === "below_horizon") {
+      this._producing = false;
+      return false;
+    }
+    const was = this._producing ?? flow.production > 0.05;
+    const producing = was ? flow.production > 0.02 : flow.production > 0.15;
+    this._producing = producing;
+    return producing;
+  }
+
   private _renderRing(flow: Flow, locale: string, alarm = false, bare = false, chip?: unknown) {
     const config = this._config as ResolvedConfig;
     const hass = this._hass as HomeAssistant;
     // A ring about production says nothing before sunrise, so both production
     // views fall back to the source ring rather than showing an empty circle.
-    const producing = flow.production > 0.05;
+    const producing = this._isProducing(flow);
     const night = !producing;
     let leftSubject = this._subjectFor(config.ring.meter_style, config.ring.meter_dark, night);
     // Without a second column there is nothing to switch; the value is never read.
@@ -1111,7 +1165,7 @@ export class PowerOriginCard extends LitElement {
       const hass = this._hass as HomeAssistant;
       const produced = energyKwh(stateOf(hass, config.entities.solar_today)) ?? 0;
       const expected = config.chart.show_forecast
-        ? (energyKwh(stateOf(hass, config.entities.forecast)) ?? 0)
+        ? (this._kwhOf(config.entities.forecast) ?? 0)
         : 0;
       const whole = produced + expected;
       if (whole > 0) {
@@ -1776,8 +1830,10 @@ export class PowerOriginCard extends LitElement {
       capacity: config.battery_capacity || undefined,
       reserve: config.battery_reserve,
       averageLoad: this._series?.houseAverage,
-      loadSpread: this._series?.houseSpread
+      loadSpread: this._series?.houseSpread,
+      lastMode: this._batteryMode
     });
+    this._batteryMode = view.mode;
     this._refineFull(view);
     const sunrise = sunTimes(stateOf(hass, "sun.sun")).nextRising;
     const hoursToSunrise = sunrise ? (sunrise.getTime() - Date.now()) / 3600000 : undefined;
@@ -1805,8 +1861,18 @@ export class PowerOriginCard extends LitElement {
     const resting = view.mode === "idle" && sunUp;
     if (view.mode !== "charging" && !resting) return;
 
-    if (config.battery.full_from === "forecast" && config.entities.forecast_hourly && capacityKwh) {
-      const slots = hourlyForecast(stateOf(hass, config.entities.forecast_hourly));
+    // The last hour of sun fills nothing, and the forecast's three answers for
+    // it trade places with every reading. The day is decided; say nothing.
+    const DUSK = 3600 * 1000;
+    if (sunUp && setting && setting.getTime() - now.getTime() < DUSK) {
+      view.at = undefined;
+      view.hours = undefined;
+      view.full = undefined;
+      return;
+    }
+
+    if (config.battery.full_from === "forecast" && config.entities.forecast_hourly.length > 0 && capacityKwh) {
+      const slots = this._hoursOf(config.entities.forecast_hourly);
       if (slots.length) {
         const headroom = capacityKwh * Math.max(0, (100 - view.soc) / 100);
         // Five hours of afternoon are not the last half hour: the oven that ran
@@ -1848,6 +1914,18 @@ export class PowerOriginCard extends LitElement {
     }
   }
 
+  /** Several forecast sensors as one figure: their energies added up, in kWh. */
+  private _kwhOf(ids: string[]): number | undefined {
+    const hass = this._hass as HomeAssistant;
+    return sumEnergyKwh(ids.map((id) => stateOf(hass, id)));
+  }
+
+  /** Several hourly forecasts as one: the hours added up. */
+  private _hoursOf(ids: string[]): ForecastHour[] {
+    const hass = this._hass as HomeAssistant;
+    return hourlyForecastAll(ids.map((id) => stateOf(hass, id)));
+  }
+
   /** The house's mean draw since sunrise today, in kW; undefined before the day has readings. */
   private _daylightLoad(): number | undefined {
     const series = this._series;
@@ -1873,7 +1951,11 @@ export class PowerOriginCard extends LitElement {
       parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
     } else if (view.full === "not_today") {
       // Where it ends up at sunset says on its own that full is not on today's cards.
-      if (view.socAtSunset !== undefined) {
+      // With the moon on the bar it is already said, and the line stays short.
+      const config = this._config as ResolvedConfig;
+      if (view.socAtSunset !== undefined && config.battery.sunrise_mark) {
+        // The moon has it.
+      } else if (view.socAtSunset !== undefined) {
         parts.push(
           `${localize("battery.about", locale)} ${formatNumber(view.socAtSunset, locale, 0)} % ${localize("battery.at_sunset", locale)}`
         );
@@ -2390,7 +2472,7 @@ export class PowerOriginCard extends LitElement {
     };
 
     const mode = config.ring.center;
-    const producing = flow.production > 0.05;
+    const producing = this._isProducing(flow);
     const ringShowsDestinations = producing && (mode === "production" || mode === "surplus");
 
     if (ringShowsDestinations) {
@@ -2487,9 +2569,9 @@ export class PowerOriginCard extends LitElement {
     const ghost: ForecastHour[] = !config.chart.forecast_bars
       ? []
       : sunDown
-        ? hourlyForecast(stateOf(hass, config.entities.forecast_tomorrow))
+        ? this._hoursOf(config.entities.forecast_tomorrow)
             .map((hour) => ({ start: hour.start - DAY, kw: hour.kw }))
-        : hourlyForecast(stateOf(hass, config.entities.forecast_hourly));
+        : this._hoursOf(config.entities.forecast_hourly);
     const midnight = startOfToday().getTime();
     const layers =
       config.chart.layers && this._hours
@@ -2545,11 +2627,11 @@ export class PowerOriginCard extends LitElement {
     const used = energyKwh(stateOf(hass, config.entities.house_today));
     // After sunset "0.0 expected" states the obvious and costs a line.
     const forecastValue = config.chart.show_forecast
-      ? energyKwh(stateOf(hass, config.entities.forecast))
+      ? this._kwhOf(config.entities.forecast)
       : undefined;
     const forecast = forecastValue !== undefined && forecastValue >= 0.05 ? forecastValue : undefined;
 
-    const tomorrow = energyKwh(stateOf(hass, config.entities.forecast_tomorrow));
+    const tomorrow = this._kwhOf(config.entities.forecast_tomorrow);
     const note = [
       produced !== undefined
         ? html`<span class="key-solar">${formatEnergy(produced, locale)}
@@ -2983,6 +3065,18 @@ export class PowerOriginCard extends LitElement {
     return { at: Math.max(config.battery_reserve, facts.soc - drop), sunrise: facts.sunrise };
   }
 
+  /**
+   * Where the charge will stand at sunset, when the day cannot fill it: the
+   * moon's place on the bar, as the sun's is the sunrise. The forecast alone
+   * can say it, so a rate-based day has no moon.
+   */
+  private _socAtSunset(): { at: number } | undefined {
+    const { view } = this._batteryFacts();
+    if (view.mode !== "charging" && view.mode !== "idle") return undefined;
+    if (view.full !== "not_today" || view.socAtSunset === undefined) return undefined;
+    return { at: view.socAtSunset };
+  }
+
   private _renderBatterySvg(
     soc: number,
     tone: string,
@@ -2993,6 +3087,8 @@ export class PowerOriginCard extends LitElement {
     const config = this._config as ResolvedConfig;
     const bare = config.battery.style === "bar";
     const dawn = config.battery.sunrise_mark ? this._socAtSunrise() : undefined;
+    // Sun by night, moon by day, never both: the bar has one tomorrow at a time.
+    const dusk = config.battery.sunrise_mark && !dawn ? this._socAtSunset() : undefined;
     // The wave runs only while the battery moves; a resting battery stands still.
     const flowing = motion === "charging" || motion === "discharging" ? motion : undefined;
 
@@ -3018,6 +3114,8 @@ export class PowerOriginCard extends LitElement {
     const level = (percent: number) =>
       innerStart - 1 + ((innerWidth + 2) * Math.min(100, Math.max(0, percent))) / 100;
     const dawnX = dawn ? level(dawn.at) : undefined;
+    const duskX = dusk ? level(dusk.at) : undefined;
+    const marked = dawnX !== undefined || duskX !== undefined;
 
     const body =
       config.battery.style === "solid"
@@ -3051,7 +3149,7 @@ export class PowerOriginCard extends LitElement {
           );
 
     return html`
-      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${dawn ? 66 : 54}" role="img"
+      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${marked ? 66 : 54}" role="img"
            aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
         ${dawnX !== undefined
           ? svg`<g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 16}) scale(0.72)">
@@ -3059,6 +3157,11 @@ export class PowerOriginCard extends LitElement {
                   <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
                            M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
                            M-3.3,3.3 L-4.4,4.4"></path>
+                </g>`
+          : nothing}
+        ${duskX !== undefined
+          ? svg`<g class="bat-moon" transform="translate(${duskX.toFixed(1)} ${top + tall + 16}) scale(0.72)">
+                  <path d="M0.8,-6 A6,6 0 1,0 0.8,6 A7.4,7.4 0 0,1 0.8,-6 Z"></path>
                 </g>`
           : nothing}
         ${
@@ -3106,11 +3209,14 @@ export class PowerOriginCard extends LitElement {
 
     if (view.mode === "charging") {
       parts.push(...this._fullWords(view, locale));
-      if (view.power !== undefined) {
+      // A trickle on its way out is not worth a figure; the last one stands
+      // until the battery is at rest, and then the word changes.
+      if (view.power !== undefined && Math.abs(view.power) >= 0.1) {
         parts.push(
           `${localize("battery.charging", locale)} ${formatPower(Math.abs(view.power), locale)} kW`
         );
       }
+      if (parts.length === 0) parts.push(localize("battery.resting", locale));
     } else if (view.mode === "discharging") {
       // A clock time and a duration are the same fact twice, and past the next
       // sunrise neither is the answer — the sun takes over long before.
@@ -3140,11 +3246,16 @@ export class PowerOriginCard extends LitElement {
         }
       }
     } else {
-      parts.push(localize(view.mode === "full" ? "battery.full" : "battery.resting", locale));
+      // Resting on the reserve is not resting: there is nothing to rest on.
+      const drained = view.mode === "idle" && view.availableKwh !== undefined && view.availableKwh <= 0.05;
+      parts.push(
+        localize(view.mode === "full" ? "battery.full" : drained ? "battery.at_reserve" : "battery.resting", locale)
+      );
       // Resting by day, the forecast still knows how the day ends for it.
       if (view.mode === "idle") parts.push(...this._fullWords(view, locale));
-      // At the ceiling the stored figure just repeats the capacity in the header.
-      if (stored && view.mode !== "full") parts.push(stored);
+      // At the ceiling the stored figure just repeats the capacity in the
+      // header, and on the reserve it is a zero that says less than the word.
+      if (stored && view.mode !== "full" && !drained) parts.push(stored);
     }
 
     if (parts.length === 0) return nothing;
@@ -3773,7 +3884,7 @@ export class PowerOriginCard extends LitElement {
         break;
       }
       case "forecast": {
-        const expected = energyKwh(stateOf(hass, config.entities.forecast));
+        const expected = this._kwhOf(config.entities.forecast);
         if (expected !== undefined) value = formatEnergyFine(expected, locale);
         break;
       }
@@ -3795,7 +3906,7 @@ export class PowerOriginCard extends LitElement {
       import: config.entities.import_today,
       solar: config.entities.solar_today,
       house: config.entities.house_today,
-      forecast: config.entities.forecast,
+      forecast: config.entities.forecast[0],
       amortisation: config.entities.amortisation
     };
 

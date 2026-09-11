@@ -13,6 +13,8 @@ export interface BatteryInput {
   loadSpread?: number;
   /** The battery's power averaged over the last while, same sign as `power`, in kW. */
   averagePower?: number;
+  /** What the battery was doing last time, so a few watts either way do not flip it. */
+  lastMode?: BatteryMode;
 }
 
 export type BatteryMode = "charging" | "discharging" | "full" | "idle" | "unknown";
@@ -38,6 +40,14 @@ export interface BatteryView {
 
 const FULL_SOC = 99;
 const IDLE_KW = 0.05;
+/**
+ * A battery at rest drifts a few watts either side of zero, and a single
+ * threshold turns that drift into a word that flips every update. So the
+ * door in is further out than the door back: it takes real power to start
+ * charging or delivering, and only a near standstill to stop.
+ */
+const ENTER_KW = 0.1;
+const LEAVE_KW = 0.05;
 
 /**
  * Above this relative spread the averaged load is too jumpy to divide by, so
@@ -53,8 +63,11 @@ export function batteryView(input: BatteryInput, now = new Date()): BatteryView 
   const usableKwh = capacity ? (capacity / 1000) * Math.max(0, (soc - reserve) / 100) : undefined;
   const headroomKwh = capacity ? (capacity / 1000) * Math.max(0, (100 - soc) / 100) : undefined;
 
-  const charging = power !== undefined && power < -IDLE_KW;
-  const discharging = power !== undefined && power > IDLE_KW;
+  const { lastMode } = input;
+  const charging =
+    power !== undefined && power < -(lastMode === "charging" ? LEAVE_KW : ENTER_KW);
+  const discharging =
+    power !== undefined && power > (lastMode === "discharging" ? LEAVE_KW : ENTER_KW);
 
   const mode: BatteryMode = discharging
     ? "discharging"

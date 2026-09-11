@@ -9,6 +9,21 @@ import {
 
 const NOW = new Date("2026-09-07T21:15:00+02:00");
 
+describe("the battery's word, on a few watts", () => {
+  it("takes real power to start charging and only a standstill to stop", () => {
+    expect(batteryView({ soc: 50, power: -0.07, capacity: 10000 }).mode).toBe("idle");
+    expect(batteryView({ soc: 50, power: -0.12, capacity: 10000 }).mode).toBe("charging");
+    expect(batteryView({ soc: 50, power: -0.07, capacity: 10000, lastMode: "charging" }).mode).toBe("charging");
+    expect(batteryView({ soc: 50, power: -0.03, capacity: 10000, lastMode: "charging" }).mode).toBe("idle");
+  });
+
+  it("does the same on the way out", () => {
+    expect(batteryView({ soc: 50, power: 0.07, capacity: 10000 }).mode).toBe("idle");
+    expect(batteryView({ soc: 50, power: 0.07, capacity: 10000, lastMode: "discharging" }).mode).toBe("discharging");
+    expect(batteryView({ soc: 50, power: 0.03, capacity: 10000, lastMode: "discharging" }).mode).toBe("idle");
+  });
+});
+
 describe("batteryView", () => {
   it("estimates how long a full battery lasts from the averaged load", () => {
     const view = batteryView(

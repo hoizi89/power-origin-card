@@ -35,6 +35,10 @@ export interface Scenario {
   forecast: number;
   cost: number;
   unavailable?: boolean;
+  /** Puts the sunset this far ahead of now, for the last hour of sun. */
+  sunsetInMinutes?: number;
+  /** The sun below the horizon regardless of what the roof reads. */
+  sunDown?: boolean;
 }
 
 /** Every shape the real system takes, including the ones that break naive code. */
@@ -113,11 +117,12 @@ const entity = (
   attributes: { unit_of_measurement: unit, device_class: deviceClass }
 });
 
-function sunEntity(): HassEntity {
+function sunEntity(sunsetInMinutes?: number): HassEntity {
   const rise = new Date();
   rise.setHours(6, 28, 0, 0);
   const set = new Date();
-  set.setHours(19, 36, 0, 0);
+  if (sunsetInMinutes === undefined) set.setHours(19, 36, 0, 0);
+  else set.setTime(set.getTime() + sunsetInMinutes * 60000);
   return {
     entity_id: "sun.sun",
     state: "above_horizon",
@@ -293,7 +298,7 @@ export function makeHass(scenario: Scenario): HomeAssistant {
 
   const states: Record<string, HassEntity> = {
     // The sun is where the scenario puts it: producing means day.
-    "sun.sun": { ...sunEntity(), state: scenario.pv > 0 ? "above_horizon" : "below_horizon" },
+    "sun.sun": { ...sunEntity(scenario.sunsetInMinutes), state: scenario.pv > 0 && !scenario.sunDown ? "above_horizon" : "below_horizon" },
     [IDS.house]: entity(IDS.house, v(scenario.house), "W", "power"),
     [IDS.solar]: entity(IDS.solar, v(scenario.pv), "W", "power"),
     [IDS.battery_power]: entity(IDS.battery_power, v(scenario.battery), "W", "power"),

@@ -146,6 +146,45 @@ describe("tapping the ring", () => {
   });
 });
 
+describe("the figures' face", () => {
+  it("is monospace unless the card is told to wear the dashboard's font", async () => {
+    const mono = await render(config(), day);
+    expect(mono.root.querySelector("ha-card")?.classList.contains("font-system")).toBe(false);
+    const system = await render(config({ font: "system" }), day);
+    expect(system.root.querySelector("ha-card")?.classList.contains("font-system")).toBe(true);
+  });
+});
+
+describe("the ring at dusk", () => {
+  const dusk = (pv: number): Scenario => ({ ...day, name: `dusk ${pv}`, house: 900, pv, soc: 60, battery: 0 });
+  const centre = (root: ShadowRoot) => root.querySelector(".ring-value")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+
+  it("keeps the production view through the last watts and lets it go only once they are gone", async () => {
+    clearStatisticsCache();
+    const element = document.createElement(CARD_TYPE) as Card;
+    element.setConfig(config({ ring: { center: "production" } }));
+    document.body.append(element);
+    const show = async (pv: number) => {
+      element.hass = makeHass(dusk(pv));
+      await element.updateComplete;
+      return centre(element.shadowRoot as ShadowRoot);
+    };
+    expect(await show(300)).toContain("0,30");
+    // Forty watts would be night on a single threshold; the ring remembers the day.
+    expect(await show(40)).toContain("0,04");
+    // Ten watts is the end of it: the centre falls back to the house.
+    expect(await show(10)).toContain("0,90");
+    // And from there sixty watts is not enough to bring the day back.
+    expect(await show(60)).toContain("0,90");
+    expect(await show(200)).toContain("0,20");
+  });
+
+  it("is night below the horizon whatever the meter still reads", async () => {
+    const { root } = await render(config({ ring: { center: "production" } }), { ...dusk(300), sunDown: true });
+    expect(centre(root)).toContain("0,90");
+  });
+});
+
 describe("the charge at sunrise, on the bar", () => {
   it("marks the level with the sun alone and leaves the cells as they are", async () => {
     const { root } = await render(config({ battery: { sunrise_mark: true, capacity: 13100 } }), evening);

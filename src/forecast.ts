@@ -62,3 +62,32 @@ export function hourlyForecast(entity: HassEntity | undefined): ForecastHour[] {
     }))
     .sort((a, b) => a.start - b.start);
 }
+
+/**
+ * Several forecasts, one per roof face, as one: the hours added up. Edges
+ * are added too, and kept only where every forecast publishes them, since a
+ * span with one side missing is no span.
+ */
+export function hourlyForecastAll(entities: Array<HassEntity | undefined>): ForecastHour[] {
+  const each = entities.map(hourlyForecast).filter((hours) => hours.length > 0);
+  if (each.length <= 1) return each[0] ?? [];
+  const byHour = new Map<number, { kw: number; low: number; high: number; edges: number; count: number }>();
+  for (const hours of each) {
+    for (const hour of hours) {
+      const slot = byHour.get(hour.start) ?? { kw: 0, low: 0, high: 0, edges: 0, count: 0 };
+      slot.kw += hour.kw;
+      slot.low += hour.low ?? hour.kw;
+      slot.high += hour.high ?? hour.kw;
+      if (hour.low !== undefined && hour.high !== undefined) slot.edges += 1;
+      slot.count += 1;
+      byHour.set(hour.start, slot);
+    }
+  }
+  return [...byHour.entries()]
+    .map(([start, slot]) => ({
+      start,
+      kw: slot.kw,
+      ...(slot.edges === slot.count ? { low: slot.low, high: slot.high } : {})
+    }))
+    .sort((a, b) => a.start - b.start);
+}

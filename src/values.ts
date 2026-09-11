@@ -85,3 +85,19 @@ export function formatClock(date: Date, locale: string): string {
     minute: "2-digit"
   }).format(date);
 }
+
+/** One entity or a list of them, as a list; nothing as an empty one. */
+export function idsOf(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) return value.filter((id) => typeof id === "string" && id.length > 0);
+  return typeof value === "string" && value.length > 0 ? [value] : [];
+}
+
+/** The energies of several sensors added up, in kWh; undefined when none of them can say. */
+export function sumEnergyKwh(entities: Array<HassEntity | undefined>): number | undefined {
+  let sum: number | undefined;
+  for (const entity of entities) {
+    const value = energyKwh(entity);
+    if (value !== undefined) sum = (sum ?? 0) + value;
+  }
+  return sum;
+}

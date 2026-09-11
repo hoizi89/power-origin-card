@@ -166,15 +166,44 @@ describe("what the battery block says while charging", () => {
   it("does not promise a time past the sunset", async () => {
     const trickle: Scenario = { ...charging, name: "trickle", battery: -200 };
     const { note } = await mount(config(), trickle);
-    expect(note()).toContain("Heute nicht mehr voll");
+    expect(note()).toContain("Heute nicht voll");
     expect(note()).not.toMatch(/Voll um/);
   });
 
   it("says where the charge will stand at sunset when the forecast cannot fill it", async () => {
     const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
     const { note } = await mount(config({ battery: { full_from: "forecast" } }), hungry);
-    expect(note()).not.toContain("Heute nicht mehr voll");
+    expect(note()).not.toContain("Heute nicht voll");
     expect(note()).toMatch(/Etwa \d+ % bei Sonnenuntergang/);
+  });
+
+  it("leaves the sunset figure to the moon once the bar carries one", async () => {
+    const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
+    const { root, note } = await mount(config({ battery: { full_from: "forecast", sunrise_mark: true } }), hungry);
+    expect(root.querySelector(".bat-moon")).toBeTruthy();
+    expect(root.querySelector(".bat-sun")).toBeNull();
+    expect(note()).not.toMatch(/Sonnenuntergang/);
+  });
+});
+
+describe("the battery block in the last hour of sun", () => {
+  it("promises nothing about full, whatever the rate or forecast say", async () => {
+    const dusk: Scenario = { ...charging, name: "dusk", sunsetInMinutes: 40 };
+    for (const cfg of [config(), config({ battery: { full_from: "forecast" } })]) {
+      const { note } = await mount(cfg, dusk);
+      expect(note()).not.toMatch(/Voll|voll|Sonnenuntergang/);
+      expect(note()).toMatch(/lädt mit/);
+    }
+  });
+});
+
+describe("a battery resting on its reserve", () => {
+  it("says so, and leaves out the zero", async () => {
+    const drained: Scenario = { ...charging, name: "drained", battery: -20, soc: 15 };
+    const { note } = await mount(config(), drained);
+    expect(note()).toContain("Auf Reserve");
+    expect(note()).not.toContain("Bereit");
+    expect(note()).not.toMatch(/0,0 kWh/);
   });
 });
 

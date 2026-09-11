@@ -101,14 +101,14 @@ today:
 | `battery_soc` | State of charge in percent. Switches on the battery block. |
 | `grid_power` | Grid power, **positive while importing**. Taken as the truth when set. |
 | `solar_today`, `house_today`, `export_today`, `import_today`, `battery_out_today` | Daily energy totals for the chart note, the origin bar and the today strip. |
-| `forecast_tomorrow` | What the roof expects tomorrow, in kWh. Read after sunset, beside today: the day stays, tomorrow joins it. |
-| `forecast` | Energy still expected today, e.g. from Solcast. |
+| `forecast_tomorrow` | What the roof expects tomorrow, in kWh. Read after sunset, beside today: the day stays, tomorrow joins it. A list of sensors, one per roof face, is added up. |
+| `forecast` | Energy still expected today, e.g. from Solcast. A list of sensors, one per roof face, is added up. |
 | `cost_today` | Today's balance in your currency. **Negative means earned.** |
 | `cost_export_today`, `cost_import_today` | The two sides of the balance. |
 | `price_import`, `price_export` | A fixed price per kWh, used only to work the money out — see below. |
 | `amortisation` | How much of the system has paid for itself, in percent. |
 
-`forecast_hourly` is a sensor whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`); after sunset the card reads `forecast_tomorrow` the same way.
+`forecast_hourly` is a sensor, or a list of them for several roof faces, whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`); after sunset the card reads `forecast_tomorrow` the same way.
 
 ### Card
 
@@ -119,6 +119,7 @@ today:
 | `shape` | `standard` | The card's shape: `standard` as it is; `wide` with the ring and its columns on the left and the day, the battery and the rest on the right, for a panel; `compact` as one row — the ring small, three figures (roof, grid, battery) and the chip. |
 | `wide_from` | `640` | From this many pixels of card width the wide shape takes hold; narrower it stacks as usual, and below 560 px it stacks in any case, since two columns need the room. |
 | `palette` | `standard` | The three source colours as one set, everywhere at once. `standard` follows the Energy dashboard: sun gold, battery green, grid blue. `traffic` reads as a traffic light: sun yellow, battery orange, grid red. `safe` never asks anyone to tell green from red: sun amber, battery blue, grid magenta. `muted` is the same three at low saturation, for a panel on a wall. Each colour can still be set on its own through the theme variables. |
+| `font` | `mono` | The face the figures wear. `mono` keeps every digit the same width, so a changing number never shifts the line. `system` sets them in Home Assistant's own font, for a card that should look like the ones around it. |
 | `night_layout` | `same` | `quiet` once the sun is down: the columns, the week, the tiles and the devices step aside, and the ring, the battery and one line about the day remain. Pairs with `night_dim`. |
 | `chip` | `always` | The state word in the corner: `always`, `gridfree`, `never`. |
 | `chip_shows` | `state` | What the chip says: `state` (grid-free or from grid) or `autarky` — the day's self-supplied share from the daily meters, green from 80 %, the grid's colour below. |
@@ -172,7 +173,7 @@ today:
 | `battery.full_from` | `rate` | Where the full time comes from while charging. `rate` divides what is missing by the charge rate of the last quarter hour, and says nothing past today's sunset or past a day: “not full today” instead of a clock time that lies in tomorrow. `forecast` reads the hourly forecast from now to sunset, the house's average load taken off, and names the hour it fills; when it does not, it says where the charge will stand at sunset. When the forecast publishes a pessimistic and an optimistic edge (Solcast's `pv_estimate10` and `pv_estimate90`), both are walked: more than two hours apart the card says the span instead of an hour, and when the pessimistic day never fills it says so. Offered once `forecast_hourly` is set. |
 | `battery.percent` | `true` | The charge as a figure beside the heading. The bar says it too, so this is the number and not the picture. |
 | `battery.reserve_line` | `true` | A dashed line where the reserve begins, so a bar that reads full does not hide power that never comes out. Shown only when a reserve is set. |
-| `battery.sunrise_mark` | `false` | A sun under the bar where the charge will stand at sunrise, worked out from today's average load. Shown while the battery carries the house. |
+| `battery.sunrise_mark` | `false` | A sun under the bar where the charge will stand at sunrise, worked out from today's average load, while the battery carries the house. By day, a moon where the charge will stand at sunset when the forecast cannot fill it (needs `full_from: forecast`). Never both. |
 | `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house), `flow` (what went in and out today, with the cycles; needs `battery_in_today` and `battery_out_today`). |
 | `battery.animate` | `false` | A slow wave through the cells while the battery moves: towards the cap while charging, away from it while discharging, still while it rests. Off when the system asks for reduced motion. Segments and bar styles only. |
 | `battery.curve` | `false` | The charge as a small curve under the bar: at night since sunset and dashed on to where it will stand at sunrise, by day since midnight and dashed on to full while charging. The reserve is a floor line. Costs the same query as `range`. |
@@ -272,7 +273,8 @@ power-origin-house-color: "#171a24"
 sections:
   devices: true
 devices:
-  list: [sensor.heat_pump_power, sensor.dishwasher_power]   # live power sensors; the adopt button fills this
+  source: list                   # list | energy — unset, a list of your own means list, none means energy
+  list: [sensor.heat_pump_power, sensor.dishwasher_power]   # live power sensors, read when source is list
   mode: now                      # now | today — today needs the meters the Energy dashboard knows
   window: 15                     # minutes averaged for "now"
   style: both                    # both | bar | icons
@@ -284,7 +286,8 @@ devices:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `devices.list` | `[]` | The live power sensors, one per device. The editor's adopt button takes them from the Energy dashboard's device list. |
+| `devices.source` | `energy` | `energy` follows the Energy dashboard: its devices with a live power sensor, names and meters included, read again every hour. A device added there is here within the hour, and `list` is not read. `list` reads the sensors below instead. Unset, a card with a `list` of its own keeps it; one without follows the dashboard. |
+| `devices.list` | `[]` | The live power sensors, one per device, when `source` is `list`. |
 | `devices.mode` | `now` | `now` averages each sensor over the window; `today` sums each device's meter since midnight. Offered only once meters are known. |
 | `devices.window` | `15` | Minutes the live readings are averaged over. |
 | `devices.style` | `rows` | `rows` a bar chart lying down: icon, name, a bar for the share of the house and the figure, one device a row, the rest last with how many it holds. `band` the house load as one strip, the biggest first, with the names below keyed by shade. `icons` an icon per device on a fixed grid, with a level and the figure under the ones that draw. The older `bar` and `both` read as `band`, `tiles` as `rows`. |
@@ -298,4 +301,4 @@ devices:
 | `devices.limit` | `5` | How many devices get a name in rows and band; the others fold into the rest. Icons have no rest, so they show no more than this. |
 | `devices.threshold` | `25` | Watts below which a device is not named. Shown for `now` only. |
 | *(icons)* | | Without a chosen icon, the one set on the entity in Home Assistant wins; otherwise one is read off the name, with a plug as the fallback. |
-| `devices.names`, `devices.energy` | | Written by the adopt button: the dashboard's name and meter for each sensor. Data, not settings. |
+| `devices.names`, `devices.energy` | | The dashboard's name and meter for each sensor. Filled by the card when it follows the dashboard; written by hand with a list of your own. Data, not settings. |

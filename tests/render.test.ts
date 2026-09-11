@@ -332,7 +332,7 @@ describe("the battery caption", () => {
       baseConfig({ battery_capacity: 13100, battery_reserve: night.soc }),
       night
     );
-    expect(text).toContain("Reserve erreicht");
+    expect(text).toContain("Auf Reserve");
     expect(text).not.toContain("Reicht bis");
   });
 });

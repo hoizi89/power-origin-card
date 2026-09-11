@@ -17,6 +17,30 @@ describe("assertConfig", () => {
 });
 
 describe("resolveConfig", () => {
+  it("reads the forecasts as lists, one sensor or several, and none as an empty one", () => {
+    const one = resolveConfig({ ...base, entities: { house: "sensor.house", forecast: "sensor.f" } });
+    expect(one.entities.forecast).toEqual(["sensor.f"]);
+    const two = resolveConfig({
+      ...base,
+      entities: { house: "sensor.house", forecast_hourly: ["sensor.east", "sensor.west"] }
+    });
+    expect(two.entities.forecast_hourly).toEqual(["sensor.east", "sensor.west"]);
+    expect(two.entities.forecast).toEqual([]);
+    expect(two.entities.forecast_tomorrow).toEqual([]);
+  });
+
+  it("sets the figures in monospace unless told otherwise", () => {
+    expect(resolveConfig(base).font).toBe("mono");
+    expect(resolveConfig({ ...base, font: "system" }).font).toBe("system");
+  });
+
+  it("follows the Energy dashboard's devices unless a list of your own is there", () => {
+    expect(resolveConfig(base).devices.source).toBe("energy");
+    expect(resolveConfig({ ...base, devices: { list: ["sensor.a"] } }).devices.source).toBe("list");
+    expect(resolveConfig({ ...base, devices: { list: ["sensor.a"], source: "energy" } }).devices.source).toBe("energy");
+    expect(resolveConfig({ ...base, devices: { source: "list" } }).devices.source).toBe("list");
+  });
+
   it("fills in every default", () => {
     const resolved = resolveConfig(base);
     expect(resolved.sections).toEqual(DEFAULTS.sections);

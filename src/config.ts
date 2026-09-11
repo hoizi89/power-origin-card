@@ -1,4 +1,5 @@
 import { localize } from "./localize";
+import { idsOf } from "./values";
 import type {
   BlockName,
   LegacyRingOptions,
@@ -24,6 +25,7 @@ export const DEFAULTS = {
   wide_from: 640,
   night_layout: "same" as const,
   palette: "standard" as const,
+  font: "mono" as const,
   tap_action: { action: "more-info" as const },
   battery_capacity: 0,
   battery_reserve: 0,
@@ -99,6 +101,7 @@ export const DEFAULTS = {
     full_from: "rate" as const
   },
   devices: {
+    source: "energy" as const,
     list: [] as string[],
     names: {} as Record<string, string>,
     mode: "now" as const,
@@ -222,7 +225,13 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
   return {
     type: config.type,
     title: config.title,
-    entities: { ...config.entities },
+    entities: {
+      ...config.entities,
+      // One roof face or several: the card reads a list either way.
+      forecast: idsOf(config.entities?.forecast),
+      forecast_tomorrow: idsOf(config.entities?.forecast_tomorrow),
+      forecast_hourly: idsOf(config.entities?.forecast_hourly)
+    },
     text_scale: config.text_scale ?? DEFAULTS.text_scale,
     night_dim: config.night_dim ?? DEFAULTS.night_dim,
     chip: config.chip ?? DEFAULTS.chip,
@@ -234,6 +243,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     wide_from: config.wide_from ?? DEFAULTS.wide_from,
     night_layout: config.night_layout ?? DEFAULTS.night_layout,
     palette: config.palette ?? DEFAULTS.palette,
+    font: config.font ?? DEFAULTS.font,
     tap_action: config.tap_action ?? DEFAULTS.tap_action,
     // The two used to sit at the top level. They belong to the battery and
     // live there now; a card written before that still reads.
@@ -296,6 +306,8 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       },
       top: config.devices?.top ?? DEFAULTS.devices.top,
       spark: config.devices?.spark ?? DEFAULTS.devices.spark,
+      // Nobody's own list is overruled: the dashboard is followed only where no list was made.
+      source: config.devices?.source ?? (config.devices?.list?.length ? "list" : DEFAULTS.devices.source),
       list: config.devices?.list ?? DEFAULTS.devices.list,
       names: { ...DEFAULTS.devices.names, ...config.devices?.names },
       mode: config.devices?.mode ?? DEFAULTS.devices.mode,
@@ -378,12 +390,15 @@ const STAT_OPTIONS: TodayStat[] = [
   "amortisation"
 ];
 
-const entityField = (name: string, deviceClass?: string) => ({
+const entityField = (name: string, deviceClass?: string, multiple = false) => ({
   name,
   selector: {
-    entity: deviceClass
-      ? { filter: [{ domain: "sensor", device_class: [deviceClass] }] }
-      : { domain: "sensor" }
+    entity: {
+      ...(multiple ? { multiple: true } : {}),
+      ...(deviceClass
+        ? { filter: [{ domain: "sensor", device_class: [deviceClass] }] }
+        : { domain: "sensor" })
+    }
   }
 });
 
@@ -755,6 +770,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           }
         },
         {
+          name: "font",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "mono", label: t("editor.font_mono") },
+                { value: "system", label: t("editor.font_system") }
+              ]
+            }
+          }
+        },
+        {
           name: "night_layout",
           selector: {
             select: {
@@ -849,8 +876,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [entityField("export_today", "energy"), entityField("import_today", "energy")]
         },
-        entityField("forecast", "energy"),
-        { type: "grid", schema: [entityField("forecast_tomorrow", "energy"), entityField("forecast_hourly", "energy")] },
+        entityField("forecast", "energy", true),
+        { type: "grid", schema: [entityField("forecast_tomorrow", "energy", true), entityField("forecast_hourly", "energy", true)] },
         entityField("cost_today", "monetary"),
         {
           type: "grid",
@@ -1125,7 +1152,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [
             { name: "consumption", selector: { boolean: {} } },
-            ...only((resolved) => Boolean(resolved.entities.forecast), {
+            ...only((resolved) => resolved.entities.forecast.length > 0, {
               name: "show_forecast",
               selector: { boolean: {} }
             }),
@@ -1140,7 +1167,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           schema: [
             ...only(
               (resolved) =>
-                Boolean(resolved.entities.forecast_hourly || resolved.entities.forecast_tomorrow),
+                resolved.entities.forecast_hourly.length > 0 || resolved.entities.forecast_tomorrow.length > 0,
               { name: "forecast_bars", selector: { boolean: {} } }
             ),
             ...only(
@@ -1223,7 +1250,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         // A forecast can see the evening, which the rate cannot; offered only
         // once there is a forecast by the hour to read.
         ...only(
-          (resolved) => cellTimed(resolved) && resolved.battery.runtime && Boolean(resolved.entities.forecast_hourly),
+          (resolved) => cellTimed(resolved) && resolved.battery.runtime && resolved.entities.forecast_hourly.length > 0,
           {
             name: "full_from",
             selector: {
@@ -1288,11 +1315,23 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         icon: "mdi:power-plug-outline",
         schema: [
           {
+            name: "source",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "list", label: t("editor.source_list") },
+                  { value: "energy", label: t("editor.source_energy") }
+                ]
+              }
+            }
+          },
+          ...only((resolved) => resolved.devices.source !== "energy", {
             name: "list",
             selector: {
               entity: { multiple: true, filter: { domain: "sensor", device_class: "power" } }
             }
-          },
+          }),
           // The day's total needs the meters, which only the dashboard knows;
           // until they are known there is one period, and no choice to offer.
           ...only(
@@ -1537,6 +1576,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     columns: t("editor.columns"),
     devices: t("editor.section_devices"),
     list: t("editor.list"),
+    source: t("editor.source"),
     mode: t("editor.mode"),
     window: t("editor.window"),
     values: t("editor.values"),
@@ -1573,6 +1613,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     animate: t("editor.animate"),
     full_from: t("editor.full_from"),
     palette: t("editor.palette"),
+    font: t("editor.font"),
     head: t("editor.devices_head"),
     colours: t("editor.devices_colours"),
     consumption: t("editor.consumption"),
@@ -1649,6 +1690,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     animate: t("editor.help_animate"),
     full_from: t("editor.help_full_from"),
     palette: t("editor.help_palette"),
+    font: t("editor.help_font"),
     order: t("editor.help_order"),
     limit: t("editor.help_limit"),
     head: t("editor.help_devices_head"),
@@ -1665,6 +1707,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     investment: t("editor.help_investment"),
     meter_marks: t("editor.help_meter_marks"),
     list: t("editor.help_list"),
+    source: t("editor.help_source"),
     mode: t("editor.help_mode"),
     window: t("editor.help_window"),
     group: t("editor.help_group"),
