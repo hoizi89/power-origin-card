@@ -207,6 +207,17 @@ describe("a battery resting on its reserve", () => {
   });
 });
 
+describe("a day the pessimistic forecast cannot fill", () => {
+  // The median fills by mid-afternoon; the cautious edge, at a third of it, never does.
+  const hopeful: Scenario = { ...charging, name: "hopeful", soc: 15, hourlyEdges: [0.35, 1.6] };
+
+  it("promises no full time, and says where the cautious day ends instead", async () => {
+    const { note } = await mount(config({ battery: { full_from: "forecast" } }), hopeful);
+    expect(note()).not.toMatch(/Voll/);
+    expect(note()).toMatch(/Etwa \d+ % bei Sonnenuntergang/);
+  });
+});
+
 describe("a battery resting by day", () => {
   const resting: Scenario = { ...charging, name: "resting by day", battery: -20 };
 

@@ -30,7 +30,7 @@ export interface BatteryView {
   at?: Date;
   power?: number;
   /** Where the full time came from, or why there is none. */
-  full?: "rate" | "forecast" | "not_today" | "between" | "if_it_clears";
+  full?: "rate" | "forecast" | "not_today" | "between";
   /** The two ends of the span, when the forecast's own edges land far apart. */
   early?: Date;
   late?: Date;

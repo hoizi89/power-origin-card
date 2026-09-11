@@ -39,6 +39,8 @@ export interface Scenario {
   sunsetInMinutes?: number;
   /** The sun below the horizon regardless of what the roof reads. */
   sunDown?: boolean;
+  /** The forecast's pessimistic and optimistic edges as factors of the median; close by default. */
+  hourlyEdges?: [number, number];
 }
 
 /** Every shape the real system takes, including the ones that break naive code. */
@@ -149,7 +151,7 @@ const DEVICE_KWH: Record<string, number> = {
 };
 
 /** The day's forecast by hour, the way Solcast attaches it: a bell over the daylight. */
-function hourlyRows(dayOffset: number, peakKw: number) {
+function hourlyRows(dayOffset: number, peakKw: number, edges: [number, number] = [0.85, 1.15]) {
   const midnight = new Date();
   midnight.setHours(0, 0, 0, 0);
   midnight.setDate(midnight.getDate() + dayOffset);
@@ -159,8 +161,8 @@ function hourlyRows(dayOffset: number, peakKw: number) {
       period_start: new Date(midnight.getTime() + hour * 3600000).toISOString(),
       pv_estimate: Number(kw.toFixed(3)),
       // A day the forecast is fairly sure of: the two edges sit close.
-      pv_estimate10: Number((kw * 0.85).toFixed(3)),
-      pv_estimate90: Number((kw * 1.15).toFixed(3))
+      pv_estimate10: Number((kw * edges[0]).toFixed(3)),
+      pv_estimate90: Number((kw * edges[1]).toFixed(3))
     };
   });
 }
@@ -315,7 +317,7 @@ export function makeHass(scenario: Scenario): HomeAssistant {
     },
     [IDS.forecast_hourly]: {
       ...entity(IDS.forecast_hourly, scenario.forecast + scenario.solarToday, "kWh", "energy"),
-      attributes: { unit_of_measurement: "kWh", device_class: "energy", detailedHourly: hourlyRows(0, 7.1) }
+      attributes: { unit_of_measurement: "kWh", device_class: "energy", detailedHourly: hourlyRows(0, 7.1, scenario.hourlyEdges) }
     },
     [IDS.cost_today]: entity(IDS.cost_today, v(scenario.cost), "€", "monetary"),
     [IDS.cost_export_today]: entity(IDS.cost_export_today, v(1.2), "€", "monetary"),

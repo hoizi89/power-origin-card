@@ -1881,27 +1881,30 @@ export class PowerOriginCard extends LitElement {
         const until = sunUp ? setting : undefined;
         const found = fullFromForecast(slots, now, headroom, load, until);
         const span = fullSpan(slots, now, headroom, load, until);
-        if (found.at) {
+        // Full is claimed only when even the pessimistic day fills. A median
+        // that fills while the pessimistic edge does not is a hope, and a hope
+        // reads as a promise once it stands under the bar; where the cautious
+        // day ends is the answer that holds, and a better day corrects it upward.
+        const cautious = span.edges && span.early && !span.late
+          ? fullFromForecast(slots, now, headroom, load, until, "low")
+          : found;
+        if (found.at && cautious.at) {
           view.at = found.at;
           view.hours = (found.at.getTime() - now.getTime()) / 3600000;
           view.full = "forecast";
           // An hour named to the minute out of a day that could go either way
-          // is a claim, not an answer. Past two hours apart, say the span; with
-          // no pessimistic end at all, say what it depends on.
+          // is a claim, not an answer. Past two hours apart, say the span.
           const APART = 2 * 3600 * 1000;
-          if (span.edges && span.early) {
-            if (!span.late) view.full = "if_it_clears";
-            else if (span.late.getTime() - span.early.getTime() > APART) {
-              view.full = "between";
-              view.early = span.early;
-              view.late = span.late;
-            }
+          if (span.edges && span.early && span.late && span.late.getTime() - span.early.getTime() > APART) {
+            view.full = "between";
+            view.early = span.early;
+            view.late = span.late;
           }
         } else {
           view.at = undefined;
           view.hours = undefined;
           view.full = "not_today";
-          view.socAtSunset = Math.min(100, view.soc + (found.reachedKwh / capacityKwh) * 100);
+          view.socAtSunset = Math.min(100, view.soc + (cautious.reachedKwh / capacityKwh) * 100);
         }
         return;
       }
@@ -1944,8 +1947,6 @@ export class PowerOriginCard extends LitElement {
       parts.push(
         `${localize("battery.full_between", locale)} ${formatClock(view.early, locale)} ${localize("battery.and", locale)} ${formatClock(view.late, locale)}`
       );
-    } else if (view.full === "if_it_clears") {
-      parts.push(localize("battery.full_if_it_clears", locale));
     } else if (view.at) {
       const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
       parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
