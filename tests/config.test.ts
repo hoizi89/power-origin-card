@@ -34,6 +34,15 @@ describe("resolveConfig", () => {
     expect(resolveConfig({ ...base, font: "system" }).font).toBe("system");
   });
 
+  it("offers icon fields only for a list of your own", () => {
+    const titles = (cfg: Parameters<typeof getConfigForm>[1]) =>
+      JSON.stringify(getConfigForm("en", cfg).schema).includes(localize("editor.device_icons", "en"));
+    const on = { ...base, sections: { devices: true } };
+    expect(titles({ ...on, devices: { list: ["sensor.a"] } })).toBe(true);
+    expect(titles({ ...on, devices: { source: "energy" } })).toBe(false);
+    expect(titles(on)).toBe(false);
+  });
+
   it("follows the Energy dashboard's devices unless a list of your own is there", () => {
     expect(resolveConfig(base).devices.source).toBe("energy");
     expect(resolveConfig({ ...base, devices: { list: ["sensor.a"] } }).devices.source).toBe("list");

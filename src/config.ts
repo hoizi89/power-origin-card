@@ -1419,17 +1419,22 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 })
               ]
             },
-            // One icon field per device, named after the device so the list reads itself.
-            {
-              type: "expandable",
-              title: t("editor.device_icons"),
-              icon: "mdi:shape-outline",
-              schema: (config?.devices.list ?? []).map((id) => ({
-                name: `icon:${id}`,
-                title: config?.devices.names[id] ?? id,
-                selector: { icon: {} }
-              }))
-            }
+            // One icon field per device, named after the device so the list reads
+            // itself. Following the dashboard, the editor knows no devices, and an
+            // empty section would only raise the question of where they went.
+            ...only(
+              (resolved) => resolved.devices.source !== "energy" && resolved.devices.list.length > 0,
+              {
+                type: "expandable",
+                title: t("editor.device_icons"),
+                icon: "mdi:shape-outline",
+                schema: (config?.devices.list ?? []).map((id) => ({
+                  name: `icon:${id}`,
+                  title: config?.devices.names[id] ?? id,
+                  selector: { icon: {} }
+                }))
+              }
+            )
           )
         ]
       }
