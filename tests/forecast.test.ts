@@ -29,7 +29,7 @@ describe("a roof far behind its forecast", () => {
 
   it("says nothing early in the day, or with little expected, or without a reading", () => {
     expect(shortfall(hours, 0, sunrise, new Date(at(7, 30))).short).toBe(false);
-    expect(shortfall([hour(6, 0.2), hour(7, 0.2)], 0, sunrise, new Date(at(9))).short).toBe(false);
+    expect(shortfall(hourlyForecastAll([face("sensor.f", [hour(6, 0.2), hour(7, 0.2)])]), 0, sunrise, new Date(at(9))).short).toBe(false);
     expect(shortfall(hours, undefined, sunrise, new Date(at(9))).short).toBe(false);
     expect(shortfall(hours, 0, undefined, new Date(at(9))).short).toBe(false);
   });
