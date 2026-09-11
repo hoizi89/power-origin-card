@@ -428,7 +428,7 @@ describe("the balance column", () => {
       baseConfig({ ring: { meter: true, meter_style: "balance" } }),
       SCENARIOS[0]
     );
-    expect(text).toContain("Dach");
+    expect(text).toContain("PV");
   });
 });
 
@@ -815,7 +815,7 @@ describe("the three priced and relative columns", () => {
       SCENARIOS[0]
     );
     expect(root.querySelector(".meter-block")).toBeTruthy();
-    expect(text).toContain("Dach jetzt");
+    expect(text).toContain("PV jetzt");
   });
 
   it("keeps today's best inside the column as a shadow under now", async () => {
@@ -851,13 +851,13 @@ describe("the three priced and relative columns", () => {
       baseConfig({ ring: { meter: true, meter_shows: "grid" } }),
       SCENARIOS[0]
     );
-    expect(alone.text).toContain("Dach jetzt");
+    expect(alone.text).toContain("PV jetzt");
 
     const inColumn = await render(
       baseConfig({ ring: { meter: true, meter_shows: "roof" } }),
       SCENARIOS[0]
     );
-    expect(inColumn.text.match(/Dach jetzt/g)?.length).toBe(1);
+    expect(inColumn.text.match(/PV jetzt/g)?.length).toBe(1);
   });
 
   it("draws no roof column without a roof sensor", async () => {
@@ -1040,15 +1040,15 @@ describe("the card at night", () => {
 
   it("lets a column say something else once the sun is down", async () => {
     const day = await render(baseConfig({ ring: { meter: true, meter_shows: "roof", meter_dark: "autarky" } }), SCENARIOS[0]);
-    expect(day.text).toContain("Dach jetzt");
+    expect(day.text).toContain("PV jetzt");
     const night = await render(baseConfig({ ring: { meter: true, meter_shows: "roof", meter_dark: "autarky" } }), evening());
     expect(night.text).toContain("Autarkie");
-    expect(night.text).not.toContain("Dach jetzt");
+    expect(night.text).not.toContain("PV jetzt");
   });
 
   it("keeps a column as it was when nothing else was chosen", async () => {
     const night = await render(baseConfig({ ring: { meter: true, meter_shows: "roof" } }), evening());
-    expect(night.text).toContain("Dach jetzt");
+    expect(night.text).toContain("PV jetzt");
   });
 
   it("shows the battery as a store on the scale of its own size", async () => {
