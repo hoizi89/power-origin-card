@@ -1,12 +1,4 @@
 // @vitest-environment jsdom
-
-  it("is read in euros per kilowatt hour whatever the helper is kept in", () => {
-    expect(priceOf(price("0.08", "€/kWh"))).toBeCloseTo(0.08, 6);
-    expect(priceOf(price("8", "ct/kWh"))).toBeCloseTo(0.08, 6);
-    expect(priceOf(price("8", "Cent/kWh"))).toBeCloseTo(0.08, 6);
-    expect(priceOf(price("0.08", ""))).toBeCloseTo(0.08, 6);
-  });
-});
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CARD_TYPE } from "../src/config";
 import { priceOf } from "../src/values";
@@ -118,3 +110,11 @@ describe("a price kept in cents", () => {
     state,
     attributes: { unit_of_measurement: unit }
   });
+
+  it("is read in euros per kilowatt hour whatever the helper is kept in", () => {
+    expect(priceOf(price("0.08", "€/kWh"))).toBeCloseTo(0.08, 6);
+    expect(priceOf(price("8", "ct/kWh"))).toBeCloseTo(0.08, 6);
+    expect(priceOf(price("8", "Cent/kWh"))).toBeCloseTo(0.08, 6);
+    expect(priceOf(price("0.08", ""))).toBeCloseTo(0.08, 6);
+  });
+});
