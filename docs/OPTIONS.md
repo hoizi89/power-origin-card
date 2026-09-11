@@ -108,7 +108,7 @@ today:
 | `price_import`, `price_export` | A fixed price per kWh, used only to work the money out — see below. |
 | `amortisation` | How much of the system has paid for itself, in percent. |
 
-With the hours known, the line under the chart also says *below forecast* once the roof has delivered less than a quarter of what the forecast expected since sunrise, two hours into the day and a kilowatt hour or more; from November to March it asks *snow on the roof?* instead. `forecast_hourly` is a sensor, or a list of them for several roof faces, whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`); after sunset the card reads `forecast_tomorrow` the same way.
+With the hours known, the line under the chart also says *below forecast* once the roof has delivered less than a quarter of what the forecast expected since sunrise, two hours into the day and a kilowatt hour or more; from November to March it asks *snow on the roof?* instead. `forecast_hourly` is a sensor, or a list of them for several roof faces, whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`), and so do Open-Meteo Solar Forecast's and Forecast.Solar's *Energy production today* (`wh_period`, or `watts`); after sunset the card reads `forecast_tomorrow` the same way.
 
 ### Card
 
@@ -128,7 +128,7 @@ With the hours known, the line under the chart also says *below forecast* once t
 | `head_sunbar` | `false` | A line under the heading from sunrise to sunset with the sun where it stands; at night the night, with the moon. Offered only without the day chart, which draws the same day. |
 | `tap_action` | `more-info` | What tapping a figure does, in Lovelace's own vocabulary. |
 | `chart.compare` | `false` | Draws the same weekday a week ago faintly behind today. Costs one more recorder query. |
-| `chart.forecast_bars` | `false` | The hours still expected as dashed outlines after now, where their bars will stand; after sunset, tomorrow's whole day over today's axis. Read from the attributes of `forecast_hourly` (or of `forecast_tomorrow` at night), the way Solcast attaches them. |
+| `chart.forecast_bars` | `false` | The hours still expected as dashed outlines after now, where their bars will stand; after sunset, tomorrow's whole day over today's axis. Read from the attributes of `forecast_hourly` (or of `forecast_tomorrow` at night): Solcast's rows, or the `wh_period` map of Open-Meteo Solar Forecast and Forecast.Solar. |
 | `chart.layers` | `false` | What the grid and the battery carried, hour by hour, as areas under the day, in the ring's colours for the same two. |
 | `chart.best_day` | `false` | A faint line of the year's best day behind today, with its yield beside the day's figures. Two recorder queries, twice a day. |
 | `sections.week` | `false` | Seven days as bars for the roof's yield, a dot above each for the self-supplied share (green from 80 %), today bright. The heading carries the average; a tap on a day puts its figures there instead. Needs the daily roof meter; one query an hour. A meter that only climbs (`total_increasing`), or one that says when it resets, is read by its change per day; a daily meter that resets at midnight without saying so (`total`, no `last_reset`) is read by the state it ended each day at. The month under the balance is read the same way. |

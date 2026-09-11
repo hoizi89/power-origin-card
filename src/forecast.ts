@@ -22,16 +22,33 @@ const pick = (row: Record<string, unknown>, keys: string[]): unknown => {
  * The hours a forecast integration attaches to its sensor. Solcast writes
  * `detailedHourly` (one row per hour) and `detailedForecast` (one per half
  * hour) with `period_start` and `pv_estimate` in kW; other integrations use
- * other names for the same two things, so a few are tried. Half hours are
- * averaged into hours, since the chart draws hours.
+ * other names for the same two things, so a few are tried, and the map form
+ * of Open-Meteo Solar Forecast and Forecast.Solar is read too. Half hours and
+ * quarter hours are averaged into hours, since the chart draws hours.
  */
+/**
+ * Open-Meteo Solar Forecast and Forecast.Solar attach the day as a map from
+ * timestamp to value rather than as rows: `wh_period` holds the energy of each
+ * hour in Wh, which over an hour is the mean power in W; `watts` holds the
+ * power at each timestamp. Either is turned into rows the parser below reads.
+ */
+function rowsFromMap(attributes: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  const map = (attributes.wh_period ?? attributes.watts) as unknown;
+  if (!map || typeof map !== "object" || Array.isArray(map)) return undefined;
+  return Object.entries(map as Record<string, unknown>).map(([start, value]) => ({
+    period_start: start,
+    pv_estimate: Number(value) / 1000
+  }));
+}
+
 export function hourlyForecast(entity: HassEntity | undefined): ForecastHour[] {
   const attributes = entity?.attributes ?? {};
   const rows =
     (attributes.detailedHourly as unknown) ??
     (attributes.detailedForecast as unknown) ??
     (attributes.forecast as unknown) ??
-    (attributes.hourly as unknown);
+    (attributes.hourly as unknown) ??
+    rowsFromMap(attributes);
   if (!Array.isArray(rows)) return [];
 
   type Slot = { sum: number; low: number; high: number; count: number; edges: boolean };

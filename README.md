@@ -209,7 +209,7 @@ Without either, the money line simply does not appear and everything else works 
 | Integration | What it feeds |
 | --- | --- |
 | [PV Energy Management+](https://github.com/hoizi89/pv_management_fix) | Balance, export revenue, import cost and the paid-off percentage — every money figure this card can show, on a fixed or a spot tariff. |
-| [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) | `forecast` — how much the roof still expects today. |
+| [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) or [Open-Meteo Solar Forecast](https://github.com/rany2/ha-open-meteo-solar-forecast) | `forecast` — how much the roof still expects today; `forecast_hourly` — the day hour by hour. |
 | [Home Assistant's Energy dashboard](https://www.home-assistant.io/docs/energy/) | The daily energy totals, if your inverter integration does not already provide them. |
 
 The card only asks for numbers and units, never for a particular brand: anything that exposes power in watts and daily energy in kilowatt hours will do. Developed against a **GoodWe** system.
