@@ -927,7 +927,8 @@ export const cardStyles = css`
   .origin-keys {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 14px;
+    justify-content: space-between;
+    gap: 4px 10px;
     font-family: var(--sst-mono);
     font-size: calc(10.5px * var(--sst-scale));
     color: var(--sst-muted);
@@ -948,6 +949,25 @@ export const cardStyles = css`
   .origin-keys b {
     color: var(--sst-ink);
     font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .origin-keys em {
+    font-style: normal;
+  }
+
+  .origin-keys small {
+    font-size: inherit;
+    color: var(--sst-muted);
+    font-weight: 400;
+  }
+
+  /* Narrow, the colour square names the source on its own; the words step
+     aside before the line would break. */
+  @container (max-width: 339px) {
+    .origin-keys em {
+      display: none;
+    }
   }
 
   .stat {

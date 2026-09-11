@@ -3695,9 +3695,10 @@ export class PowerOriginCard extends LitElement {
         </div>
         <div class="origin-keys">
           ${parts.map(
-            (part) => html`<span
-              ><i style="background: ${part.colour}"></i>${localize(part.key, locale)}
-              <b>${formatEnergy(part.value, locale)} kWh</b></span
+            // The unit once, after the last figure: three times kWh is what made the line wrap.
+            (part, i) => html`<span
+              ><i style="background: ${part.colour}"></i><em>${localize(part.key, locale)}</em>
+              <b>${formatEnergy(part.value, locale)}${i === parts.length - 1 ? html` <small>kWh</small>` : nothing}</b></span
             >`
           )}
         </div>
