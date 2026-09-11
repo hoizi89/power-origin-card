@@ -413,6 +413,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   const only = <T>(able: (resolved: ResolvedConfig) => boolean, ...items: T[]): T[] =>
     on(able) ? items : [];
 
+  /** Whether the card has devices to show: a list of its own, or the dashboard's. */
+  const hasDevices = (resolved: ResolvedConfig) =>
+    resolved.devices.list.length > 0 || resolved.devices.source === "energy";
+
   /** Whether anything can put a price on the day: a sensor, or a price to work it out from. */
   const money = (resolved: ResolvedConfig) =>
     Boolean(
@@ -461,7 +465,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   /* The subjects a column can take. The night is a night subject only; the
      roof and the roof against the house have nothing to say at night, so the
      night list leaves them out. Devices need a list to draw from. */
-  const devicesSubject = only((resolved) => resolved.devices.list.length > 0, {
+  const devicesSubject = only(hasDevices, {
     value: "devices",
     label: t("editor.meter_devices")
   });
@@ -1336,7 +1340,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           // until they are known there is one period, and no choice to offer.
           ...only(
             (resolved) =>
-              resolved.devices.list.length > 0 && Object.keys(resolved.devices.energy).length > 0,
+              hasDevices(resolved) && Object.keys(resolved.devices.energy).length > 0,
             {
               name: "mode",
               selector: {
@@ -1351,11 +1355,11 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           ),
           ...only(
-            (resolved) => resolved.devices.list.length > 0 && resolved.devices.mode === "now",
+            (resolved) => hasDevices(resolved) && resolved.devices.mode === "now",
             { name: "window", selector: { number: { min: 1, max: 180, mode: "box" } } }
           ),
-          ...only(
-            (resolved) => resolved.devices.list.length > 0,
+          ...only<object>(
+            hasDevices,
             {
               name: "style",
               selector: {

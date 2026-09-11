@@ -36,7 +36,7 @@ describe("resolveConfig", () => {
 
   it("offers icon fields only for a list of your own", () => {
     const titles = (cfg: Parameters<typeof getConfigForm>[1]) =>
-      JSON.stringify(getConfigForm("en", cfg).schema).includes(localize("editor.device_icons", "en"));
+      JSON.stringify(getConfigForm("en", cfg).schema).includes("mdi:shape-outline");
     const on = { ...base, sections: { devices: true } };
     expect(titles({ ...on, devices: { list: ["sensor.a"] } })).toBe(true);
     expect(titles({ ...on, devices: { source: "energy" } })).toBe(false);

@@ -3162,7 +3162,8 @@ export class PowerOriginCard extends LitElement {
           : nothing}
         ${duskX !== undefined
           ? svg`<g class="bat-moon" transform="translate(${duskX.toFixed(1)} ${top + tall + 16}) scale(0.72)">
-                  <path d="M0.8,-6 A6,6 0 1,0 0.8,6 A7.4,7.4 0 0,1 0.8,-6 Z"></path>
+                  <path transform="scale(0.62) translate(-11.5 -12.6)"
+                        d="M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95Z"></path>
                 </g>`
           : nothing}
         ${
