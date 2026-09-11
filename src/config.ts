@@ -395,6 +395,15 @@ const STAT_OPTIONS: TodayStat[] = [
   "amortisation"
 ];
 
+/**
+ * A price is as often a helper someone keeps by hand as a sensor an
+ * integration writes, so the picker offers both.
+ */
+const priceField = (name: string) => ({
+  name,
+  selector: { entity: { domain: ["sensor", "input_number", "number"] } }
+});
+
 const entityField = (name: string, deviceClass?: string, multiple = false) => ({
   name,
   selector: {
@@ -895,7 +904,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             entityField("cost_import_today", "monetary")
           ]
         },
-        { type: "grid", schema: [entityField("price_import"), entityField("price_export")] },
+        { type: "grid", schema: [priceField("price_import"), priceField("price_export")] },
         {
           type: "grid",
           schema: [entityField("battery_out_today", "energy"), entityField("battery_in_today", "energy")]

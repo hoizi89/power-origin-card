@@ -105,7 +105,7 @@ today:
 | `forecast` | Energy still expected today, e.g. from Solcast. A list of sensors, one per roof face, is added up. |
 | `cost_today` | Today's balance in your currency. **Negative means earned.** |
 | `cost_export_today`, `cost_import_today` | The two sides of the balance. |
-| `price_import`, `price_export` | A fixed price per kWh, used only to work the money out — see below. |
+| `price_import`, `price_export` | The price per kWh, used only to work the money out — see below. A sensor or a helper such as `input_number`; kept in ct/kWh, it is read as cents. |
 | `amortisation` | How much of the system has paid for itself, in percent. |
 
 With the hours known, the line under the chart also says *below forecast* once the roof has delivered less than a quarter of what the forecast expected since sunrise, two hours into the day and a kilowatt hour or more; from November to March it asks *snow on the roof?* instead. `forecast_hourly` is a sensor, or a list of them for several roof faces, whose attributes carry the day hour by hour — Solcast's *Forecast Today* does (`detailedHourly`), and so do Open-Meteo Solar Forecast's and Forecast.Solar's *Energy production today* (`wh_period`, or `watts`); after sunset the card reads `forecast_tomorrow` the same way.

@@ -101,3 +101,15 @@ export function sumEnergyKwh(entities: Array<HassEntity | undefined>): number | 
   }
   return sum;
 }
+
+/** What a price entity's number is worth in €/kWh: a helper kept in ct/kWh is a hundredth. */
+export function priceScale(entity: HassEntity | undefined): number {
+  const unit = unitOf(entity).toLowerCase();
+  return /\bct\b|cent/.test(unit) ? 0.01 : 1;
+}
+
+/** A price in €/kWh, whether the entity is kept in euros or in cents. */
+export function priceOf(entity: HassEntity | undefined): number | undefined {
+  const value = numberOf(entity);
+  return value === undefined ? undefined : value * priceScale(entity);
+}

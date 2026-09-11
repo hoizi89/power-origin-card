@@ -34,6 +34,12 @@ describe("resolveConfig", () => {
     expect(resolveConfig({ ...base, font: "system" }).font).toBe("system");
   });
 
+  it("lets a price be a helper as well as a sensor", () => {
+    const schema = JSON.stringify(getConfigForm("en", base).schema);
+    const field = schema.match(/\{"name":"price_export","selector":\{"entity":\{[^}]*\}/)?.[0] ?? "";
+    expect(field).toContain("input_number");
+  });
+
   it("offers icon fields only for a list of your own", () => {
     const titles = (cfg: Parameters<typeof getConfigForm>[1]) =>
       JSON.stringify(getConfigForm("en", cfg).schema).includes("mdi:shape-outline");

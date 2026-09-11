@@ -44,7 +44,7 @@ import {
   numberOf,
   powerKw,
   stateOf,
-  unitOf, sumEnergyKwh } from "./values";
+  unitOf, sumEnergyKwh, priceOf, priceScale } from "./values";
 
 let gradientSeq = 0;
 
@@ -413,7 +413,9 @@ export class PowerOriginCard extends LitElement {
       const prices = priceId
         ? (stats[priceId] ?? []).map((row) => row.mean).filter((v): v is number => typeof v === "number" && Number.isFinite(v))
         : [];
-      this._priceMean = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : undefined;
+      // The recorder keeps the entity's own unit; the mean is compared with a price in €/kWh.
+      const scale = priceId ? priceScale(stateOf(hass, priceId)) : 1;
+      this._priceMean = prices.length ? (scale * prices.reduce((a, b) => a + b, 0)) / prices.length : undefined;
 
       if (gridId && stats[gridId]?.length) {
         let up = 0;
@@ -630,8 +632,8 @@ export class PowerOriginCard extends LitElement {
       "money-days"
     )) as unknown as Rows;
 
-    const buy = numberOf(stateOf(hass, e.price_import)) ?? 0;
-    const sell = numberOf(stateOf(hass, e.price_export)) ?? 0;
+    const buy = priceOf(stateOf(hass, e.price_import)) ?? 0;
+    const sell = priceOf(stateOf(hass, e.price_export)) ?? 0;
     const has = (id: string | undefined) => Boolean(id) && (rows?.[id as string] ?? []).length > 0;
     const source = balanceOk && has(e.cost_today)
       ? "balance"
@@ -805,7 +807,7 @@ export class PowerOriginCard extends LitElement {
           </span>`;
 
     // This hour's price against the day's mean: a colour before a number.
-    const price = config.head_price ? numberOf(stateOf(hass, config.entities.price_import)) : undefined;
+    const price = config.head_price ? priceOf(stateOf(hass, config.entities.price_import)) : undefined;
     const mean = this._priceMean;
     const priceTone =
       price === undefined || mean === undefined
@@ -1052,8 +1054,8 @@ export class PowerOriginCard extends LitElement {
 
     // A kilowatt is not a decision; a euro an hour is, and on a moving tariff
     // the two do not track each other.
-    const buy = numberOf(stateOf(hass, config.entities.price_import));
-    const sell = numberOf(stateOf(hass, config.entities.price_export));
+    const buy = priceOf(stateOf(hass, config.entities.price_import));
+    const sell = priceOf(stateOf(hass, config.entities.price_export));
     const priced = buy !== undefined || sell !== undefined;
     const perHour = flow.toGrid * (sell ?? 0) - flow.fromGrid * (buy ?? 0);
 
@@ -1659,8 +1661,8 @@ export class PowerOriginCard extends LitElement {
   private _renderMoneyMeter(flow: Flow, locale: string) {
     const config = this._config as ResolvedConfig;
     const hass = this._hass as HomeAssistant;
-    const buy = numberOf(stateOf(hass, config.entities.price_import));
-    const sell = numberOf(stateOf(hass, config.entities.price_export));
+    const buy = priceOf(stateOf(hass, config.entities.price_import));
+    const sell = priceOf(stateOf(hass, config.entities.price_export));
     if (buy === undefined && sell === undefined) return nothing;
 
     const earning = flow.toGrid * (sell ?? 0);
@@ -3010,7 +3012,7 @@ export class PowerOriginCard extends LitElement {
         };
       }
       case "saved": {
-        const price = numberOf(stateOf(hass, config.entities.price_import));
+        const price = priceOf(stateOf(hass, config.entities.price_import));
         if (given === undefined || price === undefined) return undefined;
         return {
           value: `${formatMoney(given * price, locale)} \u20ac`,
@@ -3400,7 +3402,7 @@ export class PowerOriginCard extends LitElement {
     const houseShown = house !== undefined && !(config.sections.ring && this._centreShown === "power");
 
     const hass = this._hass as HomeAssistant;
-    const price = numberOf(stateOf(hass, config.entities.price_import));
+    const price = priceOf(stateOf(hass, config.entities.price_import));
     // The biggest as a row of its own: since when it has been drawing, and
     // what it cost today. It leaves the list, or it would stand there twice.
     const topRow = !today && config.devices.top && !rooms && style !== "icons" ? ranking.named[0] : undefined;
@@ -3712,8 +3714,8 @@ export class PowerOriginCard extends LitElement {
       imported: numberOf(stateOf(hass, config.entities.cost_import_today)),
       exportKwh: energyKwh(stateOf(hass, config.entities.export_today)),
       importKwh: energyKwh(stateOf(hass, config.entities.import_today)),
-      priceImport: numberOf(stateOf(hass, config.entities.price_import)),
-      priceExport: numberOf(stateOf(hass, config.entities.price_export))
+      priceImport: priceOf(stateOf(hass, config.entities.price_import)),
+      priceExport: priceOf(stateOf(hass, config.entities.price_export))
     });
 
     const balance = money.balance;
@@ -3745,7 +3747,7 @@ export class PowerOriginCard extends LitElement {
     // against what left for the grid.
     const houseKwh = energyKwh(stateOf(hass, config.entities.house_today));
     const importKwh = energyKwh(stateOf(hass, config.entities.import_today));
-    const buy = numberOf(stateOf(hass, config.entities.price_import));
+    const buy = priceOf(stateOf(hass, config.entities.price_import));
     const notBought =
       houseKwh !== undefined && importKwh !== undefined && buy !== undefined
         ? Math.max(0, houseKwh - importKwh) * buy
