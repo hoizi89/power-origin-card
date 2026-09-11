@@ -113,6 +113,7 @@ export const DEFAULTS = {
     head: true,
     colours: false,
     group: "device" as const,
+    merge_icons: true,
     limit: 5,
     threshold: 25,
     top: false,
@@ -328,6 +329,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       head: config.devices?.head ?? DEFAULTS.devices.head,
       colours: config.devices?.colours ?? DEFAULTS.devices.colours,
       group: config.devices?.group ?? DEFAULTS.devices.group,
+      merge_icons: config.devices?.merge_icons ?? DEFAULTS.devices.merge_icons,
       limit: config.devices?.limit ?? DEFAULTS.devices.limit,
       threshold: config.devices?.threshold ?? DEFAULTS.devices.threshold
     },
@@ -1423,7 +1425,12 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                       ]
                     }
                   }
-                }
+                },
+                // Without names only the icon tells devices apart; rows and the band have names.
+                ...only(
+                  (resolved) => resolved.devices.style === "icons" && resolved.devices.group !== "area",
+                  { name: "merge_icons", selector: { boolean: {} } }
+                )
               ]
             },
             {
@@ -1603,6 +1610,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     window: t("editor.window"),
     values: t("editor.values"),
     group: t("editor.group"),
+    merge_icons: t("editor.merge_icons"),
     limit: t("editor.limit"),
     threshold: t("editor.threshold"),
     top: t("editor.top"),
@@ -1735,6 +1743,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     mode: t("editor.help_mode"),
     window: t("editor.help_window"),
     group: t("editor.help_group"),
+    merge_icons: t("editor.help_merge_icons"),
     threshold: t("editor.help_threshold"),
     top: t("editor.help_top"),
     spark: t("editor.help_spark"),

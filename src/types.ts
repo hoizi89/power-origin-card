@@ -281,6 +281,8 @@ export interface DevicesOptions {
   /** Print the watts beside the names. */
   values?: boolean;
   group?: DevicesGroup;
+  /** In the icon grid, devices with the same icon stand as one, their watts summed. */
+  merge_icons?: boolean;
   /** How many are named; the rest fold together. */
   limit?: number;
   /** Below this many watts a device is not worth a name. */

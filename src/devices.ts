@@ -96,6 +96,34 @@ export function rankDevices(
   return { named, small, rest, house };
 }
 
+/**
+ * Devices that wear the same icon, as one. In a grid of icons without names,
+ * two fridges read as one fridge drawn twice; summed, the icon says how much
+ * the fridges draw, and the names stay in the members. A device alone keeps
+ * itself, so its tap still opens its entity.
+ */
+export function byIcon(readings: DeviceReading[]): DeviceReading[] {
+  const groups = new Map<string, DeviceReading[]>();
+  for (const reading of readings) {
+    const group = groups.get(reading.icon) ?? [];
+    group.push(reading);
+    groups.set(reading.icon, group);
+  }
+  return [...groups.values()].map((group) => {
+    if (group.length === 1) return group[0];
+    const members = [...group].sort((a, b) => (b.watts ?? 0) - (a.watts ?? 0));
+    const known = group.filter((r) => r.watts !== undefined && Number.isFinite(r.watts));
+    return {
+      id: members[0].id,
+      name: members.map((m) => m.name).join(", "),
+      watts: known.length ? known.reduce((sum, r) => sum + (r.watts ?? 0), 0) : undefined,
+      icon: group[0].icon,
+      area: group[0].area,
+      members
+    };
+  });
+}
+
 /** The same readings summed by the room they stand in. */
 export function byArea(readings: DeviceReading[], nowhere: string): DeviceReading[] {
   const rooms = new Map<string, DeviceReading>();

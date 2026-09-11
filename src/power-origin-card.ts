@@ -13,7 +13,7 @@ import {
 } from "./flow";
 import { pickFromEnergy, type EnergyPrefs } from "./energy";
 import { hourlyForecastAll, shortfall, snowSeason, type ForecastHour } from "./forecast";
-import { byArea, iconFor, rankDevices, type DeviceReading } from "./devices";
+import { byArea, byIcon, iconFor, rankDevices, type DeviceReading } from "./devices";
 import { fetchRecentMeans, fetchRecentSeries, fetchTodayChange, runMinutes } from "./stats";
 import { hourlyShares, worthDrawing, type HourShare } from "./hours";
 import { localize } from "./localize";
@@ -3361,6 +3361,8 @@ export class PowerOriginCard extends LitElement {
     });
     const rooms = config.devices.group === "area";
     if (rooms) readings = byArea(readings, localize("devices.nowhere", locale));
+    // Icons carry no names, so two that look alike stand as one.
+    else if (config.devices.style === "icons" && config.devices.merge_icons) readings = byIcon(readings);
 
     const houseToday = numberOf(stateOf(hass, config.entities.house_today));
     const house = today
@@ -3393,7 +3395,7 @@ export class PowerOriginCard extends LitElement {
     const period = today
       ? localize("devices.today", locale)
       : `\u00d8 ${formatNumber(config.devices.window, locale, 0)} min`;
-    const tap = (r: DeviceReading, content: unknown) => (rooms ? content : this._linked(r.id, content));
+    const tap = (r: DeviceReading, content: unknown) => (rooms || r.members ? content : this._linked(r.id, content));
     // The ring's centre is the house load already; the head repeats nothing.
     const houseShown = house !== undefined && !(config.sections.ring && this._centreShown === "power");
 
@@ -3544,7 +3546,8 @@ export class PowerOriginCard extends LitElement {
             const on = (r.watts ?? 0) >= (today ? 0.1 : config.devices.threshold);
             return tap(
               r,
-              html`<span class="dev ${on ? "" : "off"}" style="${tint(r, i)}" title="${r.name} ${w(r.watts ?? 0)}"
+              html`<span class="dev ${on ? "" : "off"}" style="${tint(r, i)}"
+                title="${r.members ? r.members.map((m) => `${m.name} ${w(m.watts ?? 0)}`).join(", ") : `${r.name} ${w(r.watts ?? 0)}`}"
                 ><ha-icon icon="${r.icon}"></ha-icon
                 ><i class="lvl"><b style="width: ${Math.round((100 * (r.watts ?? 0)) / top)}%"></b></i
                 >${values && on ? html`<small>${w(r.watts ?? 0)}</small>` : nothing}</span

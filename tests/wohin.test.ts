@@ -124,6 +124,16 @@ describe("icons", () => {
     expect(devs[0].querySelector("small")?.textContent).toMatch(/W/);
   });
 
+  it("stand as one where two look alike, unless told not to", async () => {
+    const names = { "sensor.nas_power": "Kühlschrank Keller", "sensor.fridge_power": "Kühlschrank" };
+    const merged = await mount(config({ style: "icons", names }), day);
+    expect(merged.root.querySelectorAll(".dev").length).toBe(3);
+    const fridges = [...merged.root.querySelectorAll(".dev")].find((d) => d.getAttribute("title")?.includes("Keller"));
+    expect(fridges?.getAttribute("title")).toMatch(/Kühlschrank Keller .*W, Kühlschrank .*W/);
+    const apart = await mount(config({ style: "icons", names, merge_icons: false }), day);
+    expect(apart.root.querySelectorAll(".dev").length).toBe(4);
+  });
+
   it("stand no more than the limit, since they have no rest to fold into", async () => {
     const { root } = await mount(config({ style: "icons", limit: 2 }), day);
     expect(root.querySelectorAll(".dev").length).toBe(2);

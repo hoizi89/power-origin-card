@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byArea, iconFor, rankDevices, type DeviceReading } from "../src/devices";
+import { byArea, byIcon, iconFor, rankDevices, type DeviceReading } from "../src/devices";
 
 const r = (id: string, name: string, watts: number | undefined, area?: string): DeviceReading => ({
   id, name, watts, icon: iconFor(name, id), area
@@ -54,6 +54,26 @@ describe("who gets a name", () => {
   });
   it("has no rest to speak of without a house", () => {
     expect(rankDevices(readings, undefined, { limit: 5, threshold: 25 }).rest).toBeUndefined();
+  });
+});
+
+describe("by icon", () => {
+  it("stands devices that look alike as one, their watts summed and the biggest first among them", () => {
+    const merged = byIcon([
+      r("sensor.a", "Kühlschrank Keller", 40),
+      r("sensor.b", "Gefrierschrank", 55),
+      r("sensor.c", "Backofen", 1200)
+    ]);
+    expect(merged).toHaveLength(2);
+    const fridges = merged.find((m) => m.members)!;
+    expect(fridges.watts).toBe(95);
+    expect(fridges.members!.map((m) => m.name)).toEqual(["Gefrierschrank", "Kühlschrank Keller"]);
+    expect(merged.find((m) => m.id === "sensor.c")?.members).toBeUndefined();
+  });
+
+  it("keeps a group that cannot report as unknown, not as zero", () => {
+    const merged = byIcon([r("sensor.a", "Kühlschrank", undefined), r("sensor.b", "Gefrierschrank", undefined)]);
+    expect(merged[0].watts).toBeUndefined();
   });
 });
 
