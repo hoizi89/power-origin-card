@@ -177,6 +177,15 @@ describe("what the battery block says while charging", () => {
     expect(note()).toMatch(/Heute bis ~\d+ %/);
   });
 
+  it("draws sun and moon each on its own switch", async () => {
+    const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
+    const sunOnly = await mount(config({ battery: { full_from: "forecast", sunrise_mark: true, sunset_mark: false } }), hungry);
+    expect(sunOnly.root.querySelector(".bat-moon")).toBeNull();
+    const moonOnly = await mount(config({ battery: { full_from: "forecast", sunset_mark: true } }), hungry);
+    expect(moonOnly.root.querySelector(".bat-moon")).toBeTruthy();
+    expect(moonOnly.note()).toMatch(/Heute bis ~\d+ %/);
+  });
+
   it("draws the moon where today gets it, and still says so in words", async () => {
     const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
     const { root, note } = await mount(config({ battery: { full_from: "forecast", sunrise_mark: true } }), hungry);

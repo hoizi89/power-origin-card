@@ -3097,7 +3097,7 @@ export class PowerOriginCard extends LitElement {
     const bare = config.battery.style === "bar";
     const dawn = config.battery.sunrise_mark ? this._socAtSunrise() : undefined;
     // Sun by night, moon by day, never both: the bar has one tomorrow at a time.
-    const dusk = config.battery.sunrise_mark && !dawn ? this._socAtSunset() : undefined;
+    const dusk = config.battery.sunset_mark && !dawn ? this._socAtSunset() : undefined;
     // The wave runs only while the battery moves; a resting battery stands still.
     const flowing = motion === "charging" || motion === "discharging" ? motion : undefined;
 

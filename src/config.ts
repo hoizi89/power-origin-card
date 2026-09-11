@@ -96,6 +96,7 @@ export const DEFAULTS = {
     reserve: 0,
     extra: "none" as const,
     sunrise_mark: false,
+    sunset_mark: false,
     curve: false,
     animate: false,
     full_from: "rate" as const
@@ -288,6 +289,8 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     battery: {
       ...DEFAULTS.battery,
       ...config.battery,
+      // Until 0.28 one switch drew both; a card set up then keeps its moon.
+      sunset_mark: config.battery?.sunset_mark ?? config.battery?.sunrise_mark ?? DEFAULTS.battery.sunset_mark,
       capacity: config.battery?.capacity ?? config.battery_capacity ?? DEFAULTS.battery.capacity,
       reserve: config.battery?.reserve ?? config.battery_reserve ?? DEFAULTS.battery.reserve
     },
@@ -1256,16 +1259,26 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         ...only(
           (resolved) => cellTimed(resolved) && resolved.battery.runtime && resolved.entities.forecast_hourly.length > 0,
           {
-            name: "full_from",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "rate", label: t("editor.full_rate") },
-                  { value: "forecast", label: t("editor.full_forecast") }
-                ]
-              }
-            }
+            type: "grid",
+            schema: [
+              {
+                name: "full_from",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "rate", label: t("editor.full_rate") },
+                      { value: "forecast", label: t("editor.full_forecast") }
+                    ]
+                  }
+                }
+              },
+              // The moon is the forecast's answer, so it stands beside the forecast.
+              ...only(
+                (resolved) => resolved.battery.full_from === "forecast" && resolved.battery_capacity > 0,
+                { name: "sunset_mark", selector: { boolean: {} } }
+              )
+            ]
           }
         ),
         // What the bar says about the night sits together, since it is one thought.
@@ -1617,6 +1630,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     night: t("editor.night"),
     tap: t("editor.tap"),
     sunrise_mark: t("editor.sunrise_mark"),
+    sunset_mark: t("editor.sunset_mark"),
     import_switch: t("editor.import_switch"),
     autarky_colours: t("editor.autarky_colours"),
     animate: t("editor.animate"),
@@ -1694,6 +1708,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     night: t("editor.help_night"),
     tap: t("editor.help_tap"),
     sunrise_mark: t("editor.help_sunrise_mark"),
+    sunset_mark: t("editor.help_sunset_mark"),
     import_switch: t("editor.help_import_switch"),
     autarky_colours: t("editor.help_autarky_colours"),
     animate: t("editor.help_animate"),

@@ -245,6 +245,8 @@ export interface BatteryOptions {
   extra?: BatteryExtra;
   /** A sun under the bar where the charge will stand at sunrise. */
   sunrise_mark?: boolean;
+  /** A moon under the bar where the charge will stand at sunset, when the forecast cannot fill it. Unset, it follows `sunrise_mark`. */
+  sunset_mark?: boolean;
   /** The charge over the night, or the day, as a small curve under the bar, with where it is heading. */
   curve?: boolean;
   /** A slow wave through the cells, towards the cap while charging and away from it while discharging. */
