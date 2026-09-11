@@ -174,15 +174,15 @@ describe("what the battery block says while charging", () => {
     const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
     const { note } = await mount(config({ battery: { full_from: "forecast" } }), hungry);
     expect(note()).not.toContain("Heute nicht voll");
-    expect(note()).toMatch(/Etwa \d+ % bei Sonnenuntergang/);
+    expect(note()).toMatch(/Heute bis ~\d+ %/);
   });
 
-  it("leaves the sunset figure to the moon once the bar carries one", async () => {
+  it("draws the moon where today gets it, and still says so in words", async () => {
     const hungry: Scenario = { ...charging, name: "hungry house", house: 6000 };
     const { root, note } = await mount(config({ battery: { full_from: "forecast", sunrise_mark: true } }), hungry);
     expect(root.querySelector(".bat-moon")).toBeTruthy();
     expect(root.querySelector(".bat-sun")).toBeNull();
-    expect(note()).not.toMatch(/Sonnenuntergang/);
+    expect(note()).toMatch(/Heute bis ~\d+ %/);
   });
 });
 
@@ -191,7 +191,7 @@ describe("the battery block in the last hour of sun", () => {
     const dusk: Scenario = { ...charging, name: "dusk", sunsetInMinutes: 40 };
     for (const cfg of [config(), config({ battery: { full_from: "forecast" } })]) {
       const { note } = await mount(cfg, dusk);
-      expect(note()).not.toMatch(/Voll|voll|Sonnenuntergang/);
+      expect(note()).not.toMatch(/Voll|voll|Heute bis/);
       expect(note()).toMatch(/lädt mit/);
     }
   });
@@ -208,13 +208,14 @@ describe("a battery resting on its reserve", () => {
 });
 
 describe("a day the pessimistic forecast cannot fill", () => {
-  // The median fills by mid-afternoon; the cautious edge, at a third of it, never does.
+  // The median fills by mid-afternoon; the pessimistic edge, at a third of it, never does.
   const hopeful: Scenario = { ...charging, name: "hopeful", soc: 15, hourlyEdges: [0.35, 1.6] };
 
-  it("promises no full time, and says where the cautious day ends instead", async () => {
-    const { note } = await mount(config({ battery: { full_from: "forecast" } }), hopeful);
-    expect(note()).not.toMatch(/Voll/);
-    expect(note()).toMatch(/Etwa \d+ % bei Sonnenuntergang/);
+  it("goes by the median and names its hour, with no moon", async () => {
+    const { root, note } = await mount(config({ battery: { full_from: "forecast", sunrise_mark: true } }), hopeful);
+    expect(note()).toMatch(/Voll gegen \d+:\d\d/);
+    expect(note()).not.toMatch(/Heute bis/);
+    expect(root.querySelector(".bat-moon")).toBeNull();
   });
 });
 

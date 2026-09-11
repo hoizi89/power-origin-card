@@ -1881,14 +1881,10 @@ export class PowerOriginCard extends LitElement {
         const until = sunUp ? setting : undefined;
         const found = fullFromForecast(slots, now, headroom, load, until);
         const span = fullSpan(slots, now, headroom, load, until);
-        // Full is claimed only when even the pessimistic day fills. A median
-        // that fills while the pessimistic edge does not is a hope, and a hope
-        // reads as a promise once it stands under the bar; where the cautious
-        // day ends is the answer that holds, and a better day corrects it upward.
-        const cautious = span.edges && span.early && !span.late
-          ? fullFromForecast(slots, now, headroom, load, until, "low")
-          : found;
-        if (found.at && cautious.at) {
+        // The median is the answer. The pessimistic edge is the day one time
+        // in ten; judged by it, a battery would never fill on a good day, and
+        // a card that says so every morning is ignored by the afternoon.
+        if (found.at) {
           view.at = found.at;
           view.hours = (found.at.getTime() - now.getTime()) / 3600000;
           view.full = "forecast";
@@ -1904,7 +1900,7 @@ export class PowerOriginCard extends LitElement {
           view.at = undefined;
           view.hours = undefined;
           view.full = "not_today";
-          view.socAtSunset = Math.min(100, view.soc + (cautious.reachedKwh / capacityKwh) * 100);
+          view.socAtSunset = Math.min(100, view.soc + (found.reachedKwh / capacityKwh) * 100);
         }
         return;
       }
@@ -1951,14 +1947,12 @@ export class PowerOriginCard extends LitElement {
       const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
       parts.push(`${localize(word, locale)} ${formatClock(view.at, locale)}`);
     } else if (view.full === "not_today") {
-      // Where it ends up at sunset says on its own that full is not on today's cards.
-      // With the moon on the bar it is already said, and the line stays short.
-      const config = this._config as ResolvedConfig;
-      if (view.socAtSunset !== undefined && config.battery.sunrise_mark) {
-        // The moon has it.
-      } else if (view.socAtSunset !== undefined) {
+      // How far today gets it says on its own that full is not on today's
+      // cards, and in fewer words than saying so first. The moon, when drawn,
+      // shows the same place; the line says it for anyone who does not read symbols.
+      if (view.socAtSunset !== undefined) {
         parts.push(
-          `${localize("battery.about", locale)} ${formatNumber(view.socAtSunset, locale, 0)} % ${localize("battery.at_sunset", locale)}`
+          `${localize("battery.today_up_to", locale)} ~${formatNumber(view.socAtSunset, locale, 0)} %`
         );
       } else {
         parts.push(localize("battery.not_full_today", locale));
@@ -3164,10 +3158,10 @@ export class PowerOriginCard extends LitElement {
           );
 
     return html`
-      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${marked ? 66 : 54}" role="img"
+      <svg class="full ${flowing ? `bat-flow ${flowing}` : ""}" viewBox="0 0 340 ${marked ? 60 : 54}" role="img"
            aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
         ${dawnX !== undefined
-          ? svg`<g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 16}) scale(0.72)">
+          ? svg`<g class="bat-sun" transform="translate(${dawnX.toFixed(1)} ${top + tall + 13}) scale(0.72)">
                   <circle cx="0" cy="0" r="2.7"></circle>
                   <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
                            M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
@@ -3175,8 +3169,8 @@ export class PowerOriginCard extends LitElement {
                 </g>`
           : nothing}
         ${duskX !== undefined
-          ? svg`<g class="bat-moon" transform="translate(${duskX.toFixed(1)} ${top + tall + 16}) scale(0.72)">
-                  <path transform="scale(0.62) translate(-11.5 -12.6)"
+          ? svg`<g class="bat-moon" transform="translate(${duskX.toFixed(1)} ${top + tall + 13}) scale(0.72)">
+                  <path transform="scale(0.7) translate(-11.5 -12.6)"
                         d="M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95Z"></path>
                 </g>`
           : nothing}
