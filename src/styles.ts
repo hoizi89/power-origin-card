@@ -1200,6 +1200,194 @@ export const cardStyles = css`
   .clock-mark.sun path { fill: none; }
   .clock-mark.moon { stroke: none; }
 
+
+  /* ---- Ring with figures: the four powers in the ring's corners ---- */
+  .ring-block.corners.chipped > .chip {
+    position: static;
+    align-self: flex-end;
+  }
+
+  .ring-corners {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    row-gap: 18px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .ring-corners > .ring {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    max-width: 150px;
+  }
+
+  .ring-corners.size-s > .ring { max-width: 128px; }
+  .ring-corners.size-m > .ring { max-width: 160px; }
+  .ring-corners.size-l > .ring { max-width: 196px; }
+
+  .rc,
+  .rc > .tap {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .rc.tl { grid-column: 1; grid-row: 1; align-self: start; }
+  .rc.bl { grid-column: 1; grid-row: 2; align-self: end; }
+  .rc.tr { grid-column: 3; grid-row: 1; align-self: start; }
+  .rc.br { grid-column: 3; grid-row: 2; align-self: end; }
+  .rc.tr, .rc.br { text-align: right; justify-items: end; }
+  .rc.tr > .tap, .rc.br > .tap { justify-items: end; }
+
+  .rc-k {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--sst-muted);
+  }
+
+  .rc-v {
+    font-family: var(--sst-mono);
+    font-size: calc(18px * var(--sst-scale));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--sst-ink);
+    white-space: nowrap;
+  }
+
+  .rc-v small {
+    font-size: 0.6em;
+    font-weight: 400;
+    color: var(--sst-muted);
+    margin-left: 2px;
+  }
+
+  .rc.sun .rc-v { color: var(--sst-sun); }
+  .rc.leaf .rc-v { color: var(--sst-leaf); }
+  .rc.grid .rc-v { color: var(--sst-grid); }
+  .rc.grid.import .rc-v { color: var(--power-origin-import-color, #e5484d); }
+
+  .rc-verb {
+    font-size: calc(11px * var(--sst-scale));
+    color: var(--sst-muted);
+    /* A long word wraps under itself rather than being cut. */
+    overflow-wrap: anywhere;
+  }
+
+  @container (max-width: 339px) {
+    .ring-corners > .ring { max-width: 112px; }
+    .rc-v { font-size: calc(15px * var(--sst-scale)); }
+  }
+
+  /* ---- Flow: the house in the middle, PV, grid and store around it ---- */
+  .flow-view {
+    display: block;
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    margin: 0 auto;
+    overflow: visible;
+  }
+
+  .flow-view.size-s { max-width: 320px; }
+  .flow-view.size-m { max-width: 400px; }
+  .flow-view.size-l { max-width: 480px; }
+
+  .fv-disc {
+    fill: var(--sst-inset);
+  }
+
+  .fv-track {
+    fill: none;
+    stroke: var(--sst-track);
+    stroke-width: 4;
+  }
+
+  .fv-arc,
+  .fv-rim {
+    fill: none;
+    stroke-width: 4;
+    transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;
+  }
+
+  .fv-rim { stroke-width: 2.5; }
+
+  .fv-arc.solar, .fv-rim.solar { stroke: var(--sst-sun); }
+  .fv-arc.battery, .fv-rim.battery { stroke: var(--sst-leaf); }
+  .fv-arc.grid, .fv-rim.grid { stroke: var(--sst-grid); }
+  .fv-arc.grid.import, .fv-rim.grid.import { stroke: var(--power-origin-import-color, #e5484d); }
+  .fv-rim.house { stroke: var(--sst-house); }
+
+  .fv-v {
+    font-family: var(--sst-mono);
+    font-size: calc(14px * var(--sst-scale));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    fill: var(--sst-ink);
+  }
+
+  .fv-node.house .fv-v { font-size: calc(18px * var(--sst-scale)); }
+  .fv-node.solar .fv-v { fill: var(--sst-sun); }
+  .fv-node.battery .fv-v { fill: var(--sst-leaf); }
+  .fv-node.grid .fv-v { fill: var(--sst-grid); }
+  .fv-node.grid.import .fv-v { fill: var(--power-origin-import-color, #e5484d); }
+
+  .fv-u {
+    font-family: var(--sst-mono);
+    font-size: calc(7.5px * var(--sst-scale));
+    fill: var(--sst-muted);
+  }
+
+  .fv-node.quiet { opacity: 0.45; }
+
+  .fv-node.tap:focus-visible {
+    outline: none;
+  }
+
+  .fv-node.tap:focus-visible .fv-disc {
+    stroke: var(--sst-sun);
+    stroke-width: 2;
+  }
+
+  .fv-k {
+    font-family: var(--sst-mono);
+    font-size: calc(8px * var(--sst-scale));
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--sst-muted);
+  }
+
+  .fv-verb {
+    font-family: var(--sst-mono);
+    font-size: calc(9.5px * var(--sst-scale));
+    fill: var(--sst-ink);
+  }
+
+  .fv-line {
+    stroke: var(--sst-track);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .fv-line.on { stroke-width: 3; }
+  .fv-line.on.solar { stroke: var(--sst-sun); }
+  .fv-line.on.battery { stroke: var(--sst-leaf); }
+  .fv-line.on.grid { stroke: var(--sst-grid); }
+  .fv-line.on.grid.import { stroke: var(--power-origin-import-color, #e5484d); }
+  .fv-line.on.dots { stroke-dasharray: 0.1 7; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fv-line.on.dots { animation: fv-run 1.1s linear infinite; }
+    .fv-line.on.dots.rev { animation-direction: reverse; }
+  }
+
+  @keyframes fv-run {
+    to { stroke-dashoffset: -7.1; }
+  }
+
   .tap {
     cursor: pointer;
   }

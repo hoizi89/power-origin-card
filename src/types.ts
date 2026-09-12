@@ -147,7 +147,16 @@ export interface SectionToggles {
   week?: boolean;
 }
 
+/** How the ring block is laid out: columns beside it, the four powers in its corners, or the flow between them. */
+export type RingView = "columns" | "corners" | "flow";
+
 export interface RingOptions {
+  /** The ring with columns, with the four powers in its corners, or the flow between house, PV, grid and store. */
+  view?: RingView;
+  /** In the flow view, each circle a gauge: PV against today's peak, the store by its charge, the grid against today's most, the house by origin. */
+  flow_gauges?: boolean;
+  /** In the flow view, dots running along the lines the way the power goes. */
+  flow_dots?: boolean;
   center?: RingCenter;
   /** The mode to use while nothing is being produced. */
   center_dark?: RingCenterDark;

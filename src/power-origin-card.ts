@@ -57,6 +57,8 @@ const CELL = html`<svg class="meter-glyph" viewBox="0 0 24 24" aria-hidden="true
 </svg>`;
 
 const REFRESH_MS = 2 * 60 * 1000;
+/** Below this, in kW, a power is standing still: no word for a direction, no running dots. */
+const LIVE_KW = 0.03;
 /** How often the Energy dashboard is asked for its device list. */
 const ENERGY_MS = 60 * 60 * 1000;
 
@@ -347,6 +349,7 @@ export class PowerOriginCard extends LitElement {
     if (!hass || !config || this._pending || !this.isConnected) return;
     const meterNeedsScale =
       config.ring.meter &&
+      config.ring.view === "columns" &&
       (config.ring.meter_scale === 0 ||
         config.ring.meter_second_scale === 0 ||
         config.ring.meter_style === "roof" ||
@@ -1031,6 +1034,9 @@ export class PowerOriginCard extends LitElement {
   private _renderRing(flow: Flow, locale: string, alarm = false, bare = false, chip?: unknown) {
     const config = this._config as ResolvedConfig;
     const hass = this._hass as HomeAssistant;
+    if (config.ring.view === "flow" && !bare) return this._renderFlowView(flow, locale, chip);
+    // Only the columns view stands columns beside the ring.
+    const columned = config.ring.view === "columns" && !bare;
     // A ring about production says nothing before sunrise, so both production
     // views fall back to the source ring rather than showing an empty circle.
     const producing = this._isProducing(flow);
@@ -1194,12 +1200,7 @@ export class PowerOriginCard extends LitElement {
       }
     }
 
-    return html`
-      <div class="ring-block ${config.ring.layout} ${chip ? "chipped" : ""}">
-        ${chip ?? nothing}
-        <div class="ring-group size-${bare ? "s" : config.ring.size} ${config.ring.facts === "none" || bare ? "solo" : ""}">
-        ${bare ? nothing : this._renderMeter(flow, locale, leftSubject)}
-        <svg class="ring ${showSurplus ? "surplus" : ""} ${cycle ? "cycle" : ""}"
+    const ringSvg = html`        <svg class="ring ${showSurplus ? "surplus" : ""} ${cycle ? "cycle" : ""}"
              viewBox="${farMarks ? "-17 -17 234 234" : "0 0 200 200"}"
              role="${cycle ? "button" : "img"}" aria-label="${value} ${unit}"
              tabindex="${cycle ? 0 : -1}"
@@ -1326,13 +1327,287 @@ export class PowerOriginCard extends LitElement {
               )}</g>`
             : nothing}
 
-        </svg>
-        ${config.ring.meter_second === "none" || bare
+        </svg>`;
+
+    if (config.ring.view === "corners" && !bare) {
+      return html`
+        <div class="ring-block corners ${chip ? "chipped" : ""}">
+          ${chip ?? nothing}
+          <div class="ring-corners size-${config.ring.size}">
+            ${this._corners(flow, locale, mode)}
+            ${ringSvg}
+          </div>
+        </div>
+      `;
+    }
+
+    return html`
+      <div class="ring-block ${config.ring.layout} ${chip ? "chipped" : ""}">
+        ${chip ?? nothing}
+        <div class="ring-group size-${bare ? "s" : config.ring.size} ${config.ring.facts === "none" || bare ? "solo" : ""}">
+        ${columned ? this._renderMeter(flow, locale, leftSubject) : nothing}
+        ${ringSvg}
+        ${config.ring.meter_second === "none" || !columned
           ? nothing
           : this._renderMeter(flow, locale, rightSubject, true)}
         </div>
-        ${config.ring.columns === "scale" && !bare ? this._renderScale(flow, locale) : nothing}
-        ${bare ? nothing : this._renderLegend(flow, locale)}
+        ${config.ring.columns === "scale" && columned ? this._renderScale(flow, locale) : nothing}
+        ${columned ? this._renderLegend(flow, locale) : nothing}
+      </div>
+    `;
+  }
+
+  /**
+   * The four powers as the sensors read them, with the signs the card uses
+   * everywhere: the grid positive while importing, the battery positive while
+   * discharging. The grid's own meter wins; without one, the flow's balance.
+   */
+  private _live(flow: Flow) {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const rawBattery = powerKw(stateOf(hass, config.entities.battery_power));
+    const rawGrid = powerKw(stateOf(hass, config.entities.grid_power));
+    return {
+      pv: config.entities.solar ? flow.production : undefined,
+      house: flow.house,
+      battery: rawBattery === undefined ? undefined : config.battery_invert ? -rawBattery : rawBattery,
+      grid:
+        rawGrid === undefined
+          ? flow.fromGrid - flow.toGrid
+          : config.grid_invert
+            ? -rawGrid
+            : rawGrid,
+      soc: numberOf(stateOf(hass, config.entities.battery_soc))
+    };
+  }
+
+  /** Which way the grid goes, in a word; a few watts either way are nothing. */
+  private _gridWord(grid: number): string {
+    return grid > LIVE_KW ? "live.importing" : grid < -LIVE_KW ? "live.exporting" : "live.balanced";
+  }
+
+  /** Which way the battery goes, in a word. */
+  private _batteryWord(battery: number): string {
+    return battery > LIVE_KW ? "live.discharging" : battery < -LIVE_KW ? "live.charging" : "live.idle";
+  }
+
+  /**
+   * The four powers around the ring, each with the word for where it goes: a
+   * direction read as a verb, not as a sign or a colour. The centre keeps
+   * what it shows; the fourth corner is whichever of house and autarky it
+   * does not.
+   */
+  private _corners(flow: Flow, locale: string, mode: RingCenter | "runtime") {
+    const config = this._config as ResolvedConfig;
+    const live = this._live(flow);
+    const corner = (
+      place: string,
+      tone: string,
+      label: string,
+      value: string,
+      unit: string,
+      verb: string,
+      entity: string | undefined
+    ) => html`<div class="rc ${place} ${tone}">
+      ${this._linked(
+        entity,
+        html`<span class="rc-k">${label}</span
+          ><span class="rc-v">${value}<small>${unit}</small></span
+          ><span class="rc-verb">${verb}</span>`
+      )}
+    </div>`;
+
+    const pv =
+      live.pv === undefined
+        ? nothing
+        : corner(
+            "tl",
+            "sun",
+            localize("live.pv", locale),
+            formatPower(live.pv, locale),
+            "kW",
+            localize("live.makes", locale),
+            config.entities.solar
+          );
+    const grid = corner(
+      "tr",
+      `grid ${live.grid > LIVE_KW && config.ring.import_red ? "import" : ""}`,
+      localize("live.grid", locale),
+      formatPower(Math.abs(live.grid), locale),
+      "kW",
+      localize(this._gridWord(live.grid), locale),
+      config.entities.grid_power
+    );
+    const battery =
+      live.battery === undefined
+        ? nothing
+        : corner(
+            "bl",
+            "leaf",
+            localize("live.battery", locale),
+            formatPower(Math.abs(live.battery), locale),
+            "kW",
+            `${localize(this._batteryWord(live.battery), locale)}${
+              live.soc === undefined ? "" : ` · ${formatNumber(live.soc, locale, 0)} %`
+            }`,
+            config.entities.battery_power
+          );
+    const fourth =
+      mode === "power"
+        ? corner(
+            "br",
+            "",
+            localize("live.autarky", locale),
+            formatNumber(flow.autarky * 100, locale, 0),
+            "%",
+            localize("live.now", locale),
+            undefined
+          )
+        : corner(
+            "br",
+            "",
+            localize("live.house", locale),
+            formatPower(live.house, locale),
+            "kW",
+            localize("live.uses", locale),
+            config.entities.house
+          );
+    return html`${pv}${grid}${battery}${fourth}`;
+  }
+
+  /**
+   * The flow: the house in the middle, PV above, the grid to the left, the
+   * store to the right, and a line from each to the house with dots running
+   * the way the power goes. Each circle can be a gauge as well: PV against
+   * today's peak, the store by its charge, the grid against today's most in
+   * that direction, and the house by where its power comes from, the ring in
+   * small. The words stand under the circles, so no circle has to hold more
+   * than its figure.
+   */
+  private _renderFlowView(flow: Flow, locale: string, chip?: unknown) {
+    const config = this._config as ResolvedConfig;
+    const hass = this._hass as HomeAssistant;
+    const live = this._live(flow);
+    const gauges = config.ring.flow_gauges;
+    const dots = config.ring.flow_dots;
+    const share = (value: number) => Math.min(1, Math.max(0, value));
+
+    const arc = (cx: number, cy: number, r: number, part: number | undefined, tone: string) =>
+      part === undefined
+        ? nothing
+        : svg`<circle class="fv-arc ${tone}" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
+            stroke-dasharray="${(share(part) * 100).toFixed(1)} 100"
+            transform="rotate(-90 ${cx} ${cy})"></circle>`;
+
+    const node = (
+      tone: string,
+      entity: string | undefined,
+      cx: number,
+      cy: number,
+      r: number,
+      value: string,
+      unit: string,
+      ring: unknown,
+      quiet = false
+    ) => {
+      const on = entity && hass.states?.[entity];
+      const handlers = on ? this._tap(entity!) : undefined;
+      return svg`<g class="fv-node ${tone} ${quiet ? "quiet" : ""} ${on ? "tap" : ""}"
+          role="${on ? "button" : "img"}" tabindex="${on ? 0 : -1}"
+          @click=${handlers?.click} @keydown=${handlers?.key}>
+        <circle class="fv-disc" cx="${cx}" cy="${cy}" r="${r}"></circle>
+        ${gauges
+          ? svg`<circle class="fv-track" cx="${cx}" cy="${cy}" r="${r}"></circle>${ring}`
+          : svg`<circle class="fv-rim ${tone}" cx="${cx}" cy="${cy}" r="${r}"></circle>`}
+        <text class="fv-v" x="${cx}" y="${cy + 2}" text-anchor="middle">${value}</text>
+        <text class="fv-u" x="${cx}" y="${cy + 14}" text-anchor="middle">${unit}</text>
+      </g>`;
+    };
+
+    const label = (x: number, y: number, anchor: string, name: string, verb: string) =>
+      svg`<text class="fv-k" x="${x}" y="${y}" text-anchor="${anchor}">${name}</text>
+        <text class="fv-verb" x="${x}" y="${y + 13}" text-anchor="${anchor}">${verb}</text>`;
+
+    // Drawn from the outer circle to the house; "rev" runs the dots back out.
+    const line = (tone: string, x1: number, y1: number, x2: number, y2: number, power: number | undefined, out: boolean) => {
+      const on = power !== undefined && Math.abs(power) > LIVE_KW;
+      return svg`<line class="fv-line ${tone} ${on ? "on" : ""} ${on && dots ? "dots" : ""} ${on && out ? "rev" : ""}"
+        x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
+    };
+
+    // The house by origin: the ring's own question, in small.
+    const houseRing = (() => {
+      if (!gauges || flow.house <= 0) return nothing;
+      let offset = 0;
+      return [
+        ["solar", flow.fromSolar],
+        ["battery", flow.fromBattery],
+        ["grid", flow.fromGrid]
+      ]
+        .filter(([, kw]) => (kw as number) > 0.005)
+        .map(([key, kw]) => {
+          const length = ((kw as number) / flow.house) * 100;
+          const seg = svg`<circle class="fv-arc ${key}" cx="160" cy="142" r="36" pathLength="100"
+            stroke-dasharray="${length.toFixed(1)} 100" stroke-dashoffset="${(-offset).toFixed(1)}"
+            transform="rotate(-90 160 142)"></circle>`;
+          offset += length;
+          return seg;
+        });
+    })();
+
+    const peak = Math.max(this._series?.solarPeak ?? 0, ...(this._series?.solar ?? [0]));
+    const pvPart = live.pv !== undefined && peak > 0.05 ? live.pv / Math.max(peak, live.pv) : undefined;
+    const swing = this._swing;
+    const gridPart =
+      swing === undefined
+        ? undefined
+        : live.grid > 0
+          ? live.grid / Math.max(swing.down, live.grid, 0.001)
+          : -live.grid / Math.max(swing.up, -live.grid, 0.001);
+    const importing = live.grid > LIVE_KW;
+    const gridTone = `grid ${importing && config.ring.import_red ? "import" : ""}`;
+
+    const autarkic = `${formatNumber(flow.autarky * 100, locale, 0)} % ${localize("live.autarkic", locale)}`;
+    const aria = [
+      live.pv === undefined ? "" : `${localize("live.pv", locale)} ${formatPower(live.pv, locale)} kW`,
+      `${localize("live.house", locale)} ${formatPower(live.house, locale)} kW`,
+      `${localize("live.grid", locale)} ${formatPower(Math.abs(live.grid), locale)} kW ${localize(this._gridWord(live.grid), locale)}`,
+      live.battery === undefined
+        ? ""
+        : `${localize("live.battery", locale)} ${formatPower(Math.abs(live.battery), locale)} kW ${localize(this._batteryWord(live.battery), locale)}`
+    ].filter(Boolean).join(", ");
+
+    return html`
+      <div class="ring-block flowview ${chip ? "chipped" : ""}">
+        ${chip ?? nothing}
+        <svg class="flow-view size-${config.ring.size}" viewBox="0 0 320 214" role="img" aria-label="${aria}">
+          ${live.pv === undefined ? nothing : line("solar", 160, 68, 160, 106, live.pv, false)}
+          ${line(gridTone, 76, 142, 124, 142, live.grid, live.grid < 0)}
+          ${live.battery === undefined ? nothing : line("battery", 244, 142, 196, 142, live.battery, live.battery < 0)}
+
+          ${live.pv === undefined
+            ? nothing
+            : svg`${node("solar", config.entities.solar, 160, 40, 28, formatPower(live.pv, locale), "kW",
+                arc(160, 40, 28, pvPart, "solar"), live.pv < LIVE_KW)}
+              ${label(122, 36, "end", localize("live.pv", locale), localize("live.makes", locale))}`}
+
+          ${node("house", config.entities.house, 160, 142, 36, formatPower(live.house, locale), "kW", houseRing)}
+          ${label(160, 194, "middle", localize("live.house", locale), autarkic)}
+
+          ${node(gridTone, config.entities.grid_power, 48, 142, 28, formatPower(Math.abs(live.grid), locale), "kW",
+            arc(48, 142, 28, gridPart, gridTone), !importing && live.grid > -LIVE_KW)}
+          ${label(48, 186, "middle", localize("live.grid", locale), localize(this._gridWord(live.grid), locale))}
+
+          ${live.battery === undefined
+            ? nothing
+            : svg`${node("battery", config.entities.battery_power, 272, 142, 28,
+                formatPower(Math.abs(live.battery), locale), "kW",
+                arc(272, 142, 28, live.soc === undefined ? undefined : live.soc / 100, "battery"))}
+              ${label(272, 186, "middle", localize("live.battery", locale),
+                `${localize(this._batteryWord(live.battery), locale)}${
+                  live.soc === undefined ? "" : ` · ${formatNumber(live.soc, locale, 0)} %`
+                }`)}`}
+        </svg>
       </div>
     `;
   }
@@ -1465,7 +1740,7 @@ export class PowerOriginCard extends LitElement {
   /** Whether any column, by day or by night, shows the subject. */
   private _usesSubject(subject: MeterStyle): boolean {
     const config = this._config;
-    if (!config) return false;
+    if (!config || config.ring.view !== "columns") return false;
     return [
       config.ring.meter_style,
       config.ring.meter_second,
@@ -1488,6 +1763,8 @@ export class PowerOriginCard extends LitElement {
     const config = this._config;
     if (!config) return false;
     return (
+      // The flow's gauges read today's peak and the grid's swing.
+      config.ring.view === "flow" ||
       config.ring.rings === "clock" ||
       config.ring.rings === "dayclock" ||
       config.ring.meter_style === "day" ||

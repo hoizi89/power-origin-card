@@ -40,6 +40,23 @@ describe("resolveConfig", () => {
     expect(field).toContain("input_number");
   });
 
+  it("offers each view only the settings it reads", () => {
+    const names = (cfg: Parameters<typeof getConfigForm>[1]) => JSON.stringify(getConfigForm("de", cfg).schema);
+    const columns = names(base);
+    expect(columns).toContain('"name":"columns"');
+    expect(columns).toContain('"name":"rings"');
+    expect(columns).not.toContain('"name":"flow_gauges"');
+    const flow = names({ ...base, ring: { view: "flow" } });
+    expect(flow).toContain('"name":"flow_gauges"');
+    expect(flow).toContain('"name":"flow_dots"');
+    expect(flow).not.toContain('"name":"rings"');
+    expect(flow).not.toContain('"name":"columns"');
+    const corners = names({ ...base, ring: { view: "corners" } });
+    expect(corners).toContain('"name":"rings"');
+    expect(corners).not.toContain('"name":"columns"');
+    expect(corners).not.toContain('"name":"facts"');
+  });
+
   it("offers icon fields only for a list of your own", () => {
     const titles = (cfg: Parameters<typeof getConfigForm>[1]) =>
       JSON.stringify(getConfigForm("en", cfg).schema).includes("mdi:shape-outline");

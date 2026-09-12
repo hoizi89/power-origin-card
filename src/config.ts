@@ -35,6 +35,9 @@ export const DEFAULTS = {
     devices: true, week: false,
     order: [] as BlockName[] },
   ring: {
+    view: "columns" as const,
+    flow_gauges: true,
+    flow_dots: true,
     center: "power" as const,
     center_dark: "power" as const,
     layout: "auto" as const,
@@ -469,6 +472,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
   };
 
   const cell = (resolved: ResolvedConfig) => Boolean(resolved.entities.battery_soc);
+  /** The views that draw the ring itself; the flow draws circles instead. */
+  const ringDrawn = (resolved: ResolvedConfig) => resolved.ring.view !== "flow";
   const cellTimed = (resolved: ResolvedConfig) =>
     Boolean(resolved.entities.battery_soc && resolved.entities.battery_power);
 
@@ -968,8 +973,22 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
       name: "ring",
       title: t("editor.ring_settings"),
       icon: "mdi:circle-slice-8",
-      schema: inPairs([
+      schema: [
         {
+          name: "view",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "columns", label: t("editor.view_columns") },
+                { value: "corners", label: t("editor.view_corners") },
+                { value: "flow", label: t("editor.view_flow") }
+              ]
+            }
+          }
+        },
+        ...inPairs([
+        ...only(ringDrawn, {
           name: "center",
           selector: {
             select: {
@@ -983,9 +1002,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
+        }),
         // The night has answers of its own; house power leaves a day view alone.
-        {
+        ...only(ringDrawn, {
           name: "center_dark",
           selector: {
             select: {
@@ -998,8 +1017,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
-        {
+        }),
+        ...only(ringDrawn, {
           name: "tap",
           selector: {
             select: {
@@ -1010,8 +1029,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
-        {
+        }),
+        ...only(ringDrawn, {
           name: "rings",
           selector: {
             select: {
@@ -1024,15 +1043,15 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
+        }),
         ...only(
-          (resolved) => resolved.ring.rings === "clock" || resolved.ring.rings === "dayclock",
+          (resolved) => ringDrawn(resolved) && (resolved.ring.rings === "clock" || resolved.ring.rings === "dayclock"),
           {
             name: "clock_marks",
             selector: { boolean: {} }
           }
         ),
-        {
+        ...only(ringDrawn, {
           name: "night",
           selector: {
             select: {
@@ -1043,9 +1062,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
+        }),
         { name: "import_red", selector: { boolean: {} } },
-        {
+        ...only(ringDrawn, {
           name: "inner",
           selector: {
             select: {
@@ -1058,7 +1077,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
+        }),
         {
           name: "size",
           selector: {
@@ -1073,7 +1092,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
-        ...only((resolved) => resolved.ring.facts !== "none", {
+        ...only((resolved) => resolved.ring.view === "columns" && resolved.ring.facts !== "none", {
           name: "layout",
           selector: {
             select: {
@@ -1086,8 +1105,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         }),
-        { name: "caption", selector: { boolean: {} } },
-        {
+        ...only(ringDrawn, { name: "caption", selector: { boolean: {} } }),
+        ...only((resolved) => resolved.ring.view === "columns", {
           name: "facts",
           selector: {
             select: {
@@ -1100,12 +1119,17 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               ]
             }
           }
-        },
+        }),
+        ...only((resolved) => resolved.ring.view === "flow",
+          { name: "flow_gauges", selector: { boolean: {} } },
+          { name: "flow_dots", selector: { boolean: {} } }
+        )
       ])
+      ]
     }
     ),
     ...only(
-      (resolved) => resolved.sections.ring,
+      (resolved) => resolved.sections.ring && resolved.ring.view === "columns",
       {
         type: "expandable",
         name: "ring",
@@ -1609,6 +1633,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     center: t("editor.center"),
     center_dark: t("editor.center_dark"),
     facts: t("editor.facts"),
+    view: t("editor.view"),
+    flow_gauges: t("editor.flow_gauges"),
+    flow_dots: t("editor.flow_dots"),
     layout: t("editor.layout"),
     caption: t("editor.caption"),
     columns: t("editor.columns"),
@@ -1737,6 +1764,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     head: t("editor.help_devices_head"),
     colours: t("editor.help_devices_colours"),
     columns: t("editor.help_columns"),
+    view: t("editor.help_view"),
+    flow_gauges: t("editor.help_flow_gauges"),
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),
     layers: t("editor.help_layers"),

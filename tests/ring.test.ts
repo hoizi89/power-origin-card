@@ -146,6 +146,51 @@ describe("tapping the ring", () => {
   });
 });
 
+describe("the ring's views", () => {
+  const charging = SCENARIOS.find((s) => s.name === "charging")!;
+  const text = (root: ShadowRoot) => (root.textContent ?? "").replace(/\s+/g, " ");
+
+  it("stands the four powers around the ring, each with its direction as a word, and no columns", async () => {
+    const { root } = await render(config({ ring: { view: "corners" } }), charging);
+    expect(root.querySelectorAll(".rc").length).toBe(4);
+    expect(root.querySelector(".meter-block")).toBeNull();
+    const words = text(root);
+    expect(words).toMatch(/PV.*erzeugt/);
+    expect(words).toMatch(/Speicher.*lädt · 52 %/);
+    expect(words).toMatch(/Netz.*speist ein/);
+    expect(words).toContain("Autarkie");
+  });
+
+  it("draws the flow instead of the ring: four circles, the words under them", async () => {
+    const { root } = await render(config({ ring: { view: "flow" } }), charging);
+    expect(root.querySelector(".ring")).toBeNull();
+    expect(root.querySelectorAll(".fv-node").length).toBe(4);
+    const words = text(root);
+    expect(words).toContain("lädt · 52 %");
+    expect(words).toContain("speist ein");
+    // Charging: the store's dots run away from the house.
+    expect(root.querySelector(".fv-line.battery.on.dots.rev")).toBeTruthy();
+    // The store's circle is filled to its charge.
+    expect(root.querySelector(".fv-arc.battery")?.getAttribute("stroke-dasharray")).toBe("52.0 100");
+  });
+
+  it("runs the dots toward the house while the battery carries it, and can stand still", async () => {
+    const moving = await render(config({ ring: { view: "flow" } }), evening);
+    expect(moving.root.querySelector(".fv-line.battery.on.dots:not(.rev)")).toBeTruthy();
+    expect(text(moving.root)).toContain("entlädt");
+    const still = await render(config({ ring: { view: "flow", flow_dots: false, flow_gauges: false } }), evening);
+    expect(still.root.querySelector(".fv-line.dots")).toBeNull();
+    expect(still.root.querySelector(".fv-arc")).toBeNull();
+    expect(still.root.querySelectorAll(".fv-rim").length).toBe(4);
+  });
+
+  it("keeps the compact ring a ring whatever the view", async () => {
+    const { root } = await render(config({ shape: "compact", ring: { view: "flow" } }), charging);
+    expect(root.querySelector(".ring")).toBeTruthy();
+    expect(root.querySelector(".flow-view")).toBeNull();
+  });
+});
+
 describe("the figures' face", () => {
   it("is monospace unless the card is told to wear the dashboard's font", async () => {
     const mono = await render(config(), day);
