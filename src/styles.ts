@@ -1378,6 +1378,35 @@ export const cardStyles = css`
   .fv-clock.grid { stroke: var(--sst-grid); }
   .fv-clock.empty { stroke: var(--sst-track); }
   .fv-clock.in { stroke-width: 4; }
+  .fv-clock.big { stroke-width: 7; }
+  .fv-clock.ring { stroke-width: 5; }
+
+  .fv-dial {
+    font-family: var(--sst-mono);
+    font-size: calc(7px * var(--sst-scale));
+    fill: var(--sst-muted);
+  }
+
+  .fv-hand {
+    stroke: var(--sst-ink);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    opacity: 0.9;
+  }
+
+  .fv-node.big .fv-v { font-size: calc(22px * var(--sst-scale)); }
+
+  .fv-strip .cell.solar { fill: var(--sst-sun); }
+  .fv-strip .cell.battery { fill: var(--sst-leaf); }
+  .fv-strip .cell.grid { fill: var(--sst-grid); }
+  .fv-strip .cell.empty { fill: var(--sst-track); }
+  .fv-strip .cell.forecast {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+    opacity: 0.6;
+  }
 
   .fv-track.thin { stroke-width: 3; opacity: 0.6; }
 

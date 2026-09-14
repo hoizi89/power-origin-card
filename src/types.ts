@@ -149,10 +149,12 @@ export interface SectionToggles {
 
 /** How the ring block is laid out: columns beside it, the four powers in its corners, or the flow between them. */
 export type RingView = "columns" | "corners" | "flow";
-/** What runs around each circle of the flow: nothing, the day's 24 hours, or how far today has come. */
-export type FlowOuter = "none" | "clock" | "day";
+/** What runs around each circle of the flow: nothing, or how far today has come. `clock` is the older value and reads as the house clock. */
+export type FlowOuter = "none" | "day" | "clock";
+/** Where the day's clock is drawn: around a bigger house, as a strip under the flow, or with the house as the big ring. */
+export type FlowClock = "none" | "house" | "strip" | "ring";
 /** What runs inside a circle of the flow: its live gauge, the day's 24 hours, how far today has come, or nothing. */
-export type FlowInner = "gauge" | "clock" | "day" | "none";
+export type FlowInner = "gauge" | "day" | "none" | "clock";
 /** Which side of the ring the first column stands on. */
 export type MeterSide = "left" | "right";
 /** The column upright beside the ring, or lying flat as a bar. */
@@ -167,6 +169,8 @@ export interface RingOptions {
   flow_dots?: boolean;
   /** In the flow view, a second ring around each circle. */
   flow_outer?: FlowOuter;
+  /** The day's clock in the flow: none, around the house with a dial and a hand, as a strip beneath, or the house as the big ring. */
+  flow_clock?: FlowClock;
   /** What each circle of the flow wears inside its rim. Unset, the live gauge; `flow_gauges: false` reads as none. */
   flow_pv?: FlowInner;
   flow_house?: FlowInner;

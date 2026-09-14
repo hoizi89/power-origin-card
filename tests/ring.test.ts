@@ -192,22 +192,35 @@ describe("the ring's views", () => {
     expect(words).not.toContain("lädt");
   });
 
-  it("can run a day clock or today's share around each circle", async () => {
-    const clock = await render(config({ ring: { view: "flow", flow_outer: "clock" } }), charging);
-    // One segment per hour the day has reached, the same count around each of the four circles.
-    const segments = clock.root.querySelectorAll(".fv-clock").length;
-    expect(segments).toBeGreaterThan(0);
-    expect(segments % 4).toBe(0);
-    expect(clock.root.querySelectorAll(".fv-now").length).toBe(4);
+  it("can run today's share around each circle, and the day's clock at the house", async () => {
     const day = await render(config({ ring: { view: "flow", flow_outer: "day" } }), charging);
     expect(day.root.querySelectorAll(".fv-track.thin").length).toBe(4);
     expect(day.root.querySelectorAll(".fv-clock.solar").length).toBeGreaterThan(0);
+    const house = await render(config({ ring: { view: "flow", flow_clock: "house" } }), charging);
+    expect(house.root.querySelectorAll(".fv-clock.big").length).toBe(24);
+    expect(house.root.querySelectorAll(".fv-dial").length).toBe(4);
+    expect(house.root.querySelectorAll(".fv-hand").length).toBe(1);
+    expect(house.root.querySelector(".fv-strip")).toBeNull();
+    const strip = await render(config({ ring: { view: "flow", flow_clock: "strip" } }), charging);
+    expect(strip.root.querySelectorAll(".fv-strip .cell").length).toBe(24);
+    expect(strip.root.querySelectorAll(".fv-hand").length).toBe(1);
+    const ring = await render(config({ ring: { view: "flow", flow_clock: "ring" } }), charging);
+    expect(ring.root.querySelectorAll(".fv-clock.ring").length).toBe(24);
+    expect(ring.root.querySelector(".fv-node.house.big")).toBeTruthy();
     const none = await render(config({ ring: { view: "flow" } }), charging);
     expect(none.root.querySelector(".fv-clock")).toBeNull();
   });
 
-  it("lets each circle wear the clock, today's share, the gauge or nothing", async () => {
-    const mixed = await render(config({ ring: { view: "flow", flow_house: "clock", flow_battery: "day", flow_pv: "none" } }), charging);
+  it("reads the older clock values as the clock at the house", async () => {
+    const outer = await render(config({ ring: { view: "flow", flow_outer: "clock" } }), charging);
+    expect(outer.root.querySelectorAll(".fv-clock.big").length).toBe(24);
+    expect(outer.root.querySelectorAll(".fv-track.thin").length).toBe(0);
+    const inner = await render(config({ ring: { view: "flow", flow_house: "clock" } }), charging);
+    expect(inner.root.querySelectorAll(".fv-clock.big").length).toBe(24);
+  });
+
+  it("lets each circle wear today's share, the gauge or nothing", async () => {
+    const mixed = await render(config({ ring: { view: "flow", flow_house: "day", flow_battery: "day", flow_pv: "none" } }), charging);
     expect(mixed.root.querySelectorAll(".fv-clock.in").length).toBeGreaterThan(0);
     expect(mixed.root.querySelectorAll(".fv-node.solar .fv-rim").length).toBe(1);
     expect(mixed.root.querySelectorAll(".fv-node.battery .fv-track").length).toBe(1);

@@ -40,6 +40,7 @@ export const DEFAULTS = {
     flow_gauges: true,
     flow_dots: true,
     flow_outer: "none" as const,
+    flow_clock: "none" as const,
     flow_pv: "gauge" as const,
     flow_house: "gauge" as const,
     flow_grid: "gauge" as const,
@@ -287,14 +288,19 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       ...config.ring,
       ...resolveColumns(config),
       // The older single switch turned every gauge off at once; it still does.
+      // The older "clock" values around every circle now mean one clock, at the house.
       ...(() => {
-        const off = config.ring?.flow_gauges === false;
-        const pick = (value: FlowInner | undefined) => value ?? (off ? "none" : DEFAULTS.ring.flow_pv);
+        const ring = config.ring;
+        const off = ring?.flow_gauges === false;
+        const pick = (value: FlowInner | undefined) => (value === "clock" ? "gauge" : (value ?? (off ? "none" : DEFAULTS.ring.flow_pv)));
+        const askedClock = ring?.flow_outer === "clock" || ring?.flow_house === "clock";
         return {
-          flow_pv: pick(config.ring?.flow_pv),
-          flow_house: pick(config.ring?.flow_house),
-          flow_grid: pick(config.ring?.flow_grid),
-          flow_battery: pick(config.ring?.flow_battery)
+          flow_pv: pick(ring?.flow_pv),
+          flow_house: pick(ring?.flow_house),
+          flow_grid: pick(ring?.flow_grid),
+          flow_battery: pick(ring?.flow_battery),
+          flow_outer: ring?.flow_outer === "clock" ? "none" : (ring?.flow_outer ?? DEFAULTS.ring.flow_outer),
+          flow_clock: ring?.flow_clock ?? (askedClock ? "house" : DEFAULTS.ring.flow_clock)
         };
       })(),
       // A labelled column already names the grid flow and the battery block
@@ -1149,7 +1155,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 mode: "dropdown",
                 options: [
                   { value: "gauge", label: t("editor.flow_inner_gauge") },
-                  { value: "clock", label: t("editor.flow_outer_clock") },
                   { value: "day", label: t("editor.flow_outer_day") },
                   { value: "none", label: t("editor.flow_outer_none") }
                 ]
@@ -1163,8 +1168,21 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 mode: "dropdown",
                 options: [
                   { value: "none", label: t("editor.flow_outer_none") },
-                  { value: "clock", label: t("editor.flow_outer_clock") },
                   { value: "day", label: t("editor.flow_outer_day") }
+                ]
+              }
+            }
+          },
+          {
+            name: "flow_clock",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: t("editor.flow_outer_none") },
+                  { value: "house", label: t("editor.flow_clock_house") },
+                  { value: "strip", label: t("editor.flow_clock_strip") },
+                  { value: "ring", label: t("editor.flow_clock_ring") }
                 ]
               }
             }
@@ -1714,6 +1732,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     flow_battery: t("editor.flow_battery"),
     flow_dots: t("editor.flow_dots"),
     flow_outer: t("editor.flow_outer"),
+    flow_clock: t("editor.flow_clock"),
     meter_side: t("editor.meter_side"),
     meter_layout: t("editor.meter_layout"),
     wide: t("editor.wide"),
@@ -1851,6 +1870,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     flow_grid: t("editor.help_flow_grid"),
     flow_battery: t("editor.help_flow_battery"),
     flow_outer: t("editor.help_flow_outer"),
+    flow_clock: t("editor.help_flow_clock"),
     meter_layout: t("editor.help_meter_layout"),
     wide: t("editor.help_wide"),
     forecast_hourly: t("editor.help_forecast_hourly"),
