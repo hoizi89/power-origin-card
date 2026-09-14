@@ -1621,7 +1621,9 @@ export class PowerOriginCard extends LitElement {
         })}
         ${[0, 6, 12, 18].map((hh) => {
           const [x, y] = at(hh, rOut + 8);
-          return svg`<text class="fv-dial" x="${x.toFixed(1)}" y="${(y + 2.5).toFixed(1)}" text-anchor="middle">${hh}</text>`;
+          // Six and eighteen sit on the lines to grid and battery; they step up off them.
+          const lift = hh === 6 || hh === 18 ? -7 : 0;
+          return svg`<text class="fv-dial" x="${x.toFixed(1)}" y="${(y + 2.5 + lift).toFixed(1)}" text-anchor="middle">${hh}</text>`;
         })}
         <line class="fv-hand" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"></line>`;
     };
