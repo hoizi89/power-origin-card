@@ -3257,7 +3257,7 @@ export class PowerOriginCard extends LitElement {
         </div>
         ${this._renderBatterySvg(soc, tone, locale, config.battery.wide ? undefined : extra, config.battery.animate ? view.mode : undefined)}
         ${config.battery.curve ? this._renderBatteryCurve(soc, view, locale) : nothing}
-        <div class="row-note">${this._renderBatteryNote(view, locale, config.battery.wide ? extra : undefined)}</div>
+        <div class="row-note ${config.battery.wide && extra ? "split" : ""}">${this._renderBatteryNote(view, locale, config.battery.wide ? extra : undefined)}</div>
       </div>
     `;
   }
@@ -3622,11 +3622,16 @@ export class PowerOriginCard extends LitElement {
       if (stored && view.mode !== "full" && !drained) parts.push(stored);
     }
 
-    // With the bar across the full width, the second figure ends the line.
-    if (extra) parts.push(`${extra.value} ${extra.label}`);
-    if (parts.length === 0) return nothing;
+    if (parts.length === 0 && !extra) return nothing;
     const [first, ...rest] = parts;
-    return html`${first}${rest.length ? html`<span class="dim"> · ${rest.join(" · ")}</span>` : nothing}`;
+    const main = parts.length
+      ? html`${first}${rest.length ? html`<span class="dim"> · ${rest.join(" · ")}</span>` : nothing}`
+      : nothing;
+    // With the bar across the full width, the second figure keeps the line's
+    // right end, so it never has to wrap under the words.
+    if (!extra) return main;
+    return html`<span class="note-main">${main}</span
+      ><span class="note-aside"><b>${extra.value}</b> <span class="dim">${extra.label}</span></span>`;
   }
 
   /** Whether anything on the card reads the devices: the block, or a column. */

@@ -1385,6 +1385,24 @@ export const cardStyles = css`
     opacity: 0.9;
   }
 
+  /* The wide bar's line: the words left, the second figure right, on one line as long as it fits. */
+  .row-note.split {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 14px;
+    flex-wrap: wrap;
+  }
+
+  .row-note.split .note-aside {
+    white-space: nowrap;
+  }
+
+  .row-note.split .note-aside b {
+    font-weight: 600;
+    color: var(--sst-ink);
+  }
+
   /* The first column on the ring's other side, whatever the markup's order. */
   .ring-group.meter-right > .meter-block:first-of-type { order: 3; }
   .ring-group.meter-right > .ring { order: 2; }
