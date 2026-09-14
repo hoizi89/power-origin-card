@@ -1545,7 +1545,7 @@ export class PowerOriginCard extends LitElement {
         ? { hy: 156, hr: 40, clockR: 54, clockW: 7, pvLine: 80, sideLine: 0, houseLabel: 236, height: 256 }
         : clockMode === "ring"
           ? { hy: 150, hr: 52, clockR: 66, clockW: 5, pvLine: 63, sideLine: 90, houseLabel: 240, height: 260 }
-          : { hy: 142, hr: 36, clockR: 0, clockW: 0, pvLine: 106, sideLine: 124, houseLabel: outer === "none" ? 194 : 198, height: clockMode === "strip" ? 262 : outer === "none" ? 214 : 218 };
+          : { hy: 142, hr: 36, clockR: 0, clockW: 0, pvLine: 106, sideLine: 124, houseLabel: outer === "none" ? 194 : 198, height: clockMode === "strip" ? 268 : outer === "none" ? 214 : 218 };
     const HY = L.hy;
     const SR = 28;
     const PY = clockMode === "ring" ? 34 : 40;
@@ -1684,7 +1684,7 @@ export class PowerOriginCard extends LitElement {
       const x0 = 20;
       const w = 280;
       const cw = w / 24;
-      const y = 226;
+      const y = 232;
       const h = 12;
       const filled = worthDrawing(hours);
       const forecast = new Set(
