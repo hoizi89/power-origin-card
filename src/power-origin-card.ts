@@ -1344,7 +1344,7 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="ring-block ${config.ring.layout} ${chip ? "chipped" : ""}">
         ${chip ?? nothing}
-        <div class="ring-group size-${bare ? "s" : config.ring.size} ${config.ring.facts === "none" || bare ? "solo" : ""} ${config.ring.meter_side === "right" ? "meter-right" : ""}">
+        <div class="ring-group size-${bare ? "s" : config.ring.size} ${config.ring.facts === "none" || bare ? "solo" : ""} ${config.ring.meter_side === "right" ? "meter-right" : ""} ${config.ring.meter_layout === "flat" ? "flat" : ""}">
         ${columned ? this._renderMeter(flow, locale, leftSubject) : nothing}
         ${ringSvg}
         ${config.ring.meter_second === "none" || !columned
@@ -1494,7 +1494,6 @@ export class PowerOriginCard extends LitElement {
     const config = this._config as ResolvedConfig;
     const hass = this._hass as HomeAssistant;
     const live = this._live(flow);
-    const gauges = config.ring.flow_gauges;
     const dots = config.ring.flow_dots;
     const share = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -1513,7 +1512,7 @@ export class PowerOriginCard extends LitElement {
       r: number,
       value: string,
       unit: string,
-      ring: unknown,
+      ring: unknown | undefined,
       quiet = false
     ) => {
       const on = entity && hass.states?.[entity];
@@ -1522,80 +1521,14 @@ export class PowerOriginCard extends LitElement {
           role="${on ? "button" : "img"}" tabindex="${on ? 0 : -1}"
           @click=${handlers?.click} @keydown=${handlers?.key}>
         <circle class="fv-disc" cx="${cx}" cy="${cy}" r="${r}"></circle>
-        ${gauges
-          ? svg`<circle class="fv-track" cx="${cx}" cy="${cy}" r="${r}"></circle>${ring}`
-          : svg`<circle class="fv-rim ${tone}" cx="${cx}" cy="${cy}" r="${r}"></circle>`}
+        ${ring === undefined
+          ? svg`<circle class="fv-rim ${tone}" cx="${cx}" cy="${cy}" r="${r}"></circle>`
+          : svg`<circle class="fv-track" cx="${cx}" cy="${cy}" r="${r}"></circle>${ring}`}
         <text class="fv-v" x="${cx}" y="${cy + 2}" text-anchor="middle">${value}</text>
         <text class="fv-u" x="${cx}" y="${cy + 14}" text-anchor="middle">${unit}</text>
       </g>`;
     };
 
-    // A second ring around a circle: the day's 24 hours, one segment each, or
-    // how far today has come. Drawn outside the gauge so neither hides the other.
-    const outer = config.ring.flow_outer;
-    const hours = this._hours ?? [];
-    const SEG = 100 / 24;
-    const clockRing = (cx: number, cy: number, r: number, pick: (h: HourShare) => { tone: string; weight: number }) => {
-      if (outer !== "clock" || !worthDrawing(hours)) return nothing;
-      const now = new Date().getHours();
-      return svg`${hours.map((h) => {
-          const { tone, weight } = pick(h);
-          return svg`<circle class="fv-clock ${tone}" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
-            style="opacity: ${(0.25 + 0.75 * Math.min(1, Math.max(0, weight))).toFixed(2)}"
-            stroke-dasharray="${(SEG - 0.6).toFixed(2)} 100" stroke-dashoffset="${(-h.hour * SEG).toFixed(2)}"
-            transform="rotate(90 ${cx} ${cy})"></circle>`;
-        })}
-        <circle class="fv-now" cx="${cx}" cy="${cy + r}" r="1.7" transform="rotate(${((now + 0.5) * 15).toFixed(1)} ${cx} ${cy})"></circle>`;
-    };
-    const most = (key: "solar" | "battery" | "grid" | "total") => Math.max(0.001, ...hours.map((h) => h[key]));
-    // One arc from the top, clockwise; a second one back from the top, counter-clockwise.
-    const dayArc = (cx: number, cy: number, r: number, parts: Array<{ tone: string; share: number; back?: boolean }>) => {
-      if (outer !== "day") return nothing;
-      let offset = 0;
-      return svg`<circle class="fv-track thin" cx="${cx}" cy="${cy}" r="${r}"></circle>${parts
-        .filter((p) => p.share > 0.005)
-        .map((p) => {
-          const length = Math.min(100, p.share * 100);
-          const start = p.back ? 100 - length : offset;
-          if (!p.back) offset += length;
-          return svg`<circle class="fv-clock ${p.tone}" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
-            stroke-dasharray="${length.toFixed(2)} 100" stroke-dashoffset="${(-start).toFixed(2)}"
-            transform="rotate(-90 ${cx} ${cy})"></circle>`;
-        })}`;
-    };
-    const todayKwh = (id: string | undefined) => energyKwh(stateOf(hass, id));
-    const produced = todayKwh(config.entities.solar_today);
-    const expected = this._kwhOf(config.entities.forecast);
-    const exported = todayKwh(config.entities.export_today) ?? 0;
-    const imported = todayKwh(config.entities.import_today) ?? 0;
-    const charged = todayKwh(config.entities.battery_in_today) ?? 0;
-    const drained = todayKwh(config.entities.battery_out_today) ?? 0;
-    const origin = this._dayOrigin();
-    const halves = (a: number, b: number) => {
-      const top = Math.max(a, b, 0.001);
-      return [a / top / 2, b / top / 2];
-    };
-    const [expShare, impShare] = halves(exported, imported);
-    const [inShare, outShare] = halves(charged, drained);
-    const pvOuter = outer === "clock"
-      ? clockRing(160, 40, 34, (h) => ({ tone: h.solar > 0.01 ? "solar" : "empty", weight: h.solar / most("solar") }))
-      : produced === undefined
-        ? nothing
-        : dayArc(160, 40, 34, [{ tone: "solar", share: produced / Math.max(produced + (expected ?? 0), 0.001) }]);
-    const houseOuter = outer === "clock"
-      ? clockRing(160, 142, 42, (h) => ({ tone: h.dominant ?? "empty", weight: h.total / most("total") }))
-      : origin
-        ? dayArc(160, 142, 42, origin.parts.map((p) => ({
-            tone: p.key === "ring.source_battery" ? "battery" : p.key === "ring.source_grid" ? "grid" : "solar",
-            share: p.value / origin.used
-          })))
-        : nothing;
-    const gridOuter = outer === "clock"
-      ? clockRing(48, 142, 34, (h) => ({ tone: h.grid > 0.01 ? "grid" : "empty", weight: h.grid / most("grid") }))
-      : dayArc(48, 142, 34, [{ tone: "solar", share: expShare }, { tone: "grid", share: impShare, back: true }]);
-    const batteryOuter = outer === "clock"
-      ? clockRing(272, 142, 34, (h) => ({ tone: h.battery > 0.01 ? "battery" : "empty", weight: h.battery / most("battery") }))
-      : dayArc(272, 142, 34, [{ tone: "solar", share: inShare }, { tone: "battery", share: outShare, back: true }]);
 
     const label = (x: number, y: number, anchor: string, name: string, verb: string) =>
       svg`<text class="fv-k" x="${x}" y="${y}" text-anchor="${anchor}">${name}</text>
@@ -1610,7 +1543,7 @@ export class PowerOriginCard extends LitElement {
 
     // The house by origin: the ring's own question, in small.
     const houseRing = (() => {
-      if (!gauges || flow.house <= 0) return nothing;
+      if (flow.house <= 0) return nothing;
       let offset = 0;
       return [
         ["solar", flow.fromSolar],
@@ -1640,6 +1573,102 @@ export class PowerOriginCard extends LitElement {
     const importing = live.grid > LIVE_KW;
     const gridTone = `grid ${importing && config.ring.import_red ? "import" : ""}`;
 
+    // Each circle can wear a ring inside its rim and a second one outside it:
+    // its live gauge, the day's 24 hours one segment an hour, or how far today
+    // has come. Which one is the owner's choice per circle.
+    const outer = config.ring.flow_outer;
+    const hours = this._hours ?? [];
+    const SEG = 100 / 24;
+    const clockRing = (cx: number, cy: number, r: number, cls: string, pick: (h: HourShare) => { tone: string; weight: number }) => {
+      if (!worthDrawing(hours)) return undefined;
+      const now = new Date().getHours();
+      return svg`${hours.map((h) => {
+          const { tone, weight } = pick(h);
+          return svg`<circle class="fv-clock ${cls} ${tone}" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
+            style="opacity: ${(0.25 + 0.75 * Math.min(1, Math.max(0, weight))).toFixed(2)}"
+            stroke-dasharray="${(SEG - 0.6).toFixed(2)} 100" stroke-dashoffset="${(-h.hour * SEG).toFixed(2)}"
+            transform="rotate(90 ${cx} ${cy})"></circle>`;
+        })}
+        <circle class="fv-now" cx="${cx}" cy="${cy + r}" r="1.7" transform="rotate(${((now + 0.5) * 15).toFixed(1)} ${cx} ${cy})"></circle>`;
+    };
+    const most = (key: "solar" | "battery" | "grid" | "total") => Math.max(0.001, ...hours.map((h) => h[key]));
+    // One arc from the top, clockwise; a second one back from the top, counter-clockwise.
+    const dayArc = (cx: number, cy: number, r: number, cls: string, parts: Array<{ tone: string; share: number; back?: boolean }>) => {
+      let offset = 0;
+      // Inside the rim the circle already draws the track; outside it the arc brings its own.
+      return svg`${cls === "out" ? svg`<circle class="fv-track thin" cx="${cx}" cy="${cy}" r="${r}"></circle>` : nothing}${parts
+        .filter((p) => p.share > 0.005)
+        .map((p) => {
+          const length = Math.min(100, p.share * 100);
+          const start = p.back ? 100 - length : offset;
+          if (!p.back) offset += length;
+          return svg`<circle class="fv-clock ${cls} ${p.tone}" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
+            stroke-dasharray="${length.toFixed(2)} 100" stroke-dashoffset="${(-start).toFixed(2)}"
+            transform="rotate(-90 ${cx} ${cy})"></circle>`;
+        })}`;
+    };
+    const todayKwh = (id: string | undefined) => energyKwh(stateOf(hass, id));
+    const produced = todayKwh(config.entities.solar_today);
+    const expected = this._kwhOf(config.entities.forecast);
+    const exported = todayKwh(config.entities.export_today) ?? 0;
+    const imported = todayKwh(config.entities.import_today) ?? 0;
+    const charged = todayKwh(config.entities.battery_in_today) ?? 0;
+    const drained = todayKwh(config.entities.battery_out_today) ?? 0;
+    const origin = this._dayOrigin();
+    const halves = (a: number, b: number) => {
+      const top = Math.max(a, b, 0.001);
+      return [a / top / 2, b / top / 2];
+    };
+    const [expShare, impShare] = halves(exported, imported);
+    const [inShare, outShare] = halves(charged, drained);
+    type Circle = "pv" | "house" | "grid" | "battery";
+    const ringFor = (circle: Circle, r: number, kind: string, cls: string): unknown => {
+      if (kind === "none") return undefined;
+      const [cx, cy] = circle === "pv" ? [160, 40] : circle === "house" ? [160, 142] : circle === "grid" ? [48, 142] : [272, 142];
+      if (kind === "clock") {
+        const pick =
+          circle === "pv"
+            ? (h: HourShare) => ({ tone: h.solar > 0.01 ? "solar" : "empty", weight: h.solar / most("solar") })
+            : circle === "house"
+              ? (h: HourShare) => ({ tone: h.dominant ?? "empty", weight: h.total / most("total") })
+              : circle === "grid"
+                ? (h: HourShare) => ({ tone: h.grid > 0.01 ? "grid" : "empty", weight: h.grid / most("grid") })
+                : (h: HourShare) => ({ tone: h.battery > 0.01 ? "battery" : "empty", weight: h.battery / most("battery") });
+        return clockRing(cx, cy, r, cls, pick);
+      }
+      if (kind === "day") {
+        if (circle === "pv") {
+          return produced === undefined
+            ? undefined
+            : dayArc(cx, cy, r, cls, [{ tone: "solar", share: produced / Math.max(produced + (expected ?? 0), 0.001) }]);
+        }
+        if (circle === "house") {
+          return origin
+            ? dayArc(cx, cy, r, cls, origin.parts.map((p) => ({
+                tone: p.key === "ring.source_battery" ? "battery" : p.key === "ring.source_grid" ? "grid" : "solar",
+                share: p.value / origin.used
+              })))
+            : undefined;
+        }
+        if (circle === "grid") return dayArc(cx, cy, r, cls, [{ tone: "solar", share: expShare }, { tone: "grid", share: impShare, back: true }]);
+        return dayArc(cx, cy, r, cls, [{ tone: "solar", share: inShare }, { tone: "battery", share: outShare, back: true }]);
+      }
+      // The live gauge: PV against today's peak, the house by origin, the grid
+      // against today's most in that direction, the battery by its charge.
+      if (circle === "pv") return arc(cx, cy, r, pvPart, "solar");
+      if (circle === "house") return houseRing;
+      if (circle === "grid") return arc(cx, cy, r, gridPart, gridTone);
+      return arc(cx, cy, r, live.soc === undefined ? undefined : live.soc / 100, "battery");
+    };
+    const pvOuter = ringFor("pv", 34, outer, "out");
+    const houseOuter = ringFor("house", 42, outer, "out");
+    const gridOuter = ringFor("grid", 34, outer, "out");
+    const batteryOuter = ringFor("battery", 34, outer, "out");
+    const pvInner = ringFor("pv", 28, config.ring.flow_pv, "in");
+    const houseInner = ringFor("house", 36, config.ring.flow_house, "in");
+    const gridInner = ringFor("grid", 28, config.ring.flow_grid, "in");
+    const batteryInner = ringFor("battery", 28, config.ring.flow_battery, "in");
+
     const autarkic = `${formatNumber(flow.autarky * 100, locale, 0)} % ${localize("live.autarkic", locale)}`;
     const aria = [
       live.pv === undefined ? "" : `${localize("live.pv", locale)} ${formatPower(live.pv, locale)} kW`,
@@ -1661,21 +1690,21 @@ export class PowerOriginCard extends LitElement {
           ${live.pv === undefined
             ? nothing
             : svg`${pvOuter}${node("solar", config.entities.solar, 160, 40, 28, formatPower(live.pv, locale), "kW",
-                arc(160, 40, 28, pvPart, "solar"), live.pv < LIVE_KW)}
+                pvInner, live.pv < LIVE_KW)}
               ${label(122, 36, "end", localize("live.pv", locale), localize("live.makes", locale))}`}
 
-          ${houseOuter}${node("house", config.entities.house, 160, 142, 36, formatPower(live.house, locale), "kW", houseRing)}
+          ${houseOuter}${node("house", config.entities.house, 160, 142, 36, formatPower(live.house, locale), "kW", houseInner)}
           ${label(160, outer === "none" ? 194 : 198, "middle", localize("live.house", locale), autarkic)}
 
           ${gridOuter}${node(gridTone, config.entities.grid_power, 48, 142, 28, formatPower(Math.abs(live.grid), locale), "kW",
-            arc(48, 142, 28, gridPart, gridTone), !importing && live.grid > -LIVE_KW)}
+            gridInner, !importing && live.grid > -LIVE_KW)}
           ${label(48, 186, "middle", localize("live.grid", locale), localize(this._gridWord(live.grid), locale))}
 
           ${live.battery === undefined
             ? nothing
             : svg`${batteryOuter}${node("battery", config.entities.battery_power, 272, 142, 28,
                 formatPower(Math.abs(live.battery), locale), "kW",
-                arc(272, 142, 28, live.soc === undefined ? undefined : live.soc / 100, "battery"))}
+                batteryInner)}
               ${label(272, 186, "middle", localize("live.battery", locale),
                 `${localize(this._batteryWord(live.battery, live.mode), locale)}${
                   live.soc === undefined ? "" : ` · ${formatNumber(live.soc, locale, 0)} %`
@@ -1859,7 +1888,7 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
-        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.day", locale)}">
           ${hours.map((hour) => {
             const y = hour.hour * band;
@@ -1903,7 +1932,7 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
-        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.balance", locale)}">
           <rect class="bal-track" x="8" y="0" width="32" height="${METER_HEIGHT}" rx="5"></rect>
           <rect class="bal-track" x="48" y="0" width="32" height="${METER_HEIGHT}" rx="5"></rect>
@@ -2080,7 +2109,7 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
-        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.autarky", locale)}">
           ${drawn === "blocks"
             ? this._cells(share, grade ? `fill-share-${grade}` : "fill-leaf", steps)
@@ -2138,7 +2167,7 @@ export class PowerOriginCard extends LitElement {
         ${showPeak && peak > 0 && peakAtTop
           ? html`<span class="meter-top">${formatPower(peak, locale)} kW</span>`
           : nothing}
-        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("meter.roof", locale)}">
           ${showPeak && peak > 0 && !peakAtTop
             ? svg`<line class="range-mark" x1="4" x2="84"
@@ -2384,7 +2413,7 @@ export class PowerOriginCard extends LitElement {
         ${showTop
           ? html`<span class="meter-top">${formatNumber(capacityKwh, locale, 1)} kWh</span>`
           : nothing}
-        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="0 0 88 ${METER_HEIGHT}" role="img"
              aria-label="${localize("battery.title", locale)} ${formatNumber(soc, locale, 0)} %">
           ${drawn === "blocks"
             ? this._cells(share, "fill-leaf", steps, { heldBelow: reserve })
@@ -2508,7 +2537,7 @@ export class PowerOriginCard extends LitElement {
 
     return html`
       <div class="meter-block">
-        <svg class="meter" viewBox="${marks ? `0 -18 88 ${H + 36}` : `0 0 88 ${H}`}" role="img"
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="${marks ? `0 -18 88 ${H + 36}` : `0 0 88 ${H}`}" role="img"
              aria-label="${localize("meter.night", locale)}">
           ${marks
             ? svg`<path class="clock-mark moon" d="M44,-14 a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>
@@ -2581,7 +2610,7 @@ export class PowerOriginCard extends LitElement {
     const half = METER_HEIGHT / 2;
     return html`
       <div class="meter-block">
-        <svg class="meter" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${word}">
+        <svg class="meter" preserveAspectRatio="${this._meterAspect()}" viewBox="0 0 88 ${METER_HEIGHT}" role="img" aria-label="${word}">
           <rect class="bal-track" x="8" y="0" width="72" height="${METER_HEIGHT}" rx="6"></rect>
           ${up > 0.01
             ? svg`<rect class="meter-on ${tones.up}" x="8" y="${(half - half * up).toFixed(1)}"
@@ -2694,7 +2723,7 @@ export class PowerOriginCard extends LitElement {
       <div class="meter-block">
       <!-- The box keeps its width: it is drawn to a fixed one, so widening it
            would shrink the column instead of making room. -->
-      <svg class="meter" role="img" aria-label="${label}"
+      <svg class="meter" preserveAspectRatio="${this._meterAspect()}" role="img" aria-label="${label}"
            viewBox="${marks ? `0 -18 88 ${METER_HEIGHT + 36}` : `0 0 88 ${METER_HEIGHT}`}">
         ${marks
           ? svg`
@@ -3632,6 +3661,11 @@ export class PowerOriginCard extends LitElement {
     if (!extra) return main;
     return html`<span class="note-main">${main}</span
       ><span class="note-aside"><b>${extra.value}</b> <span class="dim">${extra.label}</span></span>`;
+  }
+
+  /** How a column's drawing fits its box: stretched when it lies flat as a bar, kept when upright. */
+  private _meterAspect(): string {
+    return this._config?.ring.meter_layout === "flat" ? "none" : "xMidYMid meet";
   }
 
   /** Whether anything on the card reads the devices: the block, or a column. */

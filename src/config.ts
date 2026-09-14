@@ -6,6 +6,7 @@ import type {
   MeterDrawn,
   MeterShows,
   MeterStyle,
+  FlowInner,
   PowerOriginCardConfig,
   ResolvedConfig,
   TodayStat
@@ -39,7 +40,12 @@ export const DEFAULTS = {
     flow_gauges: true,
     flow_dots: true,
     flow_outer: "none" as const,
+    flow_pv: "gauge" as const,
+    flow_house: "gauge" as const,
+    flow_grid: "gauge" as const,
+    flow_battery: "gauge" as const,
     meter_side: "left" as const,
+    meter_layout: "column" as const,
     center: "power" as const,
     center_dark: "power" as const,
     layout: "auto" as const,
@@ -280,6 +286,17 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       ...DEFAULTS.ring,
       ...config.ring,
       ...resolveColumns(config),
+      // The older single switch turned every gauge off at once; it still does.
+      ...(() => {
+        const off = config.ring?.flow_gauges === false;
+        const pick = (value: FlowInner | undefined) => value ?? (off ? "none" : DEFAULTS.ring.flow_pv);
+        return {
+          flow_pv: pick(config.ring?.flow_pv),
+          flow_house: pick(config.ring?.flow_house),
+          flow_grid: pick(config.ring?.flow_grid),
+          flow_battery: pick(config.ring?.flow_battery)
+        };
+      })(),
       // A labelled column already names the grid flow and the battery block
       // names the battery, so the list would repeat both. It stays one switch away.
       facts:
@@ -1124,8 +1141,21 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           }
         }),
         ...only((resolved) => resolved.ring.view === "flow",
-          { name: "flow_gauges", selector: { boolean: {} } },
           { name: "flow_dots", selector: { boolean: {} } },
+          ...["flow_house", "flow_pv", "flow_grid", "flow_battery"].map((name) => ({
+            name,
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "gauge", label: t("editor.flow_inner_gauge") },
+                  { value: "clock", label: t("editor.flow_outer_clock") },
+                  { value: "day", label: t("editor.flow_outer_day") },
+                  { value: "none", label: t("editor.flow_outer_none") }
+                ]
+              }
+            }
+          })),
           {
             name: "flow_outer",
             selector: {
@@ -1176,6 +1206,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                   options: [
                     { value: "left", label: t("editor.meter_side_left") },
                     { value: "right", label: t("editor.meter_side_right") }
+                  ]
+                }
+              }
+            },
+            {
+              name: "meter_layout",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "column", label: t("editor.meter_layout_column") },
+                    { value: "flat", label: t("editor.meter_layout_flat") }
                   ]
                 }
               }
@@ -1666,10 +1708,14 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     center_dark: t("editor.center_dark"),
     facts: t("editor.facts"),
     view: t("editor.view"),
-    flow_gauges: t("editor.flow_gauges"),
+    flow_pv: t("editor.flow_pv"),
+    flow_house: t("editor.flow_house"),
+    flow_grid: t("editor.flow_grid"),
+    flow_battery: t("editor.flow_battery"),
     flow_dots: t("editor.flow_dots"),
     flow_outer: t("editor.flow_outer"),
     meter_side: t("editor.meter_side"),
+    meter_layout: t("editor.meter_layout"),
     wide: t("editor.wide"),
     layout: t("editor.layout"),
     caption: t("editor.caption"),
@@ -1800,8 +1846,12 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     colours: t("editor.help_devices_colours"),
     columns: t("editor.help_columns"),
     view: t("editor.help_view"),
-    flow_gauges: t("editor.help_flow_gauges"),
+    flow_pv: t("editor.help_flow_pv"),
+    flow_house: t("editor.help_flow_house"),
+    flow_grid: t("editor.help_flow_grid"),
+    flow_battery: t("editor.help_flow_battery"),
     flow_outer: t("editor.help_flow_outer"),
+    meter_layout: t("editor.help_meter_layout"),
     wide: t("editor.help_wide"),
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),

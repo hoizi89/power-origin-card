@@ -1377,6 +1377,7 @@ export const cardStyles = css`
   .fv-clock.battery { stroke: var(--sst-leaf); }
   .fv-clock.grid { stroke: var(--sst-grid); }
   .fv-clock.empty { stroke: var(--sst-track); }
+  .fv-clock.in { stroke-width: 4; }
 
   .fv-track.thin { stroke-width: 3; opacity: 0.6; }
 
@@ -1401,6 +1402,47 @@ export const cardStyles = css`
   .row-note.split .note-aside b {
     font-weight: 600;
     color: var(--sst-ink);
+  }
+
+  /* The column lying flat: the same drawing turned on its side and stretched
+     to a bar, the bottom of the column at the left. The box is the bar's, the
+     drawing is pulled back into it after the turn. */
+  .ring-group.flat {
+    gap: 16px;
+  }
+
+  .ring-group.flat > .meter-block {
+    --meter-t: 38px;
+    --meter-len: 150px;
+    flex: 0 1 var(--meter-len);
+    width: var(--meter-len);
+    align-items: flex-start;
+  }
+
+  .ring-group.flat > .meter-block > .meter {
+    width: var(--meter-t);
+    height: var(--meter-len);
+    transform-origin: 0 0;
+    transform: translate(var(--meter-len), 0) rotate(90deg);
+    margin-bottom: calc(var(--meter-t) - var(--meter-len));
+  }
+
+  .ring-group.flat > .meter-block > .meter-label {
+    width: auto;
+    max-width: var(--meter-len);
+    margin: 0;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .ring-group.flat > .meter-block > .meter-top {
+    align-self: flex-end;
+  }
+
+  @container (max-width: 339px) {
+    .ring-group.flat > .meter-block {
+      --meter-len: 110px;
+    }
   }
 
   /* The first column on the ring's other side, whatever the markup's order. */

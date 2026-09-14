@@ -47,7 +47,9 @@ describe("resolveConfig", () => {
     expect(columns).toContain('"name":"rings"');
     expect(columns).not.toContain('"name":"flow_gauges"');
     const flow = names({ ...base, ring: { view: "flow" } });
-    expect(flow).toContain('"name":"flow_gauges"');
+    expect(flow).toContain('"name":"flow_house"');
+    expect(flow).toContain('"name":"flow_battery"');
+    expect(flow).not.toContain('"name":"flow_gauges"');
     expect(flow).toContain('"name":"flow_dots"');
     expect(flow).toContain('"name":"flow_outer"');
     expect(columns).toContain('"name":"meter_side"');
@@ -168,6 +170,8 @@ describe("editor coverage", () => {
    * only so an older card reads.
    */
   const DERIVED = new Set([
+    // The older single switch for the flow gauges; four selects took its place.
+    "flow_gauges",
     "meter",
     "meter_second",
     // The drawing is offered as meter_drawn; meter_style is where older cards

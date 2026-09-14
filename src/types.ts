@@ -151,8 +151,12 @@ export interface SectionToggles {
 export type RingView = "columns" | "corners" | "flow";
 /** What runs around each circle of the flow: nothing, the day's 24 hours, or how far today has come. */
 export type FlowOuter = "none" | "clock" | "day";
+/** What runs inside a circle of the flow: its live gauge, the day's 24 hours, how far today has come, or nothing. */
+export type FlowInner = "gauge" | "clock" | "day" | "none";
 /** Which side of the ring the first column stands on. */
 export type MeterSide = "left" | "right";
+/** The column upright beside the ring, or lying flat as a bar. */
+export type MeterLayout = "column" | "flat";
 
 export interface RingOptions {
   /** The ring with columns, with the four powers in its corners, or the flow between house, PV, grid and store. */
@@ -163,8 +167,15 @@ export interface RingOptions {
   flow_dots?: boolean;
   /** In the flow view, a second ring around each circle. */
   flow_outer?: FlowOuter;
+  /** What each circle of the flow wears inside its rim. Unset, the live gauge; `flow_gauges: false` reads as none. */
+  flow_pv?: FlowInner;
+  flow_house?: FlowInner;
+  flow_grid?: FlowInner;
+  flow_battery?: FlowInner;
   /** The first column left of the ring, as always, or to its right. */
   meter_side?: MeterSide;
+  /** The columns upright, or lying flat as bars: draw to the left, surplus to the right. */
+  meter_layout?: MeterLayout;
   center?: RingCenter;
   /** The mode to use while nothing is being produced. */
   center_dark?: RingCenterDark;

@@ -206,6 +206,22 @@ describe("the ring's views", () => {
     expect(none.root.querySelector(".fv-clock")).toBeNull();
   });
 
+  it("lets each circle wear the clock, today's share, the gauge or nothing", async () => {
+    const mixed = await render(config({ ring: { view: "flow", flow_house: "clock", flow_battery: "day", flow_pv: "none" } }), charging);
+    expect(mixed.root.querySelectorAll(".fv-clock.in").length).toBeGreaterThan(0);
+    expect(mixed.root.querySelectorAll(".fv-node.solar .fv-rim").length).toBe(1);
+    expect(mixed.root.querySelectorAll(".fv-node.battery .fv-track").length).toBe(1);
+    expect(mixed.root.querySelectorAll(".fv-node.grid .fv-arc").length).toBe(1);
+  });
+
+  it("lays the column flat as a bar when asked, stretching the drawing to it", async () => {
+    const { root } = await render(config({ ring: { meter_layout: "flat" } }), day);
+    expect(root.querySelector(".ring-group")?.classList.contains("flat")).toBe(true);
+    expect(root.querySelector("svg.meter")?.getAttribute("preserveAspectRatio")).toBe("none");
+    const upright = await render(config(), day);
+    expect(upright.root.querySelector("svg.meter")?.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
+  });
+
   it("stands the column on the ring's right when asked", async () => {
     const { root } = await render(config({ ring: { meter_side: "right" } }), day);
     expect(root.querySelector(".ring-group")?.classList.contains("meter-right")).toBe(true);
