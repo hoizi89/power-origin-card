@@ -666,7 +666,7 @@ export const cardStyles = css`
   .cons-line {
     fill: none;
     stroke: var(--sst-ink);
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
@@ -699,7 +699,7 @@ export const cardStyles = css`
   .bat-shell {
     fill: none;
     stroke: var(--sst-muted);
-    stroke-width: 2.2;
+    stroke-width: 2;
     opacity: 0.55;
   }
 
@@ -1366,7 +1366,7 @@ export const cardStyles = css`
 
   .fv-node.tap:focus-visible .fv-disc {
     stroke: var(--sst-sun);
-    stroke-width: 2.2;
+    stroke-width: 2;
   }
 
   .fv-k {
@@ -1412,7 +1412,7 @@ export const cardStyles = css`
 
   .fv-hand {
     stroke: var(--sst-ink);
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linecap: round;
     opacity: 0.9;
   }
@@ -1523,7 +1523,7 @@ export const cardStyles = css`
 
   .fv-line {
     stroke: var(--sst-track);
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linecap: round;
   }
 
@@ -1646,7 +1646,7 @@ export const cardStyles = css`
   .meter-mark {
     fill: none;
     stroke: var(--sst-muted);
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
     opacity: 0.5;
@@ -1669,7 +1669,7 @@ export const cardStyles = css`
   .bat-curve {
     fill: none;
     stroke: var(--sst-leaf);
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
