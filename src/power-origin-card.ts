@@ -1565,19 +1565,20 @@ export class PowerOriginCard extends LitElement {
     ) => {
       const on = entity && hass.states?.[entity];
       const handlers = on ? this._tap(entity!) : undefined;
-      // The icon fills the circle the way the house fills the ring: faint, behind the figure.
-      const k = r / 18;
+      // A small icon in the circle's colour above the figure, so each circle says what it is.
+      const k = r / 54;
+      const iy = cy - r * 0.56;
       return svg`<g class="fv-node ${tone} ${quiet ? "quiet" : ""} ${on ? "tap" : ""} ${big ? "big" : ""}"
           role="${on ? "button" : "img"}" tabindex="${on ? 0 : -1}"
           @click=${handlers?.click} @keydown=${handlers?.key}>
         <circle class="fv-disc" cx="${cx}" cy="${cy}" r="${r}"></circle>
         <path class="fv-icon ${icon.stroke ? "stroke" : ""}" d="${icon.d}"
-          transform="translate(${(cx - 12 * k).toFixed(1)} ${(cy - 12 * k).toFixed(1)}) scale(${k.toFixed(3)})"></path>
+          transform="translate(${(cx - 12 * k).toFixed(1)} ${(iy - 12 * k).toFixed(1)}) scale(${k.toFixed(3)})"></path>
         ${ring === undefined
           ? svg`<circle class="fv-rim ${tone}" cx="${cx}" cy="${cy}" r="${r}"></circle>`
           : svg`<circle class="fv-track" cx="${cx}" cy="${cy}" r="${r}"></circle>${ring}`}
-        <text class="fv-v" x="${cx}" y="${cy + (big ? 4 : 2)}" text-anchor="middle">${value}</text>
-        <text class="fv-u" x="${cx}" y="${cy + (big ? 17 : 14)}" text-anchor="middle">${unit}</text>
+        <text class="fv-v" x="${cx}" y="${cy + (big ? 8 : 6)}" text-anchor="middle">${value}</text>
+        <text class="fv-u" x="${cx}" y="${cy + (big ? 21 : 17)}" text-anchor="middle">${unit}</text>
       </g>`;
     };
 
