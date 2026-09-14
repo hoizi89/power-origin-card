@@ -1529,14 +1529,19 @@ export class PowerOriginCard extends LitElement {
     const SR = 32;
     const L =
       clockMode === "house"
-        ? { hy: 160, hr: 44, py: 40, clockR: 58, clockW: 7, pvLine: 80, sideLine: 96, height: 240 }
+        ? { w: 340, hy: 164, hr: 42, py: 36, clockR: 54, clockW: 6, pvLine: 88, height: 240 }
         : clockMode === "ring"
-          ? { hy: 152, hr: 54, py: 36, clockR: 68, clockW: 5, pvLine: 0, sideLine: 88, height: 240 }
-          : { hy: 146, hr: 42, py: 44, clockR: 0, clockW: 0, pvLine: 100, sideLine: 114, height: clockMode === "strip" ? 248 : 204 };
+          ? { w: 360, hy: 156, hr: 54, py: 36, clockR: 68, clockW: 5, pvLine: 0, height: 246 }
+          : { w: 320, hy: 146, hr: 42, py: 44, clockR: 0, clockW: 0, pvLine: 100, height: clockMode === "strip" ? 248 : 204 };
+    // The clock views draw wider, so the lines between the circles keep their length.
+    const W = L.w;
+    const CX = W / 2;
     const HY = L.hy;
     const PY = L.py;
-    const GX = 46;
-    const BX = 274;
+    const GX = W > 320 ? 42 : 46;
+    const BX = W - GX;
+    const houseEdge = L.clockR ? L.clockR + L.clockW / 2 + 2 : L.hr + 2;
+    const sideLineEnd = CX - houseEdge - 2;
 
     const arc = (cx: number, cy: number, r: number, part: number | undefined, tone: string) =>
       part === undefined
@@ -1579,7 +1584,7 @@ export class PowerOriginCard extends LitElement {
     // A line between two circles, and an arrowhead at the end the power flows to.
     const line = (tone: string, x1: number, y1: number, x2: number, y2: number, power: number | undefined, out: boolean) => {
       const on = power !== undefined && Math.abs(power) > LIVE_KW;
-      if (x1 === x2 ? y2 <= y1 : x2 <= x1 && y1 === y2 && x1 < 160) return nothing;
+      if (x1 === x2 ? y2 <= y1 : x2 <= x1 && y1 === y2 && x1 < CX) return nothing;
       const vertical = x1 === x2;
       // The line runs from the outer circle to the house; "out" sends the arrow back the other way.
       const tipX = out ? x1 : x2;
@@ -1605,9 +1610,9 @@ export class PowerOriginCard extends LitElement {
         .filter(([, kw]) => (kw as number) > 0.005)
         .map(([key, kw]) => {
           const length = ((kw as number) / flow.house) * 100;
-          const seg = svg`<circle class="fv-arc ${key}" cx="160" cy="${HY}" r="${L.hr}" pathLength="100"
+          const seg = svg`<circle class="fv-arc ${key}" cx="${CX}" cy="${HY}" r="${L.hr}" pathLength="100"
             stroke-dasharray="${length.toFixed(1)} 100" stroke-dashoffset="${(-offset).toFixed(1)}"
-            transform="rotate(-90 160 ${HY})"></circle>`;
+            transform="rotate(-90 ${CX} ${HY})"></circle>`;
           offset += length;
           return seg;
         });
@@ -1754,7 +1759,7 @@ export class PowerOriginCard extends LitElement {
 
     type Circle = "pv" | "house" | "grid" | "battery";
     const centre = (circle: Circle): [number, number] =>
-      circle === "pv" ? [160, PY] : circle === "house" ? [160, HY] : circle === "grid" ? [GX, HY] : [BX, HY];
+      circle === "pv" ? [CX, PY] : circle === "house" ? [CX, HY] : circle === "grid" ? [GX, HY] : [BX, HY];
     // What a circle wears inside its rim, or outside it: the live gauge, or how
     // far today has come. The clock is the house's alone and drawn apart.
     const ringFor = (circle: Circle, r: number, kind: string, cls: string): unknown => {
@@ -1785,7 +1790,7 @@ export class PowerOriginCard extends LitElement {
       return arc(cx, cy, r, cellPart, "battery");
     };
     // With the clock around the house there is no room for a second ring there.
-    const houseOuter = L.clockR ? houseClock(160, HY, L.clockR, clockMode === "ring" ? "ring" : "big") : ringFor("house", L.hr + 6, outer, "out");
+    const houseOuter = L.clockR ? houseClock(CX, HY, L.clockR, clockMode === "ring" ? "ring" : "big") : ringFor("house", L.hr + 6, outer, "out");
     const pvOuter = ringFor("pv", SR + 6, outer, "out");
     const gridOuter = ringFor("grid", SR + 6, outer, "out");
     const batteryOuter = ringFor("battery", SR + 6, outer, "out");
@@ -1809,17 +1814,17 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="ring-block flowview ${chip ? "chipped" : ""}">
         ${chip ?? nothing}
-        <svg class="flow-view size-${config.ring.size}" viewBox="0 0 320 ${L.height}" role="img" aria-label="${aria}">
-          ${live.pv === undefined || L.pvLine <= PY + SR ? nothing : line("solar", 160, PY + SR, 160, L.pvLine, live.pv, false)}
-          ${line(gridTone, GX + SR, HY, L.sideLine, HY, live.grid, live.grid < 0)}
-          ${live.battery === undefined ? nothing : line("battery", BX - SR, HY, 320 - L.sideLine, HY, live.battery, live.battery < 0)}
+        <svg class="flow-view size-${config.ring.size}" viewBox="0 0 ${W} ${L.height}" role="img" aria-label="${aria}">
+          ${live.pv === undefined || L.pvLine <= PY + SR ? nothing : line("solar", CX, PY + SR, CX, L.pvLine, live.pv, false)}
+          ${line(gridTone, GX + SR, HY, sideLineEnd, HY, live.grid, live.grid < 0)}
+          ${live.battery === undefined ? nothing : line("battery", BX - SR, HY, W - sideLineEnd, HY, live.battery, live.battery < 0)}
 
           ${live.pv === undefined
             ? nothing
-            : svg`${pvOuter}${node("solar", config.entities.solar, 160, PY, SR, formatPower(live.pv, locale), "kW",
+            : svg`${pvOuter}${node("solar", config.entities.solar, CX, PY, SR, formatPower(live.pv, locale), "kW",
                 pvInner, FLOW_ICONS.sun, live.pv < LIVE_KW)}`}
 
-          ${houseOuter}${node("house", config.entities.house, 160, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, FLOW_ICONS.house, false, L.hr > 44)}
+          ${houseOuter}${node("house", config.entities.house, CX, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, FLOW_ICONS.house, false, L.hr > 44)}
 
           ${gridOuter}${node(gridTone, config.entities.grid_power, GX, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
             gridInner, FLOW_ICONS.grid, !importing && live.grid > -LIVE_KW)}
