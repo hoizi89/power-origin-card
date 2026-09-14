@@ -1341,6 +1341,19 @@ export const cardStyles = css`
     fill: var(--sst-muted);
   }
 
+  .fv-icon {
+    fill: var(--sst-ink);
+    opacity: 0.1;
+  }
+
+  .fv-icon.stroke {
+    fill: none;
+    stroke: var(--sst-ink);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .fv-node.quiet { opacity: 0.45; }
 
   .fv-node.tap:focus-visible {

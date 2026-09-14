@@ -57,6 +57,13 @@ const CELL = html`<svg class="meter-glyph" viewBox="0 0 24 24" aria-hidden="true
 </svg>`;
 
 const REFRESH_MS = 2 * 60 * 1000;
+/** What each circle of the flow carries behind its figure. Pylon and cell are drawn as strokes. */
+const FLOW_ICONS = {
+  house: { d: "M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z" },
+  sun: { d: "M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.77 5.95,15.5C6.37,16.2 6.91,16.81 7.5,17.31L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.35C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.22L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z" },
+  grid: { d: "M12 3 6.5 21M12 3l5.5 18M8.7 14h6.6M7.6 19h8.8M5 6l7-2 7 2", stroke: true },
+  battery: { d: "M4.5 8.5h13a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 14v-4a1.5 1.5 0 0 1 1.5-1.5zM21 10.8v2.4", stroke: true }
+};
 /** Below this, in kW, a power is standing still: no word for a direction, no running dots. */
 const LIVE_KW = 0.03;
 /** How often the Energy dashboard is asked for its device list. */
@@ -1401,26 +1408,6 @@ export class PowerOriginCard extends LitElement {
     };
   }
 
-  /**
-   * Where the battery is heading, in a few words: "voll 14:03" while it charges,
-   * "bis 23:40" while it carries the house, "bis ~60 %" when the day cannot
-   * fill it. The same facts the battery block prints, cut to fit under a circle.
-   */
-  private _batteryHint(locale: string): string | undefined {
-    const config = this._config as ResolvedConfig;
-    if (!config.entities.battery_soc || !config.entities.battery_power) return undefined;
-    const { view } = this._batteryFacts();
-    if (view.mode === "charging") {
-      if (view.at) return `${localize("live.full", locale)} ${formatClock(view.at, locale)}`;
-      if (view.full === "not_today" && view.socAtSunset !== undefined) {
-        return `${localize("live.until", locale)} ~${formatNumber(view.socAtSunset, locale, 0)} %`;
-      }
-      return undefined;
-    }
-    if (view.mode === "discharging" && view.at) return `${localize("live.until", locale)} ${formatClock(view.at, locale)}`;
-    return undefined;
-  }
-
   /** Which way the grid goes, in a word; a few watts either way are nothing. */
   private _gridWord(grid: number): string {
     return grid > LIVE_KW ? "live.importing" : grid < -LIVE_KW ? "live.exporting" : "live.balanced";
@@ -1542,14 +1529,14 @@ export class PowerOriginCard extends LitElement {
     // "strip" leaves the flow alone and lays the day out beneath it.
     const L =
       clockMode === "house"
-        ? { hy: 156, hr: 40, clockR: 54, clockW: 7, pvLine: 80, sideLine: 0, houseLabel: 236, height: 256 }
+        ? { hy: 156, hr: 40, clockR: 54, clockW: 7, pvLine: 80, sideLine: 0, houseLabel: 246, height: 256 }
         : clockMode === "ring"
-          ? { hy: 150, hr: 52, clockR: 66, clockW: 5, pvLine: 63, sideLine: 90, houseLabel: 240, height: 260 }
-          : { hy: 142, hr: 36, clockR: 0, clockW: 0, pvLine: 106, sideLine: 124, houseLabel: outer === "none" ? 194 : 198, height: clockMode === "strip" ? 268 : outer === "none" ? 214 : 218 };
+          ? { hy: 150, hr: 52, clockR: 66, clockW: 5, pvLine: 63, sideLine: 90, houseLabel: 250, height: 260 }
+          : { hy: 142, hr: 36, clockR: 0, clockW: 0, pvLine: 106, sideLine: 124, houseLabel: outer === "none" ? 198 : 202, height: clockMode === "strip" ? 268 : outer === "none" ? 214 : 218 };
     const HY = L.hy;
     const SR = 28;
     const PY = clockMode === "ring" ? 34 : 40;
-    const sideLabel = HY + SR + 16;
+    const sideLabel = HY + SR + 20;
     // The lines end where the house's outermost ring begins.
     const houseEdge = L.clockR ? L.clockR + L.clockW / 2 + 2 : L.hr + 2;
     const sideLineEnd = L.sideLine || 160 - houseEdge - 2;
@@ -1570,15 +1557,20 @@ export class PowerOriginCard extends LitElement {
       value: string,
       unit: string,
       ring: unknown | undefined,
+      icon: { d: string; stroke?: boolean },
       quiet = false,
       big = false
     ) => {
       const on = entity && hass.states?.[entity];
       const handlers = on ? this._tap(entity!) : undefined;
+      // The icon fills the circle the way the house fills the ring: faint, behind the figure.
+      const k = r / 18;
       return svg`<g class="fv-node ${tone} ${quiet ? "quiet" : ""} ${on ? "tap" : ""} ${big ? "big" : ""}"
           role="${on ? "button" : "img"}" tabindex="${on ? 0 : -1}"
           @click=${handlers?.click} @keydown=${handlers?.key}>
         <circle class="fv-disc" cx="${cx}" cy="${cy}" r="${r}"></circle>
+        <path class="fv-icon ${icon.stroke ? "stroke" : ""}" d="${icon.d}"
+          transform="translate(${(cx - 12 * k).toFixed(1)} ${(cy - 12 * k).toFixed(1)}) scale(${k.toFixed(3)})"></path>
         ${ring === undefined
           ? svg`<circle class="fv-rim ${tone}" cx="${cx}" cy="${cy}" r="${r}"></circle>`
           : svg`<circle class="fv-track" cx="${cx}" cy="${cy}" r="${r}"></circle>${ring}`}
@@ -1587,9 +1579,9 @@ export class PowerOriginCard extends LitElement {
       </g>`;
     };
 
-    const label = (x: number, y: number, anchor: string, name: string, verb: string) =>
-      svg`<text class="fv-k" x="${x}" y="${y}" text-anchor="${anchor}">${name}</text>
-        <text class="fv-verb" x="${x}" y="${y + 13}" text-anchor="${anchor}">${verb}</text>`;
+    // One word under a circle, and only where it says something the circle does not.
+    const word = (x: number, y: number, text: string | undefined) =>
+      text ? svg`<text class="fv-verb" x="${x}" y="${y}" text-anchor="middle">${text}</text>` : nothing;
 
     const line = (tone: string, x1: number, y1: number, x2: number, y2: number, power: number | undefined, out: boolean) => {
       const on = power !== undefined && Math.abs(power) > LIVE_KW;
@@ -1811,25 +1803,23 @@ export class PowerOriginCard extends LitElement {
           ${live.pv === undefined
             ? nothing
             : svg`${pvOuter}${node("solar", config.entities.solar, 160, PY, SR, formatPower(live.pv, locale), "kW",
-                pvInner, live.pv < LIVE_KW)}
-              ${label(122, PY - 4, "end", localize("live.pv", locale),
-                produced === undefined ? localize("live.makes", locale) : `${formatEnergy(produced, locale)} kWh ${localize("live.today", locale)}`)}`}
+                pvInner, FLOW_ICONS.sun, live.pv < LIVE_KW)}`}
 
-          ${houseOuter}${node("house", config.entities.house, 160, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, false, L.hr > 40)}
-          ${label(160, L.houseLabel, "middle", localize("live.house", locale), autarkic)}
+          ${houseOuter}${node("house", config.entities.house, 160, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, FLOW_ICONS.house, false, L.hr > 40)}
+          ${word(160, L.houseLabel, autarkic)}
 
           ${gridOuter}${node(gridTone, config.entities.grid_power, 48, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
-            gridInner, !importing && live.grid > -LIVE_KW)}
-          ${label(2, sideLabel, "start", localize("live.grid", locale), localize(this._gridWord(live.grid), locale))}
+            gridInner, FLOW_ICONS.grid, !importing && live.grid > -LIVE_KW)}
+          ${word(48, sideLabel, Math.abs(live.grid) > LIVE_KW ? localize(this._gridWord(live.grid), locale) : undefined)}
 
           ${live.battery === undefined
             ? nothing
             : svg`${batteryOuter}${node("battery", config.entities.battery_power, 272, HY, SR,
                 formatPower(Math.abs(live.battery), locale), "kW",
-                batteryInner)}
-              ${label(318, sideLabel, "end",
-                `${localize("live.battery", locale)}${live.soc === undefined ? "" : ` · ${formatNumber(live.soc, locale, 0)} %`}`,
-                [localize(this._batteryWord(live.battery, live.mode), locale), this._batteryHint(locale)].filter(Boolean).join(" · "))}`}
+                batteryInner, FLOW_ICONS.battery)}
+              ${word(272, sideLabel, live.soc === undefined
+                ? localize(this._batteryWord(live.battery, live.mode), locale)
+                : `${formatNumber(live.soc, locale, 0)} %`)}`}
           ${strip}
         </svg>
       </div>

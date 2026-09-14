@@ -166,8 +166,10 @@ describe("the ring's views", () => {
     expect(root.querySelector(".ring")).toBeNull();
     expect(root.querySelectorAll(".fv-node").length).toBe(4);
     const words = text(root);
-    expect(words).toMatch(/Speicher · 52 %.*lädt/);
+    expect(words).toContain("52 %");
     expect(words).toContain("speist ein");
+    // Every circle carries its icon behind the figure.
+    expect(root.querySelectorAll(".fv-icon").length).toBe(4);
     // Charging: the store's dots run away from the house.
     expect(root.querySelector(".fv-line.battery.on.dots.rev")).toBeTruthy();
     // The ring outside the store is filled to its charge.
@@ -178,7 +180,7 @@ describe("the ring's views", () => {
   it("runs the dots toward the house while the battery carries it, and can stand still", async () => {
     const moving = await render(config({ ring: { view: "flow" } }), evening);
     expect(moving.root.querySelector(".fv-line.battery.on.dots:not(.rev)")).toBeTruthy();
-    expect(text(moving.root)).toContain("entlädt");
+    expect(moving.root.querySelector(".flow-view")?.getAttribute("aria-label")).toContain("entlädt");
     const still = await render(config({ ring: { view: "flow", flow_dots: false, flow_gauges: false } }), evening);
     expect(still.root.querySelector(".fv-line.dots")).toBeNull();
     expect(still.root.querySelector(".fv-arc")).toBeNull();
@@ -189,8 +191,10 @@ describe("the ring's views", () => {
     const full: Scenario = { ...charging, name: "full", soc: 100, battery: -27 };
     const { root } = await render(config({ ring: { view: "flow" } }), full);
     const words = text(root);
-    expect(words).toMatch(/Speicher · 100 %.*voll/);
-    expect(words).not.toContain("lädt");
+    expect(words).toContain("100 %");
+    const aria = root.querySelector(".flow-view")?.getAttribute("aria-label") ?? "";
+    expect(aria).toContain("voll");
+    expect(aria).not.toContain("lädt");
   });
 
   it("can run today's share around each circle, and the day's clock at the house", async () => {
