@@ -155,6 +155,8 @@ export type FlowOuter = "none" | "day" | "clock";
 export type FlowClock = "none" | "house" | "strip" | "ring";
 /** What runs inside a circle of the flow: its live gauge, the day's 24 hours, how far today has come, or nothing. */
 export type FlowInner = "gauge" | "day" | "none" | "clock";
+/** The battery's circle can also wear its charge outside: as one ring, or in cells like the bar. */
+export type FlowBattery = FlowInner | "charge" | "cells";
 /** Which side of the ring the first column stands on. */
 export type MeterSide = "left" | "right";
 /** The column upright beside the ring, or lying flat as a bar. */
@@ -175,7 +177,7 @@ export interface RingOptions {
   flow_pv?: FlowInner;
   flow_house?: FlowInner;
   flow_grid?: FlowInner;
-  flow_battery?: FlowInner;
+  flow_battery?: FlowBattery;
   /** The first column left of the ring, as always, or to its right. */
   meter_side?: MeterSide;
   /** The columns upright, or lying flat as bars: draw to the left, surplus to the right. */

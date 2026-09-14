@@ -6,7 +6,6 @@ import type {
   MeterDrawn,
   MeterShows,
   MeterStyle,
-  FlowInner,
   PowerOriginCardConfig,
   ResolvedConfig,
   TodayStat
@@ -44,7 +43,7 @@ export const DEFAULTS = {
     flow_pv: "none" as const,
     flow_house: "gauge" as const,
     flow_grid: "none" as const,
-    flow_battery: "none" as const,
+    flow_battery: "charge" as const,
     meter_side: "left" as const,
     meter_layout: "column" as const,
     center: "power" as const,
@@ -292,7 +291,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       ...(() => {
         const ring = config.ring;
         const off = ring?.flow_gauges === false;
-        const pick = (value: FlowInner | undefined, fallback: FlowInner) => (value === "clock" ? "gauge" : (value ?? (off ? "none" : fallback)));
+        const pick = <T extends string>(value: T | undefined, fallback: T): T => (value === "clock" ? ("gauge" as T) : (value ?? (off ? ("none" as T) : fallback)));
         const askedClock = ring?.flow_outer === "clock" || ring?.flow_house === "clock";
         return {
           flow_pv: pick(ring?.flow_pv, DEFAULTS.ring.flow_pv),
@@ -1213,6 +1212,13 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 select: {
                   mode: "dropdown",
                   options: [
+                    // The store alone can wear its charge outside, in one ring or in cells.
+                    ...(name === "flow_battery"
+                      ? [
+                          { value: "charge", label: t("editor.flow_inner_charge") },
+                          { value: "cells", label: t("editor.flow_inner_cells") }
+                        ]
+                      : []),
                     { value: "gauge", label: t("editor.flow_inner_gauge") },
                     { value: "day", label: t("editor.flow_outer_day") },
                     { value: "none", label: t("editor.flow_outer_none") }

@@ -216,8 +216,22 @@ describe("the ring's views", () => {
     const ring = await render(config({ ring: { view: "flow", flow_clock: "ring" } }), charging);
     expect(ring.root.querySelectorAll(".fv-clock.ring").length).toBe(24);
     expect(ring.root.querySelector(".fv-node.house.big")).toBeTruthy();
+    // Without the second ring only the store keeps one: its charge, which it wears by default.
     const none = await render(config({ ring: { view: "flow", flow_outer: "none" } }), charging);
-    expect(none.root.querySelector(".fv-clock")).toBeNull();
+    expect(none.root.querySelectorAll(".fv-clock:not(.soc)").length).toBe(0);
+    expect(none.root.querySelector(".fv-clock.soc")).toBeTruthy();
+  });
+
+  it("lets the store wear its charge outside, smooth or in the bar's cells", async () => {
+    const smooth = await render(config({ ring: { view: "flow", flow_outer: "none", flow_battery: "charge" } }), charging);
+    expect(smooth.root.querySelectorAll(".fv-clock.soc").length).toBe(1);
+    expect(smooth.root.querySelector(".fv-clock.soc")?.getAttribute("stroke-dasharray")).toBe("52.00 100");
+    const cells = await render(config({ ring: { view: "flow", flow_outer: "none", flow_battery: "cells" } }), charging);
+    // 13.1 kWh give 13 cells, one per kilowatt hour; at 52 % the seventh is partly filled and drawn twice.
+    expect(cells.root.querySelectorAll(".fv-clock.soc.battery").length).toBe(7);
+    expect(cells.root.querySelectorAll(".fv-clock.soc.empty").length).toBe(7);
+    const bare = await render(config({ ring: { view: "flow", flow_outer: "none", flow_battery: "none" } }), charging);
+    expect(bare.root.querySelector(".fv-clock.soc")).toBeNull();
   });
 
   it("reads the older clock values as the clock at the house", async () => {

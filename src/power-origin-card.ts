@@ -1738,13 +1738,34 @@ export class PowerOriginCard extends LitElement {
     };
     // The battery's charge as a ring of its own: thick, because it is the one
     // figure about the store that everyone wants at a glance.
-    const socRing = (cx: number, cy: number, r: number) =>
-      live.soc === undefined
-        ? undefined
-        : svg`<circle class="fv-track soc" cx="${cx}" cy="${cy}" r="${r}"></circle>
+    const socRing = (cx: number, cy: number, r: number, cells = false) => {
+      if (live.soc === undefined) return undefined;
+      const level = share(live.soc / 100);
+      if (!cells) {
+        return svg`<circle class="fv-track soc" cx="${cx}" cy="${cy}" r="${r}"></circle>
           <circle class="fv-clock soc battery" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
-            stroke-dasharray="${share(live.soc / 100 * 100 / 100).toFixed(2) === "0.00" ? "0.00" : (share(live.soc / 100) * 100).toFixed(2)} 100"
+            stroke-dasharray="${(level * 100).toFixed(2)} 100"
             transform="rotate(-90 ${cx} ${cy})"></circle>`;
+      }
+      // In cells, as many as the bar draws: one per kilowatt hour, so they can be counted.
+      const n = segmentCount(config.battery.segments, config.battery_capacity);
+      const pitch = 100 / n;
+      const gap = Math.min(1.2, pitch * 0.25);
+      const span = pitch - gap;
+      return svg`${Array.from({ length: n }, (_, i) => {
+        const fill = share(level * n - i);
+        return svg`${fill > 0
+            ? svg`<circle class="fv-clock soc battery" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
+                stroke-dasharray="${(fill * span).toFixed(2)} 100" stroke-dashoffset="${(-i * pitch).toFixed(2)}"
+                transform="rotate(-90 ${cx} ${cy})"></circle>`
+            : nothing}
+          ${fill < 1
+            ? svg`<circle class="fv-clock soc empty" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
+                stroke-dasharray="${((1 - fill) * span).toFixed(2)} 100" stroke-dashoffset="${(-(i * pitch + fill * span)).toFixed(2)}"
+                transform="rotate(-90 ${cx} ${cy})"></circle>`
+            : nothing}`;
+      })}`;
+    };
     const todayKwh = (id: string | undefined) => energyKwh(stateOf(hass, id));
     const produced = todayKwh(config.entities.solar_today);
     const expected = this._kwhOf(config.entities.forecast);
@@ -1793,11 +1814,14 @@ export class PowerOriginCard extends LitElement {
     const houseOuter = L.clockR ? houseClock(CX, HY, L.clockR, clockMode === "ring" ? "ring" : "big") : ringFor("house", L.hr + 6, outer, "out");
     const pvOuter = ringFor("pv", SR + 6, outer, "out");
     const gridOuter = ringFor("grid", SR + 6, outer, "out");
-    const batteryOuter = ringFor("battery", SR + 6, outer, "out");
+    // The store's own choice of charge ring wins over the second ring, so nothing is drawn twice.
+    const batteryChoice = config.ring.flow_battery;
+    const wearsCharge = batteryChoice === "charge" || batteryChoice === "cells";
+    const batteryOuter = wearsCharge ? socRing(BX, HY, SR + 6, batteryChoice === "cells") : ringFor("battery", SR + 6, outer, "out");
     const pvInner = ringFor("pv", SR, config.ring.flow_pv, "in");
     const houseInner = ringFor("house", L.hr, config.ring.flow_house, "in");
     const gridInner = ringFor("grid", SR, config.ring.flow_grid, "in");
-    const batteryInner = ringFor("battery", SR, config.ring.flow_battery, "in");
+    const batteryInner = wearsCharge ? undefined : ringFor("battery", SR, batteryChoice, "in");
 
     const autarkic = `${formatNumber(flow.autarky * 100, locale, 0)} % ${localize("live.autarkic", locale)}`;
     const aria = [

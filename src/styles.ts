@@ -1430,6 +1430,7 @@ export const cardStyles = css`
   .fv-track.thin { stroke-width: 3; opacity: 0.6; }
   .fv-track.soc { stroke-width: 6; opacity: 0.6; }
   .fv-clock.soc { stroke-width: 6; }
+  .fv-clock.soc.empty { stroke: var(--sst-track); opacity: 0.6; }
 
   /* The arrowhead at the end the power flows to, in the line's colour. */
   .fv-arrow { fill: var(--sst-track); }
