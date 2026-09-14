@@ -81,6 +81,8 @@ export class PowerOriginCard extends LitElement {
   private _series?: DaySeries;
   private _hours?: HourShare[];
   private _swing?: { up: number; down: number };
+  /** The battery's largest charge and discharge today, in kW, for the flow's gauge. */
+  private _cellSwing?: { charge: number; discharge: number };
   private _earlier?: DaySeries;
   private _socRange?: { low: number; high: number };
   /** The charge through the day so far, for the curve under the bar. */
@@ -419,6 +421,22 @@ export class PowerOriginCard extends LitElement {
       // The recorder keeps the entity's own unit; the mean is compared with a price in €/kWh.
       const scale = priceId ? priceScale(stateOf(hass, priceId)) : 1;
       this._priceMean = prices.length ? (scale * prices.reduce((a, b) => a + b, 0)) / prices.length : undefined;
+
+      if (cellId && stats[cellId]?.length) {
+        const perKw = unitOf(stateOf(hass, cellId)).toLowerCase() === "kw" ? 1 : 1000;
+        let charge = 0;
+        let discharge = 0;
+        for (const row of stats[cellId]) {
+          const value = row.mean;
+          if (value === null || value === undefined || !Number.isFinite(value)) continue;
+          const kw = (config.battery_invert ? -value : value) / perKw;
+          if (kw > discharge) discharge = kw;
+          if (-kw > charge) charge = -kw;
+        }
+        this._cellSwing = { charge, discharge };
+      } else {
+        this._cellSwing = undefined;
+      }
 
       if (gridId && stats[gridId]?.length) {
         let up = 0;
@@ -1383,6 +1401,26 @@ export class PowerOriginCard extends LitElement {
     };
   }
 
+  /**
+   * Where the battery is heading, in a few words: "voll 14:03" while it charges,
+   * "bis 23:40" while it carries the house, "bis ~60 %" when the day cannot
+   * fill it. The same facts the battery block prints, cut to fit under a circle.
+   */
+  private _batteryHint(locale: string): string | undefined {
+    const config = this._config as ResolvedConfig;
+    if (!config.entities.battery_soc || !config.entities.battery_power) return undefined;
+    const { view } = this._batteryFacts();
+    if (view.mode === "charging") {
+      if (view.at) return `${localize("live.full", locale)} ${formatClock(view.at, locale)}`;
+      if (view.full === "not_today" && view.socAtSunset !== undefined) {
+        return `${localize("live.until", locale)} ~${formatNumber(view.socAtSunset, locale, 0)} %`;
+      }
+      return undefined;
+    }
+    if (view.mode === "discharging" && view.at) return `${localize("live.until", locale)} ${formatClock(view.at, locale)}`;
+    return undefined;
+  }
+
   /** Which way the grid goes, in a word; a few watts either way are nothing. */
   private _gridWord(grid: number): string {
     return grid > LIVE_KW ? "live.importing" : grid < -LIVE_KW ? "live.exporting" : "live.balanced";
@@ -1504,9 +1542,9 @@ export class PowerOriginCard extends LitElement {
     // "strip" leaves the flow alone and lays the day out beneath it.
     const L =
       clockMode === "house"
-        ? { hy: 156, hr: 40, clockR: 54, clockW: 7, pvLine: 84, sideLine: 0, houseLabel: 236, height: 256 }
+        ? { hy: 156, hr: 40, clockR: 54, clockW: 7, pvLine: 80, sideLine: 0, houseLabel: 236, height: 256 }
         : clockMode === "ring"
-          ? { hy: 150, hr: 52, clockR: 66, clockW: 5, pvLine: 70, sideLine: 90, houseLabel: 240, height: 260 }
+          ? { hy: 150, hr: 52, clockR: 66, clockW: 5, pvLine: 63, sideLine: 90, houseLabel: 240, height: 260 }
           : { hy: 142, hr: 36, clockR: 0, clockW: 0, pvLine: 106, sideLine: 124, houseLabel: outer === "none" ? 194 : 198, height: clockMode === "strip" ? 262 : outer === "none" ? 214 : 218 };
     const HY = L.hy;
     const SR = 28;
@@ -1619,12 +1657,23 @@ export class PowerOriginCard extends LitElement {
             stroke-dasharray="${(SEG - 0.5).toFixed(2)} 100" stroke-dashoffset="${(-hh * SEG).toFixed(2)}"
             transform="rotate(90 ${cx} ${cy})"></circle>`;
         })}
-        ${[0, 6, 12, 18].map((hh) => {
-          const [x, y] = at(hh, rOut + 8);
-          // Six and eighteen sit on the lines to grid and battery; they step up off them.
-          const lift = hh === 6 || hh === 18 ? -7 : 0;
-          return svg`<text class="fv-dial" x="${x.toFixed(1)}" y="${(y + 2.5 + lift).toFixed(1)}" text-anchor="middle">${hh}</text>`;
+        ${[6, 18].map((hh) => {
+          const [ax, ay] = at(hh, rOut + 3);
+          const [bx, by] = at(hh, rOut + 9);
+          return svg`<line class="fv-tick" x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}"></line>`;
         })}
+        ${(() => {
+          const [sx, sy] = at(12, rOut + 9);
+          const [mx, my] = at(0, rOut + 9);
+          return svg`<g class="clock-mark sun" transform="translate(${sx.toFixed(1)} ${sy.toFixed(1)}) scale(0.8)">
+              <circle cx="0" cy="0" r="2.7"></circle>
+              <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
+                       M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
+                       M-3.3,3.3 L-4.4,4.4"></path>
+            </g>
+            <path class="clock-mark moon" transform="translate(${(mx - 2.4).toFixed(1)} ${(my - 3).toFixed(1)})"
+                  d="M0,0 a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>`;
+        })()}
         <line class="fv-hand" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"></line>`;
     };
 
@@ -1685,15 +1734,19 @@ export class PowerOriginCard extends LitElement {
     const expected = this._kwhOf(config.entities.forecast);
     const exported = todayKwh(config.entities.export_today) ?? 0;
     const imported = todayKwh(config.entities.import_today) ?? 0;
-    const charged = todayKwh(config.entities.battery_in_today) ?? 0;
-    const drained = todayKwh(config.entities.battery_out_today) ?? 0;
     const origin = this._dayOrigin();
     const halves = (a: number, b: number) => {
       const top = Math.max(a, b, 0.001);
       return [a / top / 2, b / top / 2];
     };
     const [expShare, impShare] = halves(exported, imported);
-    const [inShare, outShare] = halves(charged, drained);
+    const cell = this._cellSwing;
+    const cellPart =
+      live.battery === undefined || cell === undefined
+        ? undefined
+        : live.battery > 0
+          ? live.battery / Math.max(cell.discharge, live.battery, 0.001)
+          : -live.battery / Math.max(cell.charge, -live.battery, 0.001);
 
     type Circle = "pv" | "house" | "grid" | "battery";
     const centre = (circle: Circle): [number, number] =>
@@ -1718,14 +1771,14 @@ export class PowerOriginCard extends LitElement {
             : undefined;
         }
         if (circle === "grid") return dayArc(cx, cy, r, cls, [{ tone: "solar", share: expShare }, { tone: "grid", share: impShare, back: true }]);
-        return dayArc(cx, cy, r, cls, [{ tone: "solar", share: inShare }, { tone: "battery", share: outShare, back: true }]);
+        return live.soc === undefined ? undefined : dayArc(cx, cy, r, cls, [{ tone: "battery", share: live.soc / 100 }]);
       }
       // The live gauge: PV against today's peak, the house by origin, the grid
       // against today's most in that direction, the battery by its charge.
       if (circle === "pv") return arc(cx, cy, r, pvPart, "solar");
       if (circle === "house") return houseRing;
       if (circle === "grid") return arc(cx, cy, r, gridPart, gridTone);
-      return arc(cx, cy, r, live.soc === undefined ? undefined : live.soc / 100, "battery");
+      return arc(cx, cy, r, cellPart, "battery");
     };
     // With the clock around the house there is no room for a second ring there.
     const houseOuter = L.clockR ? houseClock(160, HY, L.clockR, clockMode === "ring" ? "ring" : "big") : ringFor("house", L.hr + 6, outer, "out");
@@ -1759,24 +1812,24 @@ export class PowerOriginCard extends LitElement {
             ? nothing
             : svg`${pvOuter}${node("solar", config.entities.solar, 160, PY, SR, formatPower(live.pv, locale), "kW",
                 pvInner, live.pv < LIVE_KW)}
-              ${label(122, PY - 4, "end", localize("live.pv", locale), localize("live.makes", locale))}`}
+              ${label(122, PY - 4, "end", localize("live.pv", locale),
+                produced === undefined ? localize("live.makes", locale) : `${formatEnergy(produced, locale)} kWh ${localize("live.today", locale)}`)}`}
 
           ${houseOuter}${node("house", config.entities.house, 160, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, false, L.hr > 40)}
           ${label(160, L.houseLabel, "middle", localize("live.house", locale), autarkic)}
 
           ${gridOuter}${node(gridTone, config.entities.grid_power, 48, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
             gridInner, !importing && live.grid > -LIVE_KW)}
-          ${label(48, sideLabel, "middle", localize("live.grid", locale), localize(this._gridWord(live.grid), locale))}
+          ${label(2, sideLabel, "start", localize("live.grid", locale), localize(this._gridWord(live.grid), locale))}
 
           ${live.battery === undefined
             ? nothing
             : svg`${batteryOuter}${node("battery", config.entities.battery_power, 272, HY, SR,
                 formatPower(Math.abs(live.battery), locale), "kW",
                 batteryInner)}
-              ${label(272, sideLabel, "middle", localize("live.battery", locale),
-                `${localize(this._batteryWord(live.battery, live.mode), locale)}${
-                  live.soc === undefined ? "" : ` · ${formatNumber(live.soc, locale, 0)} %`
-                }`)}`}
+              ${label(318, sideLabel, "end",
+                `${localize("live.battery", locale)}${live.soc === undefined ? "" : ` · ${formatNumber(live.soc, locale, 0)} %`}`,
+                [localize(this._batteryWord(live.battery, live.mode), locale), this._batteryHint(locale)].filter(Boolean).join(" · "))}`}
           ${strip}
         </svg>
       </div>

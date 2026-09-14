@@ -1387,6 +1387,12 @@ export const cardStyles = css`
     fill: var(--sst-muted);
   }
 
+  .fv-tick {
+    stroke: var(--sst-muted);
+    stroke-width: 1.4;
+    opacity: 0.7;
+  }
+
   .fv-hand {
     stroke: var(--sst-ink);
     stroke-width: 2.2;

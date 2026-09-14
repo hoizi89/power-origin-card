@@ -39,7 +39,7 @@ export const DEFAULTS = {
     view: "columns" as const,
     flow_gauges: true,
     flow_dots: true,
-    flow_outer: "none" as const,
+    flow_outer: "day" as const,
     flow_clock: "none" as const,
     flow_pv: "gauge" as const,
     flow_house: "gauge" as const,

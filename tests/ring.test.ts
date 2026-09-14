@@ -166,12 +166,13 @@ describe("the ring's views", () => {
     expect(root.querySelector(".ring")).toBeNull();
     expect(root.querySelectorAll(".fv-node").length).toBe(4);
     const words = text(root);
-    expect(words).toContain("lädt · 52 %");
+    expect(words).toMatch(/Speicher · 52 %.*lädt/);
     expect(words).toContain("speist ein");
     // Charging: the store's dots run away from the house.
     expect(root.querySelector(".fv-line.battery.on.dots.rev")).toBeTruthy();
-    // The store's circle is filled to its charge.
-    expect(root.querySelector(".fv-arc.battery")?.getAttribute("stroke-dasharray")).toBe("52.0 100");
+    // The ring outside the store is filled to its charge.
+    const around = [...root.querySelectorAll(".fv-clock.out.battery")].find((c) => c.getAttribute("cx") === "272");
+    expect(around?.getAttribute("stroke-dasharray")).toBe("52.00 100");
   });
 
   it("runs the dots toward the house while the battery carries it, and can stand still", async () => {
@@ -188,7 +189,7 @@ describe("the ring's views", () => {
     const full: Scenario = { ...charging, name: "full", soc: 100, battery: -27 };
     const { root } = await render(config({ ring: { view: "flow" } }), full);
     const words = text(root);
-    expect(words).toContain("voll · 100 %");
+    expect(words).toMatch(/Speicher · 100 %.*voll/);
     expect(words).not.toContain("lädt");
   });
 
@@ -198,7 +199,8 @@ describe("the ring's views", () => {
     expect(day.root.querySelectorAll(".fv-clock.solar").length).toBeGreaterThan(0);
     const house = await render(config({ ring: { view: "flow", flow_clock: "house" } }), charging);
     expect(house.root.querySelectorAll(".fv-clock.big").length).toBe(24);
-    expect(house.root.querySelectorAll(".fv-dial").length).toBe(4);
+    expect(house.root.querySelectorAll(".fv-tick").length).toBe(2);
+    expect(house.root.querySelectorAll(".clock-mark").length).toBe(2);
     expect(house.root.querySelectorAll(".fv-hand").length).toBe(1);
     expect(house.root.querySelector(".fv-strip")).toBeNull();
     const strip = await render(config({ ring: { view: "flow", flow_clock: "strip" } }), charging);
@@ -207,7 +209,7 @@ describe("the ring's views", () => {
     const ring = await render(config({ ring: { view: "flow", flow_clock: "ring" } }), charging);
     expect(ring.root.querySelectorAll(".fv-clock.ring").length).toBe(24);
     expect(ring.root.querySelector(".fv-node.house.big")).toBeTruthy();
-    const none = await render(config({ ring: { view: "flow" } }), charging);
+    const none = await render(config({ ring: { view: "flow", flow_outer: "none" } }), charging);
     expect(none.root.querySelector(".fv-clock")).toBeNull();
   });
 
