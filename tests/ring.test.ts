@@ -184,6 +184,43 @@ describe("the ring's views", () => {
     expect(still.root.querySelectorAll(".fv-rim").length).toBe(4);
   });
 
+  it("calls a full battery full, not charging, on a trickle", async () => {
+    const full: Scenario = { ...charging, name: "full", soc: 100, battery: -27 };
+    const { root } = await render(config({ ring: { view: "flow" } }), full);
+    const words = text(root);
+    expect(words).toContain("voll · 100 %");
+    expect(words).not.toContain("lädt");
+  });
+
+  it("can run a day clock or today's share around each circle", async () => {
+    const clock = await render(config({ ring: { view: "flow", flow_outer: "clock" } }), charging);
+    // One segment per hour the day has reached, the same count around each of the four circles.
+    const segments = clock.root.querySelectorAll(".fv-clock").length;
+    expect(segments).toBeGreaterThan(0);
+    expect(segments % 4).toBe(0);
+    expect(clock.root.querySelectorAll(".fv-now").length).toBe(4);
+    const day = await render(config({ ring: { view: "flow", flow_outer: "day" } }), charging);
+    expect(day.root.querySelectorAll(".fv-track.thin").length).toBe(4);
+    expect(day.root.querySelectorAll(".fv-clock.solar").length).toBeGreaterThan(0);
+    const none = await render(config({ ring: { view: "flow" } }), charging);
+    expect(none.root.querySelector(".fv-clock")).toBeNull();
+  });
+
+  it("stands the column on the ring's right when asked", async () => {
+    const { root } = await render(config({ ring: { meter_side: "right" } }), day);
+    expect(root.querySelector(".ring-group")?.classList.contains("meter-right")).toBe(true);
+    const plain = await render(config(), day);
+    expect(plain.root.querySelector(".ring-group")?.classList.contains("meter-right")).toBe(false);
+  });
+
+  it("lets the battery bar take the full width, the percentage moving to the heading", async () => {
+    const wide = await render(config({ battery: { wide: true, percent: true } }), day);
+    expect(wide.root.querySelector(".bat-pct")).toBeNull();
+    expect(wide.root.querySelector(".row-pct")).toBeTruthy();
+    const usual = await render(config({ battery: { percent: true } }), day);
+    expect(usual.root.querySelector(".bat-pct")).toBeTruthy();
+  });
+
   it("keeps the compact ring a ring whatever the view", async () => {
     const { root } = await render(config({ shape: "compact", ring: { view: "flow" } }), charging);
     expect(root.querySelector(".ring")).toBeTruthy();
@@ -236,6 +273,12 @@ describe("the charge at sunrise, on the bar", () => {
     expect(root.querySelector(".bat-sun")).toBeTruthy();
     // A dimmed cell means the reserve, and nothing else.
     expect(root.querySelectorAll(".bat-fill.night").length).toBe(0);
+  });
+
+  it("stays off the bar by day, even while the battery carries the house", async () => {
+    const foggy = SCENARIOS.find((s) => s.name === "foggy morning, three sources")!;
+    const { root } = await render(config({ battery: { sunrise_mark: true, capacity: 13100 } }), foggy);
+    expect(root.querySelector(".bat-sun")).toBeNull();
   });
 
   it("has nothing to say while the battery charges", async () => {

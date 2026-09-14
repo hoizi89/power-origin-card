@@ -38,6 +38,8 @@ export const DEFAULTS = {
     view: "columns" as const,
     flow_gauges: true,
     flow_dots: true,
+    flow_outer: "none" as const,
+    meter_side: "left" as const,
     center: "power" as const,
     center_dark: "power" as const,
     layout: "auto" as const,
@@ -100,6 +102,7 @@ export const DEFAULTS = {
     extra: "none" as const,
     sunrise_mark: false,
     sunset_mark: false,
+    wide: false,
     curve: false,
     animate: false,
     full_from: "rate" as const
@@ -1122,7 +1125,20 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         }),
         ...only((resolved) => resolved.ring.view === "flow",
           { name: "flow_gauges", selector: { boolean: {} } },
-          { name: "flow_dots", selector: { boolean: {} } }
+          { name: "flow_dots", selector: { boolean: {} } },
+          {
+            name: "flow_outer",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: t("editor.flow_outer_none") },
+                  { value: "clock", label: t("editor.flow_outer_clock") },
+                  { value: "day", label: t("editor.flow_outer_day") }
+                ]
+              }
+            }
+          }
         )
       ])
       ]
@@ -1150,6 +1166,21 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               }
             }
           },
+          ...only(
+            (resolved) => resolved.ring.columns === "one" || resolved.ring.columns === "two",
+            {
+              name: "meter_side",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "left", label: t("editor.meter_side_left") },
+                    { value: "right", label: t("editor.meter_side_right") }
+                  ]
+                }
+              }
+            }
+          ),
           ...only(
             (resolved) => resolved.ring.columns !== "none" && Boolean(resolved.entities.grid_power),
             { name: "import_switch", selector: { boolean: {} } }
@@ -1268,6 +1299,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
               selector: { number: { min: 0, max: 20, mode: "box" } }
             }),
             { name: "percent", selector: { boolean: {} } },
+            { name: "wide", selector: { boolean: {} } },
             ...only((resolved) => resolved.battery_reserve > 0, {
               name: "reserve_line",
               selector: { boolean: {} }
@@ -1636,6 +1668,9 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     view: t("editor.view"),
     flow_gauges: t("editor.flow_gauges"),
     flow_dots: t("editor.flow_dots"),
+    flow_outer: t("editor.flow_outer"),
+    meter_side: t("editor.meter_side"),
+    wide: t("editor.wide"),
     layout: t("editor.layout"),
     caption: t("editor.caption"),
     columns: t("editor.columns"),
@@ -1766,6 +1801,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     columns: t("editor.help_columns"),
     view: t("editor.help_view"),
     flow_gauges: t("editor.help_flow_gauges"),
+    flow_outer: t("editor.help_flow_outer"),
+    wide: t("editor.help_wide"),
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),
     layers: t("editor.help_layers"),

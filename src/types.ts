@@ -149,6 +149,10 @@ export interface SectionToggles {
 
 /** How the ring block is laid out: columns beside it, the four powers in its corners, or the flow between them. */
 export type RingView = "columns" | "corners" | "flow";
+/** What runs around each circle of the flow: nothing, the day's 24 hours, or how far today has come. */
+export type FlowOuter = "none" | "clock" | "day";
+/** Which side of the ring the first column stands on. */
+export type MeterSide = "left" | "right";
 
 export interface RingOptions {
   /** The ring with columns, with the four powers in its corners, or the flow between house, PV, grid and store. */
@@ -157,6 +161,10 @@ export interface RingOptions {
   flow_gauges?: boolean;
   /** In the flow view, dots running along the lines the way the power goes. */
   flow_dots?: boolean;
+  /** In the flow view, a second ring around each circle. */
+  flow_outer?: FlowOuter;
+  /** The first column left of the ring, as always, or to its right. */
+  meter_side?: MeterSide;
   center?: RingCenter;
   /** The mode to use while nothing is being produced. */
   center_dark?: RingCenterDark;
@@ -260,6 +268,8 @@ export interface BatteryOptions {
   curve?: boolean;
   /** A slow wave through the cells, towards the cap while charging and away from it while discharging. */
   animate?: boolean;
+  /** The bar across the full width; the second figure and the percentage move to the lines around it. */
+  wide?: boolean;
   full_from?: BatteryFullFrom;
 }
 

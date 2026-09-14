@@ -1366,6 +1366,30 @@ export const cardStyles = css`
     fill: var(--sst-ink);
   }
 
+  /* The second ring: the day's hours, or today's share, outside the gauge. */
+  .fv-clock {
+    fill: none;
+    stroke-width: 3;
+    transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;
+  }
+
+  .fv-clock.solar { stroke: var(--sst-sun); }
+  .fv-clock.battery { stroke: var(--sst-leaf); }
+  .fv-clock.grid { stroke: var(--sst-grid); }
+  .fv-clock.empty { stroke: var(--sst-track); }
+
+  .fv-track.thin { stroke-width: 3; opacity: 0.6; }
+
+  .fv-now {
+    fill: var(--sst-ink);
+    opacity: 0.9;
+  }
+
+  /* The first column on the ring's other side, whatever the markup's order. */
+  .ring-group.meter-right > .meter-block:first-of-type { order: 3; }
+  .ring-group.meter-right > .ring { order: 2; }
+  .ring-group.meter-right > .meter-block:last-of-type:not(:first-of-type) { order: 1; }
+
   .fv-line {
     stroke: var(--sst-track);
     stroke-width: 2;

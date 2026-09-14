@@ -49,6 +49,9 @@ describe("resolveConfig", () => {
     const flow = names({ ...base, ring: { view: "flow" } });
     expect(flow).toContain('"name":"flow_gauges"');
     expect(flow).toContain('"name":"flow_dots"');
+    expect(flow).toContain('"name":"flow_outer"');
+    expect(columns).toContain('"name":"meter_side"');
+    expect(flow).not.toContain('"name":"meter_side"');
     expect(flow).not.toContain('"name":"rings"');
     expect(flow).not.toContain('"name":"columns"');
     const corners = names({ ...base, ring: { view: "corners" } });
