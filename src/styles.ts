@@ -666,7 +666,7 @@ export const cardStyles = css`
   .cons-line {
     fill: none;
     stroke: var(--sst-ink);
-    stroke-width: 2;
+    stroke-width: 2.2;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
@@ -1412,7 +1412,7 @@ export const cardStyles = css`
 
   .fv-hand {
     stroke: var(--sst-ink);
-    stroke-width: 2;
+    stroke-width: 2.2;
     stroke-linecap: round;
     opacity: 0.9;
   }
