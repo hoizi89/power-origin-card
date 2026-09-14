@@ -2443,7 +2443,7 @@ export class PowerOriginCard extends LitElement {
     const parts: string[] = [];
     if (view.full === "between" && view.early && view.late) {
       parts.push(
-        `${localize("battery.full_between", locale)} ${formatClock(view.early, locale)} ${localize("battery.and", locale)} ${formatClock(view.late, locale)}`
+        `${localize("battery.full", locale)} ${formatClock(view.early, locale)}–${formatClock(view.late, locale)}`
       );
     } else if (view.at) {
       const word = view.full === "forecast" ? "battery.full_about" : "battery.full_at";
@@ -4457,6 +4457,8 @@ if (!customElements.get(CARD_TYPE)) {
 }
 
 void import("./editor").then(({ PowerOriginCardEditor }) => {
+  // A test run may tear the document down before the editor arrives; then there is nothing to define it on.
+  if (typeof customElements === "undefined") return;
   if (!customElements.get(`${CARD_TYPE}-editor`)) {
     customElements.define(`${CARD_TYPE}-editor`, PowerOriginCardEditor);
   }

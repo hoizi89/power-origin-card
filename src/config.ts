@@ -995,24 +995,54 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     ...only(
       (resolved) => resolved.sections.ring,
       {
+        type: "expandable",
+        name: "ring",
+        title: t("editor.view_settings"),
+        icon: "mdi:view-dashboard-variant-outline",
+        schema: [
+          {
+            type: "grid",
+            schema: [
+              {
+                name: "view",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "columns", label: t("editor.view_columns") },
+                      { value: "corners", label: t("editor.view_corners") },
+                      { value: "flow", label: t("editor.view_flow") }
+                    ]
+                  }
+                }
+              },
+              {
+                name: "size",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "auto", label: t("editor.size_auto") },
+                      { value: "s", label: t("editor.size_s") },
+                      { value: "m", label: t("editor.size_m") },
+                      { value: "l", label: t("editor.size_l") }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ),
+    ...only(
+      (resolved) => resolved.sections.ring && resolved.ring.view !== "flow",
+      {
       type: "expandable",
       name: "ring",
       title: t("editor.ring_settings"),
       icon: "mdi:circle-slice-8",
       schema: [
-        {
-          name: "view",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "columns", label: t("editor.view_columns") },
-                { value: "corners", label: t("editor.view_corners") },
-                { value: "flow", label: t("editor.view_flow") }
-              ]
-            }
-          }
-        },
         ...inPairs([
         ...only(ringDrawn, {
           name: "center",
@@ -1104,20 +1134,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         }),
-        {
-          name: "size",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "auto", label: t("editor.size_auto") },
-                { value: "s", label: t("editor.size_s") },
-                { value: "m", label: t("editor.size_m") },
-                { value: "l", label: t("editor.size_l") }
-              ]
-            }
-          }
-        },
         ...only((resolved) => resolved.ring.view === "columns" && resolved.ring.facts !== "none", {
           name: "layout",
           selector: {
@@ -1146,51 +1162,74 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         }),
-        ...only((resolved) => resolved.ring.view === "flow",
-          { name: "flow_dots", selector: { boolean: {} } },
-          ...["flow_house", "flow_pv", "flow_grid", "flow_battery"].map((name) => ({
-            name,
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "gauge", label: t("editor.flow_inner_gauge") },
-                  { value: "day", label: t("editor.flow_outer_day") },
-                  { value: "none", label: t("editor.flow_outer_none") }
-                ]
-              }
-            }
-          })),
-          {
-            name: "flow_outer",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "none", label: t("editor.flow_outer_none") },
-                  { value: "day", label: t("editor.flow_outer_day") }
-                ]
-              }
-            }
-          },
-          {
-            name: "flow_clock",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "none", label: t("editor.flow_outer_none") },
-                  { value: "house", label: t("editor.flow_clock_house") },
-                  { value: "strip", label: t("editor.flow_clock_strip") },
-                  { value: "ring", label: t("editor.flow_clock_ring") }
-                ]
-              }
-            }
-          }
-        )
       ])
       ]
     }
+    ),
+    ...only(
+      (resolved) => resolved.sections.ring && resolved.ring.view === "flow",
+      {
+        type: "expandable",
+        name: "ring",
+        title: t("editor.flow_settings"),
+        icon: "mdi:sitemap-outline",
+        schema: [
+          {
+            type: "grid",
+            schema: [
+              {
+                name: "flow_clock",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "none", label: t("editor.flow_outer_none") },
+                      { value: "house", label: t("editor.flow_clock_house") },
+                      { value: "strip", label: t("editor.flow_clock_strip") },
+                      { value: "ring", label: t("editor.flow_clock_ring") }
+                    ]
+                  }
+                }
+              },
+              {
+                name: "flow_outer",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      { value: "none", label: t("editor.flow_outer_none") },
+                      { value: "day", label: t("editor.flow_outer_day") }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            type: "grid",
+            schema: ["flow_house", "flow_pv", "flow_grid", "flow_battery"].map((name) => ({
+              name,
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "gauge", label: t("editor.flow_inner_gauge") },
+                    { value: "day", label: t("editor.flow_outer_day") },
+                    { value: "none", label: t("editor.flow_outer_none") }
+                  ]
+                }
+              }
+            }))
+          },
+          {
+            type: "grid",
+            schema: [
+              { name: "flow_dots", selector: { boolean: {} } },
+              { name: "import_red", selector: { boolean: {} } }
+            ]
+          }
+        ]
+      }
     ),
     ...only(
       (resolved) => resolved.sections.ring && resolved.ring.view === "columns",
