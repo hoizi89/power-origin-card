@@ -1414,9 +1414,14 @@ export const cardStyles = css`
   .ring-group.flat > .meter-block {
     --meter-t: 38px;
     --meter-len: 150px;
-    flex: 0 1 var(--meter-len);
+    flex: 0 0 var(--meter-len);
     width: var(--meter-len);
     align-items: flex-start;
+  }
+
+  /* The bar keeps its length; the ring gives way instead of covering it. */
+  .ring-group.flat > .ring {
+    max-width: 190px;
   }
 
   .ring-group.flat > .meter-block > .meter {
@@ -1442,6 +1447,10 @@ export const cardStyles = css`
   @container (max-width: 339px) {
     .ring-group.flat > .meter-block {
       --meter-len: 110px;
+    }
+
+    .ring-group.flat > .ring {
+      max-width: 150px;
     }
   }
 
