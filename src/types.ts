@@ -149,9 +149,9 @@ export interface SectionToggles {
 
 /** How the ring block is laid out: columns beside it, the four powers in its corners, or the flow between them. */
 export type RingView = "columns" | "corners" | "flow";
-/** What runs around each circle of the flow: nothing, or how far today has come. `clock` is the older value and reads as the house clock. */
+/** Older: a second ring around each circle. `clock` reads as the house clock; the rest is ignored. */
 export type FlowOuter = "none" | "day" | "clock";
-/** Where the day's clock is drawn: around a bigger house, as a strip under the flow, or with the house as the big ring. */
+/** Where the day's clock is drawn: as a ring around the house, or as a strip under the flow. `ring` is the older value and reads as `house`. */
 export type FlowClock = "none" | "house" | "strip" | "ring";
 /** What runs inside a circle of the flow: its live gauge, the day's 24 hours, how far today has come, or nothing. */
 export type FlowInner = "gauge" | "day" | "none" | "clock";
@@ -169,11 +169,11 @@ export interface RingOptions {
   flow_gauges?: boolean;
   /** In the flow view, dots running along the lines the way the power goes. */
   flow_dots?: boolean;
-  /** In the flow view, a second ring around each circle. */
+  /** Older: a second ring around each circle. Only `clock` still means something: the clock at the house. */
   flow_outer?: FlowOuter;
-  /** The day's clock in the flow: none, around the house with a dial and a hand, as a strip beneath, or the house as the big ring. */
+  /** The day's clock in the flow: none, a ring around the house with a dial and a hand, or a strip beneath. */
   flow_clock?: FlowClock;
-  /** What each circle of the flow wears inside its rim. Unset, the live gauge; `flow_gauges: false` reads as none. */
+  /** What each circle of the flow wears on its rim: the live gauge, today's share, or nothing; the battery its charge. `flow_gauges: false` reads as none. */
   flow_pv?: FlowInner;
   flow_house?: FlowInner;
   flow_grid?: FlowInner;

@@ -51,7 +51,7 @@ describe("resolveConfig", () => {
     expect(flow).toContain('"name":"flow_battery"');
     expect(flow).not.toContain('"name":"flow_gauges"');
     expect(flow).toContain('"name":"flow_dots"');
-    expect(flow).toContain('"name":"flow_outer"');
+    expect(flow).not.toContain('"name":"flow_outer"');
     expect(flow).toContain('"name":"flow_clock"');
     expect(columns).toContain('"name":"meter_side"');
     expect(flow).not.toContain('"name":"meter_side"');

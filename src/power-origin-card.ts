@@ -1520,7 +1520,6 @@ export class PowerOriginCard extends LitElement {
     const hass = this._hass as HomeAssistant;
     const live = this._live(flow);
     const dots = config.ring.flow_dots;
-    const outer = config.ring.flow_outer;
     const clockMode = config.ring.flow_clock;
     const share = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -1530,9 +1529,7 @@ export class PowerOriginCard extends LitElement {
     const L =
       clockMode === "house"
         ? { w: 340, hy: 164, hr: 42, py: 36, clockR: 54, clockW: 6, pvLine: 88, height: 240 }
-        : clockMode === "ring"
-          ? { w: 360, hy: 156, hr: 54, py: 36, clockR: 68, clockW: 5, pvLine: 0, height: 246 }
-          : { w: 320, hy: 146, hr: 42, py: 44, clockR: 0, clockW: 0, pvLine: 100, height: clockMode === "strip" ? 248 : 204 };
+        : { w: 320, hy: 146, hr: 42, py: 44, clockR: 0, clockW: 0, pvLine: 100, height: clockMode === "strip" ? 248 : 204 };
     // The clock views draw wider, so the lines between the circles keep their length.
     const W = L.w;
     const CX = W / 2;
@@ -1802,7 +1799,7 @@ export class PowerOriginCard extends LitElement {
             : undefined;
         }
         if (circle === "grid") return dayArc(cx, cy, r, cls, [{ tone: "solar", share: expShare }, { tone: "grid", share: impShare, back: true }]);
-        return cls === "out" ? socRing(cx, cy, r) : live.soc === undefined ? undefined : dayArc(cx, cy, r, cls, [{ tone: "battery", share: live.soc / 100 }]);
+        return live.soc === undefined ? undefined : dayArc(cx, cy, r, cls, [{ tone: "battery", share: live.soc / 100 }]);
       }
       // The live gauge: PV against today's peak, the house by origin, the grid
       // and the battery against today's most in that direction.
@@ -1811,14 +1808,11 @@ export class PowerOriginCard extends LitElement {
       if (circle === "grid") return arc(cx, cy, r, gridPart, gridTone);
       return arc(cx, cy, r, cellPart, "battery");
     };
-    // With the clock around the house there is no room for a second ring there.
-    const houseOuter = L.clockR ? houseClock(CX, HY, L.clockR, clockMode === "ring" ? "ring" : "big") : ringFor("house", L.hr + 6, outer, "out");
-    const pvOuter = ringFor("pv", SR + 6, outer, "out");
-    const gridOuter = ringFor("grid", SR + 6, outer, "out");
-    // The store's own choice of charge ring wins over the second ring, so nothing is drawn twice.
+    // Outside a circle stands only the house's clock and the store's charge; everything else sits on the rim.
+    const houseOuter = L.clockR ? houseClock(CX, HY, L.clockR, "big") : undefined;
     const batteryChoice = config.ring.flow_battery;
     const wearsCharge = batteryChoice === "charge" || batteryChoice === "cells";
-    const batteryOuter = wearsCharge ? socRing(BX, HY, SR + 6, batteryChoice === "cells") : ringFor("battery", SR + 6, outer, "out");
+    const batteryOuter = wearsCharge ? socRing(BX, HY, SR + 6, batteryChoice === "cells") : undefined;
     const pvInner = ringFor("pv", SR, config.ring.flow_pv, "in");
     const houseInner = ringFor("house", L.hr, config.ring.flow_house, "in");
     const gridInner = ringFor("grid", SR, config.ring.flow_grid, "in");
@@ -1846,12 +1840,12 @@ export class PowerOriginCard extends LitElement {
 
           ${live.pv === undefined
             ? nothing
-            : svg`${pvOuter}${node("solar", config.entities.solar, CX, PY, SR, formatPower(live.pv, locale), "kW",
+            : svg`${node("solar", config.entities.solar, CX, PY, SR, formatPower(live.pv, locale), "kW",
                 pvInner, FLOW_ICONS.sun, live.pv < LIVE_KW)}`}
 
           ${houseOuter}${node("house", config.entities.house, CX, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, FLOW_ICONS.house, false, L.hr > 44)}
 
-          ${gridOuter}${node(gridTone, config.entities.grid_power, GX, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
+          ${node(gridTone, config.entities.grid_power, GX, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
             gridInner, FLOW_ICONS.grid, !importing && live.grid > -LIVE_KW)}
 
           ${live.battery === undefined

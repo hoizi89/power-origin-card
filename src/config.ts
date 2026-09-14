@@ -38,7 +38,6 @@ export const DEFAULTS = {
     view: "columns" as const,
     flow_gauges: true,
     flow_dots: true,
-    flow_outer: "day" as const,
     flow_clock: "none" as const,
     flow_pv: "none" as const,
     flow_house: "gauge" as const,
@@ -293,13 +292,16 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
         const off = ring?.flow_gauges === false;
         const pick = <T extends string>(value: T | undefined, fallback: T): T => (value === "clock" ? ("gauge" as T) : (value ?? (off ? ("none" as T) : fallback)));
         const askedClock = ring?.flow_outer === "clock" || ring?.flow_house === "clock";
+        const battery = pick(ring?.flow_battery, DEFAULTS.ring.flow_battery);
         return {
           flow_pv: pick(ring?.flow_pv, DEFAULTS.ring.flow_pv),
           flow_house: pick(ring?.flow_house, DEFAULTS.ring.flow_house),
           flow_grid: pick(ring?.flow_grid, DEFAULTS.ring.flow_grid),
-          flow_battery: pick(ring?.flow_battery, DEFAULTS.ring.flow_battery),
-          flow_outer: ring?.flow_outer === "clock" ? "none" : (ring?.flow_outer ?? DEFAULTS.ring.flow_outer),
-          flow_clock: ring?.flow_clock ?? (askedClock ? "house" : DEFAULTS.ring.flow_clock)
+          // The store's thin day ring became the thick charge ring; the older big-ring clock is the house clock.
+          flow_battery: battery === "day" ? "charge" : battery,
+          // Kept only so older configs still read; nothing is drawn from it.
+          flow_outer: "none" as const,
+          flow_clock: (ring?.flow_clock === "ring" ? "house" : ring?.flow_clock) ?? (askedClock ? "house" : DEFAULTS.ring.flow_clock)
         };
       })(),
       // A labelled column already names the grid flow and the battery block
@@ -1174,58 +1176,53 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
         icon: "mdi:sitemap-outline",
         schema: [
           {
-            type: "grid",
-            schema: [
-              {
-                name: "flow_clock",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "none", label: t("editor.flow_outer_none") },
-                      { value: "house", label: t("editor.flow_clock_house") },
-                      { value: "strip", label: t("editor.flow_clock_strip") },
-                      { value: "ring", label: t("editor.flow_clock_ring") }
-                    ]
-                  }
-                }
-              },
-              {
-                name: "flow_outer",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "none", label: t("editor.flow_outer_none") },
-                      { value: "day", label: t("editor.flow_outer_day") }
-                    ]
-                  }
-                }
+            name: "flow_clock",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "none", label: t("editor.flow_clock_none") },
+                  { value: "house", label: t("editor.flow_clock_house") },
+                  { value: "strip", label: t("editor.flow_clock_strip") }
+                ]
               }
-            ]
+            }
           },
           {
             type: "grid",
-            schema: ["flow_house", "flow_pv", "flow_grid", "flow_battery"].map((name) => ({
-              name,
-              selector: {
-                select: {
-                  mode: "dropdown",
-                  options: [
-                    // The store alone can wear its charge outside, in one ring or in cells.
-                    ...(name === "flow_battery"
-                      ? [
-                          { value: "charge", label: t("editor.flow_inner_charge") },
-                          { value: "cells", label: t("editor.flow_inner_cells") }
-                        ]
-                      : []),
-                    { value: "gauge", label: t("editor.flow_inner_gauge") },
-                    { value: "day", label: t("editor.flow_outer_day") },
-                    { value: "none", label: t("editor.flow_outer_none") }
-                  ]
+            schema: ["flow_house", "flow_pv", "flow_grid", "flow_battery"].map((name) => {
+              // Each circle's choices say what its ring measures; the store wears its charge instead of a day ring.
+              const moment: Record<string, string> = {
+                flow_house: t("editor.flow_house_gauge"),
+                flow_pv: t("editor.flow_pv_gauge"),
+                flow_grid: t("editor.flow_grid_gauge"),
+                flow_battery: t("editor.flow_battery_gauge")
+              };
+              const today: Record<string, string> = {
+                flow_house: t("editor.flow_house_day"),
+                flow_pv: t("editor.flow_pv_day"),
+                flow_grid: t("editor.flow_grid_day")
+              };
+              return {
+                name,
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    options: [
+                      ...(name === "flow_battery"
+                        ? [
+                            { value: "charge", label: t("editor.flow_inner_charge") },
+                            { value: "cells", label: t("editor.flow_inner_cells") }
+                          ]
+                        : []),
+                      { value: "gauge", label: moment[name] },
+                      ...(name === "flow_battery" ? [] : [{ value: "day", label: today[name] }]),
+                      { value: "none", label: t("editor.flow_outer_none") }
+                    ]
+                  }
                 }
-              }
-            }))
+              };
+            })
           },
           {
             type: "grid",
@@ -1776,7 +1773,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     flow_grid: t("editor.flow_grid"),
     flow_battery: t("editor.flow_battery"),
     flow_dots: t("editor.flow_dots"),
-    flow_outer: t("editor.flow_outer"),
     flow_clock: t("editor.flow_clock"),
     meter_side: t("editor.meter_side"),
     meter_layout: t("editor.meter_layout"),
@@ -1910,11 +1906,6 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     colours: t("editor.help_devices_colours"),
     columns: t("editor.help_columns"),
     view: t("editor.help_view"),
-    flow_pv: t("editor.help_flow_pv"),
-    flow_house: t("editor.help_flow_house"),
-    flow_grid: t("editor.help_flow_grid"),
-    flow_battery: t("editor.help_flow_battery"),
-    flow_outer: t("editor.help_flow_outer"),
     flow_clock: t("editor.help_flow_clock"),
     meter_layout: t("editor.help_meter_layout"),
     wide: t("editor.help_wide"),
