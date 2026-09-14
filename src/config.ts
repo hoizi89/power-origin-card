@@ -41,10 +41,10 @@ export const DEFAULTS = {
     flow_dots: true,
     flow_outer: "day" as const,
     flow_clock: "none" as const,
-    flow_pv: "gauge" as const,
+    flow_pv: "none" as const,
     flow_house: "gauge" as const,
-    flow_grid: "gauge" as const,
-    flow_battery: "gauge" as const,
+    flow_grid: "none" as const,
+    flow_battery: "none" as const,
     meter_side: "left" as const,
     meter_layout: "column" as const,
     center: "power" as const,
@@ -292,13 +292,13 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       ...(() => {
         const ring = config.ring;
         const off = ring?.flow_gauges === false;
-        const pick = (value: FlowInner | undefined) => (value === "clock" ? "gauge" : (value ?? (off ? "none" : DEFAULTS.ring.flow_pv)));
+        const pick = (value: FlowInner | undefined, fallback: FlowInner) => (value === "clock" ? "gauge" : (value ?? (off ? "none" : fallback)));
         const askedClock = ring?.flow_outer === "clock" || ring?.flow_house === "clock";
         return {
-          flow_pv: pick(ring?.flow_pv),
-          flow_house: pick(ring?.flow_house),
-          flow_grid: pick(ring?.flow_grid),
-          flow_battery: pick(ring?.flow_battery),
+          flow_pv: pick(ring?.flow_pv, DEFAULTS.ring.flow_pv),
+          flow_house: pick(ring?.flow_house, DEFAULTS.ring.flow_house),
+          flow_grid: pick(ring?.flow_grid, DEFAULTS.ring.flow_grid),
+          flow_battery: pick(ring?.flow_battery, DEFAULTS.ring.flow_battery),
           flow_outer: ring?.flow_outer === "clock" ? "none" : (ring?.flow_outer ?? DEFAULTS.ring.flow_outer),
           flow_clock: ring?.flow_clock ?? (askedClock ? "house" : DEFAULTS.ring.flow_clock)
         };

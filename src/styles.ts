@@ -1286,7 +1286,7 @@ export const cardStyles = css`
   .flow-view {
     display: block;
     width: 100%;
-    max-width: 400px;
+    max-width: 480px;
     height: auto;
     margin: 0 auto;
     overflow: visible;
@@ -1294,7 +1294,7 @@ export const cardStyles = css`
 
   .flow-view.size-s { max-width: 320px; }
   .flow-view.size-m { max-width: 400px; }
-  .flow-view.size-l { max-width: 480px; }
+  .flow-view.size-l { max-width: 560px; }
 
   .fv-disc {
     fill: var(--sst-inset);
@@ -1428,6 +1428,15 @@ export const cardStyles = css`
   }
 
   .fv-track.thin { stroke-width: 3; opacity: 0.6; }
+  .fv-track.soc { stroke-width: 6; opacity: 0.6; }
+  .fv-clock.soc { stroke-width: 6; }
+
+  /* The arrowhead at the end the power flows to, in the line's colour. */
+  .fv-arrow { fill: var(--sst-track); }
+  .fv-arrow.solar { fill: var(--sst-sun); }
+  .fv-arrow.battery { fill: var(--sst-leaf); }
+  .fv-arrow.grid { fill: var(--sst-grid); }
+  .fv-arrow.grid.import { fill: var(--power-origin-import-color, #e5484d); }
 
   .fv-now {
     fill: var(--sst-ink);

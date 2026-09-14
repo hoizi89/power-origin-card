@@ -1524,22 +1524,19 @@ export class PowerOriginCard extends LitElement {
     const clockMode = config.ring.flow_clock;
     const share = (value: number) => Math.min(1, Math.max(0, value));
 
-    // The layout follows the clock. "house" grows the house and hangs the day
-    // around it; "ring" makes the house the big ring the standard view draws;
-    // "strip" leaves the flow alone and lays the day out beneath it.
+    // Nothing is written under the circles: the icon says what, the figure how
+    // much, the arrow which way, the ring how far. The layout follows the clock.
+    const SR = 32;
     const L =
       clockMode === "house"
-        ? { hy: 156, hr: 40, clockR: 54, clockW: 7, pvLine: 80, sideLine: 0, houseLabel: 246, height: 256 }
+        ? { hy: 160, hr: 44, py: 40, clockR: 58, clockW: 7, pvLine: 80, sideLine: 96, height: 240 }
         : clockMode === "ring"
-          ? { hy: 150, hr: 52, clockR: 66, clockW: 5, pvLine: 63, sideLine: 90, houseLabel: 250, height: 260 }
-          : { hy: 142, hr: 36, clockR: 0, clockW: 0, pvLine: 106, sideLine: 124, houseLabel: outer === "none" ? 198 : 202, height: clockMode === "strip" ? 268 : outer === "none" ? 214 : 218 };
+          ? { hy: 152, hr: 54, py: 36, clockR: 68, clockW: 5, pvLine: 0, sideLine: 88, height: 240 }
+          : { hy: 146, hr: 42, py: 44, clockR: 0, clockW: 0, pvLine: 100, sideLine: 114, height: clockMode === "strip" ? 248 : 204 };
     const HY = L.hy;
-    const SR = 28;
-    const PY = clockMode === "ring" ? 34 : 40;
-    const sideLabel = HY + SR + 20;
-    // The lines end where the house's outermost ring begins.
-    const houseEdge = L.clockR ? L.clockR + L.clockW / 2 + 2 : L.hr + 2;
-    const sideLineEnd = L.sideLine || 160 - houseEdge - 2;
+    const PY = L.py;
+    const GX = 46;
+    const BX = 274;
 
     const arc = (cx: number, cy: number, r: number, part: number | undefined, tone: string) =>
       part === undefined
@@ -1579,14 +1576,21 @@ export class PowerOriginCard extends LitElement {
       </g>`;
     };
 
-    // One word under a circle, and only where it says something the circle does not.
-    const word = (x: number, y: number, text: string | undefined) =>
-      text ? svg`<text class="fv-verb" x="${x}" y="${y}" text-anchor="middle">${text}</text>` : nothing;
-
+    // A line between two circles, and an arrowhead at the end the power flows to.
     const line = (tone: string, x1: number, y1: number, x2: number, y2: number, power: number | undefined, out: boolean) => {
       const on = power !== undefined && Math.abs(power) > LIVE_KW;
+      if (x1 === x2 ? y2 <= y1 : x2 <= x1 && y1 === y2 && x1 < 160) return nothing;
+      const vertical = x1 === x2;
+      // The line runs from the outer circle to the house; "out" sends the arrow back the other way.
+      const tipX = out ? x1 : x2;
+      const tipY = out ? y1 : y2;
+      const dir = out ? -1 : 1;
+      const head = vertical
+        ? `M${tipX},${tipY} l-4,${-6 * dir} h8 z`
+        : `M${tipX},${tipY} l${-6 * dir * (x2 > x1 ? 1 : -1)},-4 v8 z`;
       return svg`<line class="fv-line ${tone} ${on ? "on" : ""} ${on && dots ? "dots" : ""} ${on && out ? "rev" : ""}"
-        x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
+          x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>
+        ${on ? svg`<path class="fv-arrow ${tone}" d="${head}"></path>` : nothing}`;
     };
 
     // The house by origin: the ring's own question, in small.
@@ -1618,11 +1622,19 @@ export class PowerOriginCard extends LitElement {
         : live.grid > 0
           ? live.grid / Math.max(swing.down, live.grid, 0.001)
           : -live.grid / Math.max(swing.up, -live.grid, 0.001);
+    const cell = this._cellSwing;
+    const cellPart =
+      live.battery === undefined || cell === undefined
+        ? undefined
+        : live.battery > 0
+          ? live.battery / Math.max(cell.discharge, live.battery, 0.001)
+          : -live.battery / Math.max(cell.charge, -live.battery, 0.001);
     const importing = live.grid > LIVE_KW;
     const gridTone = `grid ${importing && config.ring.import_red ? "import" : ""}`;
 
-    // The day around the house: 24 segments, midnight at the bottom, in the
-    // colour of what carried each hour, with a dial and a hand for now.
+    // The day around the house: 24 segments, midnight at the bottom under a
+    // moon, noon at the top under a sun, in the colour of what carried each
+    // hour, with ticks at six and eighteen and a hand for now.
     const hours = this._hours ?? [];
     const SEG = 100 / 24;
     const nowAt = (() => {
@@ -1640,6 +1652,8 @@ export class PowerOriginCard extends LitElement {
       const rOut = r + L.clockW / 2 + 2;
       const [x1, y1] = at(nowAt, rIn);
       const [x2, y2] = at(nowAt, rOut);
+      const [sx, sy] = at(12, rOut + 9);
+      const [mx, my] = at(0, rOut + 9);
       return svg`${Array.from({ length: 24 }, (_, hh) => {
           const h = filled ? hours.find((x) => x.hour === hh) : undefined;
           const tone = h?.dominant ?? "empty";
@@ -1654,18 +1668,14 @@ export class PowerOriginCard extends LitElement {
           const [bx, by] = at(hh, rOut + 9);
           return svg`<line class="fv-tick" x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}"></line>`;
         })}
-        ${(() => {
-          const [sx, sy] = at(12, rOut + 9);
-          const [mx, my] = at(0, rOut + 9);
-          return svg`<g class="clock-mark sun" transform="translate(${sx.toFixed(1)} ${sy.toFixed(1)}) scale(0.8)">
-              <circle cx="0" cy="0" r="2.7"></circle>
-              <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
-                       M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
-                       M-3.3,3.3 L-4.4,4.4"></path>
-            </g>
-            <path class="clock-mark moon" transform="translate(${(mx - 2.4).toFixed(1)} ${(my - 3).toFixed(1)})"
-                  d="M0,0 a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>`;
-        })()}
+        <g class="clock-mark sun" transform="translate(${sx.toFixed(1)} ${sy.toFixed(1)}) scale(0.8)">
+          <circle cx="0" cy="0" r="2.7"></circle>
+          <path d="M0,-6.2 L0,-4.6 M0,4.6 L0,6.2 M-6.2,0 L-4.6,0 M4.6,0 L6.2,0
+                   M-4.4,-4.4 L-3.3,-3.3 M3.3,3.3 L4.4,4.4 M4.4,-4.4 L3.3,-3.3
+                   M-3.3,3.3 L-4.4,4.4"></path>
+        </g>
+        <path class="clock-mark moon" transform="translate(${(mx - 2.4).toFixed(1)} ${(my - 3).toFixed(1)})"
+              d="M0,0 a5.2,5.2 0 1,0 4.7,-3 a4,4 0 1,1 -4.7,3 z"></path>
         <line class="fv-hand" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"></line>`;
     };
 
@@ -1676,7 +1686,7 @@ export class PowerOriginCard extends LitElement {
       const x0 = 20;
       const w = 280;
       const cw = w / 24;
-      const y = 232;
+      const y = 214;
       const h = 12;
       const filled = worthDrawing(hours);
       const forecast = new Set(
@@ -1721,6 +1731,15 @@ export class PowerOriginCard extends LitElement {
             transform="rotate(-90 ${cx} ${cy})"></circle>`;
         })}`;
     };
+    // The battery's charge as a ring of its own: thick, because it is the one
+    // figure about the store that everyone wants at a glance.
+    const socRing = (cx: number, cy: number, r: number) =>
+      live.soc === undefined
+        ? undefined
+        : svg`<circle class="fv-track soc" cx="${cx}" cy="${cy}" r="${r}"></circle>
+          <circle class="fv-clock soc battery" cx="${cx}" cy="${cy}" r="${r}" pathLength="100"
+            stroke-dasharray="${share(live.soc / 100 * 100 / 100).toFixed(2) === "0.00" ? "0.00" : (share(live.soc / 100) * 100).toFixed(2)} 100"
+            transform="rotate(-90 ${cx} ${cy})"></circle>`;
     const todayKwh = (id: string | undefined) => energyKwh(stateOf(hass, id));
     const produced = todayKwh(config.entities.solar_today);
     const expected = this._kwhOf(config.entities.forecast);
@@ -1732,17 +1751,10 @@ export class PowerOriginCard extends LitElement {
       return [a / top / 2, b / top / 2];
     };
     const [expShare, impShare] = halves(exported, imported);
-    const cell = this._cellSwing;
-    const cellPart =
-      live.battery === undefined || cell === undefined
-        ? undefined
-        : live.battery > 0
-          ? live.battery / Math.max(cell.discharge, live.battery, 0.001)
-          : -live.battery / Math.max(cell.charge, -live.battery, 0.001);
 
     type Circle = "pv" | "house" | "grid" | "battery";
     const centre = (circle: Circle): [number, number] =>
-      circle === "pv" ? [160, PY] : circle === "house" ? [160, HY] : circle === "grid" ? [48, HY] : [272, HY];
+      circle === "pv" ? [160, PY] : circle === "house" ? [160, HY] : circle === "grid" ? [GX, HY] : [BX, HY];
     // What a circle wears inside its rim, or outside it: the live gauge, or how
     // far today has come. The clock is the house's alone and drawn apart.
     const ringFor = (circle: Circle, r: number, kind: string, cls: string): unknown => {
@@ -1763,10 +1775,10 @@ export class PowerOriginCard extends LitElement {
             : undefined;
         }
         if (circle === "grid") return dayArc(cx, cy, r, cls, [{ tone: "solar", share: expShare }, { tone: "grid", share: impShare, back: true }]);
-        return live.soc === undefined ? undefined : dayArc(cx, cy, r, cls, [{ tone: "battery", share: live.soc / 100 }]);
+        return cls === "out" ? socRing(cx, cy, r) : live.soc === undefined ? undefined : dayArc(cx, cy, r, cls, [{ tone: "battery", share: live.soc / 100 }]);
       }
       // The live gauge: PV against today's peak, the house by origin, the grid
-      // against today's most in that direction, the battery by its charge.
+      // and the battery against today's most in that direction.
       if (circle === "pv") return arc(cx, cy, r, pvPart, "solar");
       if (circle === "house") return houseRing;
       if (circle === "grid") return arc(cx, cy, r, gridPart, gridTone);
@@ -1785,41 +1797,38 @@ export class PowerOriginCard extends LitElement {
     const autarkic = `${formatNumber(flow.autarky * 100, locale, 0)} % ${localize("live.autarkic", locale)}`;
     const aria = [
       live.pv === undefined ? "" : `${localize("live.pv", locale)} ${formatPower(live.pv, locale)} kW`,
-      `${localize("live.house", locale)} ${formatPower(live.house, locale)} kW`,
+      `${localize("live.house", locale)} ${formatPower(live.house, locale)} kW, ${autarkic}`,
       `${localize("live.grid", locale)} ${formatPower(Math.abs(live.grid), locale)} kW ${localize(this._gridWord(live.grid), locale)}`,
       live.battery === undefined
         ? ""
-        : `${localize("live.battery", locale)} ${formatPower(Math.abs(live.battery), locale)} kW ${localize(this._batteryWord(live.battery, live.mode), locale)}`
+        : `${localize("live.battery", locale)} ${formatPower(Math.abs(live.battery), locale)} kW ${localize(this._batteryWord(live.battery, live.mode), locale)}${
+            live.soc === undefined ? "" : `, ${formatNumber(live.soc, locale, 0)} %`
+          }`
     ].filter(Boolean).join(", ");
 
     return html`
       <div class="ring-block flowview ${chip ? "chipped" : ""}">
         ${chip ?? nothing}
         <svg class="flow-view size-${config.ring.size}" viewBox="0 0 320 ${L.height}" role="img" aria-label="${aria}">
-          ${live.pv === undefined ? nothing : line("solar", 160, PY + SR, 160, L.pvLine, live.pv, false)}
-          ${line(gridTone, 48 + SR, HY, sideLineEnd, HY, live.grid, live.grid < 0)}
-          ${live.battery === undefined ? nothing : line("battery", 272 - SR, HY, 320 - sideLineEnd, HY, live.battery, live.battery < 0)}
+          ${live.pv === undefined || L.pvLine <= PY + SR ? nothing : line("solar", 160, PY + SR, 160, L.pvLine, live.pv, false)}
+          ${line(gridTone, GX + SR, HY, L.sideLine, HY, live.grid, live.grid < 0)}
+          ${live.battery === undefined ? nothing : line("battery", BX - SR, HY, 320 - L.sideLine, HY, live.battery, live.battery < 0)}
 
           ${live.pv === undefined
             ? nothing
             : svg`${pvOuter}${node("solar", config.entities.solar, 160, PY, SR, formatPower(live.pv, locale), "kW",
                 pvInner, FLOW_ICONS.sun, live.pv < LIVE_KW)}`}
 
-          ${houseOuter}${node("house", config.entities.house, 160, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, FLOW_ICONS.house, false, L.hr > 40)}
-          ${word(160, L.houseLabel, autarkic)}
+          ${houseOuter}${node("house", config.entities.house, 160, HY, L.hr, formatPower(live.house, locale), "kW", houseInner, FLOW_ICONS.house, false, L.hr > 44)}
 
-          ${gridOuter}${node(gridTone, config.entities.grid_power, 48, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
+          ${gridOuter}${node(gridTone, config.entities.grid_power, GX, HY, SR, formatPower(Math.abs(live.grid), locale), "kW",
             gridInner, FLOW_ICONS.grid, !importing && live.grid > -LIVE_KW)}
-          ${word(48, sideLabel, Math.abs(live.grid) > LIVE_KW ? localize(this._gridWord(live.grid), locale) : undefined)}
 
           ${live.battery === undefined
             ? nothing
-            : svg`${batteryOuter}${node("battery", config.entities.battery_power, 272, HY, SR,
+            : svg`${batteryOuter}${node("battery", config.entities.battery_power, BX, HY, SR,
                 formatPower(Math.abs(live.battery), locale), "kW",
-                batteryInner, FLOW_ICONS.battery)}
-              ${word(272, sideLabel, live.soc === undefined
-                ? localize(this._batteryWord(live.battery, live.mode), locale)
-                : `${formatNumber(live.soc, locale, 0)} %`)}`}
+                batteryInner, FLOW_ICONS.battery)}`}
           ${strip}
         </svg>
       </div>

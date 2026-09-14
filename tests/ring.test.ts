@@ -165,16 +165,16 @@ describe("the ring's views", () => {
     const { root } = await render(config({ ring: { view: "flow" } }), charging);
     expect(root.querySelector(".ring")).toBeNull();
     expect(root.querySelectorAll(".fv-node").length).toBe(4);
-    const words = text(root);
-    expect(words).toContain("52 %");
-    expect(words).toContain("speist ein");
-    // Every circle carries its icon behind the figure.
+    // Nothing is written under the circles; the icons say what, the arrows which way.
+    expect(root.querySelectorAll(".fv-verb").length).toBe(0);
     expect(root.querySelectorAll(".fv-icon").length).toBe(4);
+    // Exporting and charging: the grid's arrow points away from the house, the battery's towards the store.
+    expect(root.querySelectorAll(".fv-arrow").length).toBe(3);
+    expect(root.querySelector(".flow-view")?.getAttribute("aria-label")).toContain("speist ein");
     // Charging: the store's dots run away from the house.
     expect(root.querySelector(".fv-line.battery.on.dots.rev")).toBeTruthy();
     // The ring outside the store is filled to its charge.
-    const around = [...root.querySelectorAll(".fv-clock.out.battery")].find((c) => c.getAttribute("cx") === "272");
-    expect(around?.getAttribute("stroke-dasharray")).toBe("52.00 100");
+    expect(root.querySelector(".fv-clock.soc")?.getAttribute("stroke-dasharray")).toBe("52.00 100");
   });
 
   it("runs the dots toward the house while the battery carries it, and can stand still", async () => {
@@ -185,21 +185,24 @@ describe("the ring's views", () => {
     expect(still.root.querySelector(".fv-line.dots")).toBeNull();
     expect(still.root.querySelector(".fv-arc")).toBeNull();
     expect(still.root.querySelectorAll(".fv-rim").length).toBe(4);
+    // Carrying the house, the battery's arrow points at the house.
+    expect(still.root.querySelector(".fv-arrow.battery")).toBeTruthy();
   });
 
   it("calls a full battery full, not charging, on a trickle", async () => {
     const full: Scenario = { ...charging, name: "full", soc: 100, battery: -27 };
     const { root } = await render(config({ ring: { view: "flow" } }), full);
-    const words = text(root);
-    expect(words).toContain("100 %");
     const aria = root.querySelector(".flow-view")?.getAttribute("aria-label") ?? "";
+    expect(aria).toContain("100 %");
     expect(aria).toContain("voll");
     expect(aria).not.toContain("lädt");
   });
 
   it("can run today's share around each circle, and the day's clock at the house", async () => {
     const day = await render(config({ ring: { view: "flow", flow_outer: "day" } }), charging);
-    expect(day.root.querySelectorAll(".fv-track.thin").length).toBe(4);
+    // Three thin day rings; the battery wears its charge as a thick one instead.
+    expect(day.root.querySelectorAll(".fv-track.thin").length).toBe(3);
+    expect(day.root.querySelectorAll(".fv-track.soc").length).toBe(1);
     expect(day.root.querySelectorAll(".fv-clock.solar").length).toBeGreaterThan(0);
     const house = await render(config({ ring: { view: "flow", flow_clock: "house" } }), charging);
     expect(house.root.querySelectorAll(".fv-clock.big").length).toBe(24);
@@ -226,7 +229,7 @@ describe("the ring's views", () => {
   });
 
   it("lets each circle wear today's share, the gauge or nothing", async () => {
-    const mixed = await render(config({ ring: { view: "flow", flow_house: "day", flow_battery: "day", flow_pv: "none" } }), charging);
+    const mixed = await render(config({ ring: { view: "flow", flow_house: "day", flow_battery: "day", flow_pv: "none", flow_grid: "gauge" } }), charging);
     expect(mixed.root.querySelectorAll(".fv-clock.in").length).toBeGreaterThan(0);
     expect(mixed.root.querySelectorAll(".fv-node.solar .fv-rim").length).toBe(1);
     expect(mixed.root.querySelectorAll(".fv-node.battery .fv-track").length).toBe(1);
