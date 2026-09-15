@@ -865,6 +865,25 @@ export class PowerOriginCard extends LitElement {
       config.ring.facts === "none" &&
       config.ring.columns !== "two";
 
+    // Quiet night: what has nothing to say once the sun is down steps aside.
+    const quiet = config.night_layout === "quiet" && sunDown;
+    const shown = blockOrder(config).filter((block) => config.sections[block]);
+    const wideOn = config.shape === "wide" && this._wideOn;
+    // Without a ring the day is the first thing on the card; the word rides
+    // in its corner instead, beside the paid-off share.
+    const chipRidesToday =
+      !config.title &&
+      price === undefined &&
+      !chipRidesRing &&
+      config.shape !== "compact" &&
+      !quiet &&
+      shown[0] === "today";
+    const headShown =
+      Boolean(config.title) || (showChip && !chipRidesRing && !chipRidesToday) || price !== undefined;
+    const sunbarShown = config.head_sunbar && !config.sections.chart;
+    // With nothing above it the day needs no line to part it from anything.
+    const todayTop = !headShown && !sunbarShown && shown[0] === "today" && !wideOn;
+
     return html`
       <!-- One class swaps the grid token for the whole card, so the same
            kilowatts wear the same colour wherever they appear. -->
@@ -872,20 +891,18 @@ export class PowerOriginCard extends LitElement {
         class="${(config.ring.import_red && flow.fromGrid > 0) || (config.ring.import_switch && alarm) ? "import-alarm" : ""} ${
           config.shape === "wide" && this._wideOn ? "wide" : ""
         } ${config.night_dim > 0 && sunDown ? "night" : ""} ${config.font === "system" ? "font-system" : ""} ${config.palette === "standard" ? "" : "palette-" + config.palette}">
-        ${config.title || (showChip && !chipRidesRing) || price !== undefined
+        ${headShown
           ? html`<div class="head ${config.title || price !== undefined ? "" : "bare"}">
               ${config.title || price !== undefined
                 ? html`<span class="head-left">${config.title ? html`<p class="title">${config.title}</p>` : nothing}${priceTag}</span>`
                 : nothing}
-              ${showChip && !chipRidesRing ? chip : nothing}
+              ${showChip && !chipRidesRing && !chipRidesToday ? chip : nothing}
             </div>`
           : nothing}
-        ${config.head_sunbar && !config.sections.chart ? this._renderSunbar(sunDown, locale) : nothing}
+        ${sunbarShown ? this._renderSunbar(sunDown, locale) : nothing}
         ${config.shape === "compact"
           ? this._renderCompact(flow, locale, config.ring.import_switch && alarm)
           : (() => {
-              // Quiet night: what has nothing to say once the sun is down steps aside.
-              const quiet = config.night_layout === "quiet" && sunDown;
               const ring = config.sections.ring
                 ? this._renderRing(
                     flow,
@@ -897,7 +914,6 @@ export class PowerOriginCard extends LitElement {
                 : nothing;
               // Which block is the foot depends on what is switched on, not on
               // what the order names.
-              const shown = blockOrder(config).filter((block) => config.sections[block]);
               const blocks = {
                 ring,
                 chart: config.sections.chart ? this._renderChart(locale, quiet) : nothing,
@@ -905,13 +921,16 @@ export class PowerOriginCard extends LitElement {
                 battery: config.sections.battery ? this._renderBattery(locale) : nothing,
                 today:
                   config.sections.today && !quiet
-                    ? this._renderToday(flow, locale, shown.at(-1) === "today")
+                    ? this._renderToday(flow, locale, shown.at(-1) === "today", {
+                        top: todayTop,
+                        chip: chipRidesToday && showChip ? chip : undefined
+                      })
                     : nothing,
                 devices: config.sections.devices && !quiet ? this._renderDevices(locale) : nothing
               };
               const order = blockOrder(config);
               // Wide keeps the ring on its own side, whatever the order says.
-              return config.shape === "wide" && this._wideOn
+              return wideOn
                 ? html`<div class="side">${ring}</div>
                     <div class="main">${order.filter((b) => b !== "ring").map((b) => blocks[b])}</div>`
                 : html`${order.map((b) => blocks[b])}`;
@@ -4117,9 +4136,14 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
-  private _renderToday(flow: Flow, locale: string, foot = true) {
+  private _renderToday(
+    flow: Flow,
+    locale: string,
+    foot = true,
+    place: { top?: boolean; chip?: unknown } = {}
+  ) {
     const config = this._config as ResolvedConfig;
-    const money = config.today.money ? this._renderMoney(locale) : nothing;
+    const money = config.today.money ? this._renderMoney(locale, place.chip) : nothing;
     // In autarky mode the ring already prints this very percentage.
     const ringShowsAutarky =
       !config.today.stats_chosen && config.sections.ring && this._centreShown === "autarky";
@@ -4129,12 +4153,15 @@ export class PowerOriginCard extends LitElement {
       .map((stat) => this._renderStat(stat, flow, locale))
       .filter((item) => item !== nothing);
 
-    if (money === nothing && stats.length === 0) return nothing;
+    if (money === nothing && stats.length === 0) {
+      return place.chip ? html`<div class="head bare">${place.chip}</div>` : nothing;
+    }
 
     const earning = (numberOf(stateOf(this._hass, config.entities.cost_today)) ?? 0) < 0;
 
     return html`
-      <div class="today ${foot ? "foot" : "row"} ${earning ? "earning" : ""}">
+      <div class="today ${foot ? "foot" : "row"} ${place.top ? "top" : ""} ${earning ? "earning" : ""}">
+        ${money === nothing && place.chip ? html`<span class="today-chip">${place.chip}</span>` : nothing}
         ${money}
         ${config.today.origin_bar ? this._renderOriginBar(locale) : nothing}
         ${stats.length ? html`<div class="stats">${stats}</div>` : nothing}
@@ -4244,7 +4271,7 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
-  private _renderMoney(locale: string) {
+  private _renderMoney(locale: string, chip?: unknown) {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
     const money = moneyView({
@@ -4372,7 +4399,8 @@ export class PowerOriginCard extends LitElement {
           ${month}
         </span>
         ${breakdown}
-        ${
+        ${(() => {
+          const corner =
           paidOff === undefined || (!config.today.amortisation && !config.today.payoff_year)
             ? nothing
             : this._linked(
@@ -4383,8 +4411,10 @@ export class PowerOriginCard extends LitElement {
                     : nothing}
                   <span class="dim">${localize("stat.amortisation", locale)}</span></span
                 >`
-              )
-        }
+              );
+          // The chip stands over the paid-off share, so the pair keeps the corner.
+          return chip ? html`<span class="money-side">${chip}${corner}</span>` : corner;
+        })()}
       </div>
       ${split}
       ${payoff}

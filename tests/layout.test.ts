@@ -57,6 +57,34 @@ describe("the chip and the foot", () => {
     expect(titled.root.querySelector(".ring-block.chipped")).toBeNull();
   });
 
+  it("rides in the day's corner when the day stands alone, with no head and no line", async () => {
+    const alone = { title: undefined, chip: "always" as const, sections: { ring: false, chart: false, battery: false, devices: false, week: false } };
+    const { root } = await mount(config(alone), day);
+    expect(root.querySelector(".head")).toBeNull();
+    expect(root.querySelector(".today .chip")).toBeTruthy();
+    expect(root.querySelector(".today.foot.top")).toBeTruthy();
+
+    // A title keeps the head, the chip beside it, and the day parted by its line.
+    const titled = await mount(config({ ...alone, title: "Energie" }), day);
+    expect(titled.root.querySelector(".head .chip")).toBeTruthy();
+    expect(titled.root.querySelector(".today .chip")).toBeNull();
+    expect(titled.root.querySelector(".today.top")).toBeNull();
+
+    // Without a chip the day still starts at the card's top edge.
+    const plain = await mount(config({ ...alone, chip: "never" as const }), day);
+    expect(plain.root.querySelector(".head")).toBeNull();
+    expect(plain.root.querySelector(".today.top")).toBeTruthy();
+  });
+
+  it("keeps the chip in the head when the day is not first on the card", async () => {
+    const below = await mount(
+      config({ title: undefined, chip: "always" as const, sections: { ring: false, chart: true, battery: false, devices: false, week: false } }),
+      day
+    );
+    expect(below.root.querySelector(".today .chip")).toBeNull();
+    expect(below.root.querySelector(".today.top")).toBeNull();
+  });
+
   it("lets the day reach the card edges only where it stands last", async () => {
     const last = await mount(config({ sections: { devices: false } }), day);
     expect(last.root.querySelector(".today.foot")).toBeTruthy();

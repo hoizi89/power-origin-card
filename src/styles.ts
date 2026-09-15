@@ -744,6 +744,35 @@ export const cardStyles = css`
     border-top: 1px solid var(--sst-hairline);
   }
 
+  /* First on the card, with no head above: no line, and as the foot it fills
+     the card from its top edge instead of leaving a strip. */
+  .today.top {
+    border-top: 0;
+  }
+
+  .today.foot.top {
+    margin-top: -16px;
+    padding-top: 16px;
+  }
+
+  /* The chip in the day's corner, over the paid-off share. */
+  .money-side {
+    margin-left: auto;
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .money-side .corner {
+    margin-left: 0;
+  }
+
+  .today-chip {
+    align-self: flex-end;
+  }
+
   /* A day in credit is worth a hairline of its own. */
   .today.earning {
     box-shadow: inset 0 2px 0 -1px var(--sst-leaf);
