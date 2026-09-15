@@ -258,6 +258,15 @@ describe("the ring's views", () => {
     expect(upright.root.querySelector("svg.meter")?.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
   });
 
+  it("stacks two flat bars beside the ring and keeps the chosen size", async () => {
+    const { root } = await render(config({ ring: { columns: "two", meter_layout: "flat", size: "l" } }), day);
+    const group = root.querySelector(".ring-group");
+    expect(group?.classList.contains("flat")).toBe(true);
+    expect(group?.classList.contains("size-l")).toBe(true);
+    expect(group?.querySelectorAll(".meter-block").length).toBe(2);
+    expect(group?.querySelectorAll("svg.meter[preserveAspectRatio=\"none\"]").length).toBe(2);
+  });
+
   it("stands the column on the ring's right when asked", async () => {
     const { root } = await render(config({ ring: { meter_side: "right" } }), day);
     expect(root.querySelector(".ring-group")?.classList.contains("meter-right")).toBe(true);

@@ -420,6 +420,20 @@ shots["columns-night"] = {
   )
 };
 
+/* The column lying flat: one bar on the ring's middle line, two stacked, and the large size on the right. */
+shots["flat"] = {
+  width: 3 * 300 + 28,
+  pre: `globalThis.__at = "16:30";`,
+  body: ringRow(
+    [
+      { ...RING_ONLY, ring: { center: "power", meter: true, meter_shows: "grid", meter_layout: "flat", facts: "none" } },
+      { ...RING_ONLY, ring: { center: "power", columns: "two", meter_shows: "grid", meter_second_shows: "roof", meter_layout: "flat", facts: "none" } },
+      { ...RING_ONLY, ring: { center: "power", meter: true, meter_shows: "day", meter_layout: "flat", meter_side: "right", facts: "none", size: "l" } }
+    ],
+    "MIDDAY"
+  )
+};
+
 shots["columns-day"] = {
   width: 3 * 300 + 28,
   body: `const DEV = [["sensor.wp_power", "Wärmepumpe", 1840], ["sensor.dish_power", "Geschirrspüler", 1120], ["sensor.desk_power", "Büro", 167], ["sensor.nas_power", "NAS", 20]];

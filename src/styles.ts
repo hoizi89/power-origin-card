@@ -1468,51 +1468,131 @@ export const cardStyles = css`
 
   /* The column lying flat: the same drawing turned on its side and stretched
      to a bar, the bottom of the column at the left. The box is the bar's, the
-     drawing is pulled back into it after the turn. */
+     drawing is pulled back into it after the turn.
+
+     The group is a grid: the bars in one track, the ring in the other. One
+     bar spans both rows, as the ring does, so its middle line is the ring's;
+     a second bar takes the second row and the first bar makes room. The
+     group is as wide as its room and no wider than bar and ring together:
+     both give way in proportion. Each bar block is a grid
+     of its own, the bar in the middle row, the words below, the ceiling
+     figure above. The bar's length is the block's width, read in container
+     units, so a bar follows its track when the ring has already given way. */
   .ring-group.flat {
-    gap: 16px;
+    --meter-t: 38px;
+    --meter-len: 150px;
+    --ring-w: 190px;
+    --meter-fr: 150fr;
+    --ring-fr: 190fr;
+    --flat-gap: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, var(--meter-fr)) minmax(0, var(--ring-fr));
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: var(--flat-gap);
+    row-gap: 10px;
+    width: 100%;
+    max-width: calc(var(--meter-len) + var(--flat-gap) + var(--ring-w));
+    justify-content: center;
+  }
+
+  .ring-group.flat.meter-right {
+    grid-template-columns: minmax(0, var(--ring-fr)) minmax(0, var(--meter-fr));
   }
 
   .ring-group.flat > .meter-block {
-    --meter-t: 38px;
-    --meter-len: 150px;
-    flex: 0 0 var(--meter-len);
-    width: var(--meter-len);
-    align-items: flex-start;
+    container-type: inline-size;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: 100%;
+    gap: 0;
+    align-self: stretch;
+    width: auto;
+    min-width: 0;
+    grid-column: 1;
+    grid-row: 1 / 3;
   }
 
-  /* The bar keeps its length; the ring gives way instead of covering it. */
+  .ring-group.flat > .meter-block:first-of-type:has(~ .meter-block) {
+    grid-row: 1;
+  }
+
+  .ring-group.flat > .meter-block:last-of-type:not(:first-of-type) {
+    grid-row: 2;
+  }
+
+  .ring-group.flat.meter-right > .meter-block {
+    grid-column: 2;
+  }
+
   .ring-group.flat > .ring {
-    max-width: 190px;
+    grid-column: 2;
+    grid-row: 1 / 3;
+    max-width: var(--ring-w);
+  }
+
+  .ring-group.flat.meter-right > .ring {
+    grid-column: 1;
   }
 
   .ring-group.flat > .meter-block > .meter {
+    grid-row: 2;
     width: var(--meter-t);
-    height: var(--meter-len);
+    height: 100cqw;
     transform-origin: 0 0;
-    transform: translate(var(--meter-len), 0) rotate(90deg);
-    margin-bottom: calc(var(--meter-t) - var(--meter-len));
+    transform: translate(100cqw, 0) rotate(90deg);
+    margin-bottom: calc(var(--meter-t) - 100cqw);
   }
 
   .ring-group.flat > .meter-block > .meter-label {
+    grid-row: 3;
+    align-self: start;
+    justify-self: start;
     width: auto;
-    max-width: var(--meter-len);
-    margin: 0;
+    max-width: 100%;
+    margin: 6px 0 0;
     align-items: flex-start;
     text-align: left;
   }
 
   .ring-group.flat > .meter-block > .meter-top {
-    align-self: flex-end;
+    grid-row: 1;
+    align-self: end;
+    justify-self: end;
+    margin-bottom: 4px;
+  }
+
+  /* A chosen size sets bar and ring together; the room only trims the automatic one. */
+  .ring-group.flat.size-s {
+    --meter-t: 32px;
+    --meter-len: 120px;
+    --ring-w: 168px;
+    --meter-fr: 120fr;
+    --ring-fr: 168fr;
+  }
+
+  .ring-group.flat.size-m {
+    --meter-t: 38px;
+    --meter-len: 150px;
+    --ring-w: 200px;
+    --meter-fr: 150fr;
+    --ring-fr: 200fr;
+  }
+
+  .ring-group.flat.size-l {
+    --meter-t: 46px;
+    --meter-len: 190px;
+    --ring-w: 252px;
+    --meter-fr: 190fr;
+    --ring-fr: 252fr;
   }
 
   @container (max-width: 339px) {
-    .ring-group.flat > .meter-block {
+    .ring-group.flat.size-auto {
       --meter-len: 110px;
-    }
-
-    .ring-group.flat > .ring {
-      max-width: 150px;
+      --ring-w: 150px;
+      --meter-fr: 110fr;
+      --ring-fr: 150fr;
     }
   }
 
