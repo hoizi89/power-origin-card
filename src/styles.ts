@@ -629,6 +629,14 @@ export const cardStyles = css`
     color: var(--sst-muted);
   }
 
+  .key-battery {
+    color: var(--sst-leaf);
+  }
+
+  .key-grid {
+    color: var(--sst-grid);
+  }
+
   .key-house {
     color: var(--sst-ink);
     opacity: 0.8;
@@ -1709,6 +1717,23 @@ export const cardStyles = css`
   .layer-battery {
     fill: var(--sst-leaf);
     opacity: 0.22;
+  }
+
+  /* Among hourly bars: the grid at the foot, the battery standing on it. */
+  .carried-bar.carried-grid {
+    fill: var(--sst-grid);
+    opacity: 0.9;
+  }
+
+  .carried-bar.carried-battery {
+    fill: var(--sst-leaf);
+    opacity: 0.9;
+  }
+
+  /* Where the sun was down, inside a window that runs through the night. */
+  .night-band {
+    fill: var(--sst-ink);
+    opacity: 0.05;
   }
 
   /* Seven days: bars for the roof, a dot above each for how much of the house

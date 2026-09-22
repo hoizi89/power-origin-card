@@ -244,8 +244,16 @@ export interface LegacyRingOptions {
   legend?: boolean;
 }
 
+/** What the chart spans: the solar day, or a window that slides with the clock. */
+export type ChartSpan = "day" | "12h" | "24h";
+
 export interface ChartOptions {
   style?: ChartStyle;
+  /**
+   * `day`: sunrise to sunset. `12h`/`24h`: the hours up to now, across midnight — the
+   * evening and the night after it in one picture, which is where `layers` says most.
+   */
+  span?: ChartSpan;
   consumption?: boolean;
   show_forecast?: boolean;
   compare?: boolean;

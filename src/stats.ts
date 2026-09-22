@@ -73,7 +73,8 @@ export function clearStatisticsCache(): void {
 export async function fetchStatistics(
   hass: HomeAssistant,
   ids: string[],
-  now = new Date()
+  now = new Date(),
+  from: Date = startOfToday(now)
 ): Promise<Record<string, StatisticPoint[]>> {
   const wanted = ids.filter(Boolean);
   if (wanted.length === 0) return {};
@@ -81,7 +82,7 @@ export async function fetchStatistics(
   const request = (period: "5minute" | "hour") =>
     hass.callWS<StatisticsResponse>({
       type: "recorder/statistics_during_period",
-      start_time: startOfToday(now).toISOString(),
+      start_time: from.toISOString(),
       end_time: now.toISOString(),
       statistic_ids: wanted,
       period,
@@ -106,13 +107,15 @@ export function buildDaySeries(
   houseRows: StatisticPoint[],
   divisor: number,
   now = new Date(),
-  windowMinutes = 30
+  windowMinutes = 30,
+  /** Where the series begins: midnight, unless a sliding window asks for earlier. */
+  from: number = startOfToday(now).getTime()
 ): DaySeries {
-  const start = startOfToday(now).getTime();
+  const start = from;
   const end = now.getTime();
   const rows = solarRows.length >= houseRows.length ? solarRows : houseRows;
   const step = rows.length > 1 ? Math.max(FIVE_MINUTES, rows[1].start - rows[0].start) : FIVE_MINUTES;
-  const count = Math.max(2, Math.min(288, Math.ceil((end - start) / step) + 1));
+  const count = Math.max(2, Math.min(300, Math.ceil((end - start) / step) + 1));
 
   const timestamps = Array.from({ length: count }, (_, index) =>
     Math.min(end, start + index * step)

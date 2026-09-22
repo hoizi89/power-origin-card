@@ -87,6 +87,7 @@ export const DEFAULTS = {
   },
   chart: {
     style: "area" as const,
+    span: "day" as const,
     consumption: true,
     show_forecast: true,
     compare: false,
@@ -316,7 +317,11 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
               ? "plain"
               : DEFAULTS.ring.facts)
     },
-    chart: { ...DEFAULTS.chart, ...config.chart },
+    chart: {
+      ...DEFAULTS.chart,
+      ...config.chart,
+      span: config.chart?.span === "12h" || config.chart?.span === "24h" ? config.chart.span : DEFAULTS.chart.span
+    },
     battery: {
       ...DEFAULTS.battery,
       ...config.battery,
@@ -1324,6 +1329,19 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           }
         },
         {
+          name: "span",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "day", label: t("editor.span_day") },
+                { value: "12h", label: t("editor.span_12h") },
+                { value: "24h", label: t("editor.span_24h") }
+              ]
+            }
+          }
+        },
+        {
           type: "grid",
           schema: [
             { name: "consumption", selector: { boolean: {} } },
@@ -1751,6 +1769,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     forecast_hourly: t("editor.forecast_hourly"),
     forecast_bars: t("editor.forecast_bars"),
     layers: t("editor.layers"),
+    span: t("editor.span"),
     best_day: t("editor.best_day"),
     week: t("editor.section_week"),
     cost_today: t("editor.cost_today"),
@@ -1912,6 +1931,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     forecast_hourly: t("editor.help_forecast_hourly"),
     forecast_bars: t("editor.help_forecast_bars"),
     layers: t("editor.help_layers"),
+    span: t("editor.help_span"),
     best_day: t("editor.help_best_day"),
     curve: t("editor.help_curve"),
     month: t("editor.help_month"),

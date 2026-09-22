@@ -15,11 +15,11 @@ import { pickFromEnergy, type EnergyPrefs } from "./energy";
 import { hourlyForecastAll, shortfall, snowSeason, type ForecastHour } from "./forecast";
 import { byArea, byIcon, iconFor, rankDevices, type DeviceReading } from "./devices";
 import { fetchRecentMeans, fetchRecentSeries, fetchTodayChange, runMinutes } from "./stats";
-import { hourlyShares, worthDrawing, type HourShare } from "./hours";
+import { hourlyShares, windowEnergy, windowShares, worthDrawing, type HourShare, type Signs, type WindowShare } from "./hours";
 import { localize } from "./localize";
 import { moneyView } from "./money";
 import { balanceView, METER_HEIGHT, meterGeometry } from "./meter";
-import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, recentMean, startOfToday, toMillis } from "./stats";
+import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, integrate, recentMean, startOfToday, toMillis } from "./stats";
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
@@ -74,6 +74,7 @@ export class PowerOriginCard extends LitElement {
     _config: { state: true },
     _series: { state: true },
     _hours: { state: true },
+    _window: { state: true },
     _error: { state: true },
     _cycleAt: { state: true },
     _weekPick: { state: true },
@@ -87,6 +88,8 @@ export class PowerOriginCard extends LitElement {
   private _config?: ResolvedConfig;
   private _series?: DaySeries;
   private _hours?: HourShare[];
+  /** The chart's sliding window: its own series and hours, since the day's begin at midnight. */
+  private _window?: { from: number; to: number; series: DaySeries; shares: WindowShare[] };
   private _swing?: { up: number; down: number };
   /** The battery's largest charge and discharge today, in kW, for the flow's gauge. */
   private _cellSwing?: { charge: number; discharge: number };
@@ -459,15 +462,20 @@ export class PowerOriginCard extends LitElement {
       } else {
         this._swing = undefined;
       }
+      // A sensor that counts the other way round is turned before its hours are split.
+      const signs: Signs = { grid: config.grid_invert ? -1 : 1, battery: config.battery_invert ? -1 : 1 };
       this._hours =
         gridId || cellId
           ? hourlyShares(
               stats[houseId] ?? [],
               (gridId && stats[gridId]) || [],
               (cellId && stats[cellId]) || [],
-              divisor
+              divisor,
+              new Date(),
+              signs
             )
           : undefined;
+      await this._fetchWindow(hass, config, divisor, signs);
       await this._fetchLastWeek(hass, solarId, houseId, divisor);
       await this._fetchYearPeak(hass, solarId, houseId, divisor);
       await this._fetchDevices(hass, config);
@@ -482,6 +490,38 @@ export class PowerOriginCard extends LitElement {
       // Fetched figures redraw on their own; a watched entity may be slow.
       this.requestUpdate();
     }
+  }
+
+  /**
+   * The chart's sliding window. The day's query begins at midnight, so the evening
+   * before is not in it; the window asks for its own hours, and only when it is drawn.
+   */
+  private async _fetchWindow(hass: HomeAssistant, config: ResolvedConfig, divisor: number, signs: Signs): Promise<void> {
+    if (!config.sections.chart || config.chart.span === "day") {
+      this._window = undefined;
+      return;
+    }
+    const HOUR = 60 * 60 * 1000;
+    const hours = config.chart.span === "12h" ? 12 : 24;
+    const now = new Date();
+    // Whole hours, the one in progress being the last: hourly bars then stand on the clock's hours.
+    const to = now.getTime();
+    const from = Math.floor(to / HOUR) * HOUR + HOUR - hours * HOUR;
+    const solarId = config.entities.solar;
+    const houseId = config.entities.house;
+    const gridId = config.chart.layers ? config.entities.grid_power : undefined;
+    const cellId = config.chart.layers ? config.entities.battery_power : undefined;
+    const ids = [solarId, houseId, gridId, cellId].filter(Boolean) as string[];
+    const stats = await cachedStatistics(ids, REFRESH_MS, () => fetchStatistics(hass, ids, now, new Date(from)), `span-${hours}`);
+    // The battery may report in another unit than the house.
+    const perKw = (id: string | undefined) => (unitOf(stateOf(hass, id)).toLowerCase() === "kw" ? 1 : 1000);
+    const cellRows = cellId ? (stats[cellId] ?? []).map((row) => ({ ...row, mean: row.mean == null ? row.mean : (row.mean * divisor) / perKw(cellId) })) : [];
+    this._window = {
+      from,
+      to,
+      series: buildDaySeries((solarId && stats[solarId]) || [], stats[houseId] ?? [], divisor, now, config.battery.runtime_window, from),
+      shares: gridId || cellId ? windowShares(stats[houseId] ?? [], (gridId && stats[gridId]) || [], cellRows, divisor, from, to, signs) : []
+    };
   }
 
   /**
@@ -3083,13 +3123,21 @@ export class PowerOriginCard extends LitElement {
   private _renderChart(locale: string, summaryOnly = false) {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
-    const series = this._series;
+    // A sliding window brings its own series: the day's begins at midnight, the window's before it.
+    const sliding = config.chart.span !== "day";
+    const win = sliding ? this._window : undefined;
+    const series = sliding ? win?.series : this._series;
     const solarNow = powerKw(stateOf(hass, config.entities.solar));
+    const asBars = config.chart.style === "bars";
+    const HOUR = 60 * 60 * 1000;
 
     const box = { ...CHART_BOX, height: config.chart.height };
     const times = sunTimes(stateOf(hass, "sun.sun"));
-    const dayStart = times.rising?.getTime() ?? series?.timestamps[0];
-    const dayEnd = times.setting?.getTime() ?? series?.timestamps.at(-1);
+    // Hourly bars end on the hour in progress, so every bar is a whole hour wide; the curve ends now.
+    const dayStart = sliding ? win?.from : (times.rising?.getTime() ?? series?.timestamps[0]);
+    const dayEnd = sliding
+      ? win && (asBars ? Math.floor(win.to / HOUR) * HOUR + HOUR : win.to)
+      : (times.setting?.getTime() ?? series?.timestamps.at(-1));
 
     // Clip to the solar day so the axis labels describe what is actually drawn.
     const inDay =
@@ -3099,30 +3147,33 @@ export class PowerOriginCard extends LitElement {
             .filter((point) => point.timestamp >= dayStart && point.timestamp <= dayEnd)
         : [];
 
-    const asBars = config.chart.style === "bars";
     const sunDown = stateOf(hass, "sun.sun")?.state === "below_horizon";
 
     // What is still to come: today's hours after now, or, once the sun is
     // down, tomorrow's whole day laid over today's axis. The hours are read
     // off whichever sensor carries them.
     const DAY = 24 * 60 * 60 * 1000;
-    const ghost: ForecastHour[] = !config.chart.forecast_bars
+    // What is still to come lies right of now, and a window that ends now has no room for it.
+    const ghost: ForecastHour[] = !config.chart.forecast_bars || sliding
       ? []
       : sunDown
         ? this._hoursOf(config.entities.forecast_tomorrow)
             .map((hour) => ({ start: hour.start - DAY, kw: hour.kw }))
         : this._hoursOf(config.entities.forecast_hourly);
     const midnight = startOfToday().getTime();
-    const layers =
-      config.chart.layers && this._hours
-        ? this._hours.map((hour) => ({
+    const layers = !config.chart.layers
+      ? []
+      : sliding
+        ? (win?.shares ?? []).map((hour) => ({ start: hour.start, grid: hour.grid, battery: hour.battery }))
+        : (this._hours ?? []).map((hour) => ({
             start: midnight + hour.hour * 60 * 60 * 1000,
             grid: hour.grid,
             battery: hour.battery
-          }))
-        : [];
-    const best = config.chart.best_day ? (this._bestDay ?? []) : [];
-    const extras = { ghost, layers, best, ghostAll: sunDown };
+          }));
+    // The best day and the week before are laid over one day's axis; a window has two days on it.
+    const best = config.chart.best_day && !sliding ? (this._bestDay ?? []) : [];
+    const extras = { ghost, layers, best, ghostAll: sunDown && !sliding };
+    const earlierOf = (points: number) => (sliding ? [] : this._earlierSolar(points));
 
     const barGeometry =
       series && asBars && inDay.length > 1 && dayStart !== undefined && dayEnd !== undefined
@@ -3132,7 +3183,7 @@ export class PowerOriginCard extends LitElement {
             config.chart.consumption ? inDay.map((point) => series.house[point.index]) : [],
             { start: dayStart, end: dayEnd },
             box,
-            this._earlierSolar(inDay.length),
+            earlierOf(inDay.length),
             extras
           )
         : undefined;
@@ -3145,7 +3196,7 @@ export class PowerOriginCard extends LitElement {
             config.chart.consumption ? inDay.map((point) => series.house[point.index]) : [],
             { start: dayStart, end: dayEnd },
             box,
-            this._earlierSolar(inDay.length),
+            earlierOf(inDay.length),
             extras
           )
         : undefined;
@@ -3153,18 +3204,42 @@ export class PowerOriginCard extends LitElement {
     const drawn =
       (geometry?.area?.length ?? 0) > 0 ||
       (barGeometry?.bars.length ?? 0) > 0;
+    // A day without sun has no shape worth a chart. A window's night has one: what the house took, and from where.
     const shapeless =
       !drawn ||
       (geometry === undefined && barGeometry === undefined) ||
-      inDay.every((point) => (series?.solar[point.index] ?? 0) < 0.05);
+      (!sliding && inDay.every((point) => (series?.solar[point.index] ?? 0) < 0.05));
+
+    // The nights inside the window, as bands behind everything: where the sun was down.
+    const nights: Array<[number, number]> = [];
+    if (sliding && dayStart !== undefined && dayEnd !== undefined && times.rising && times.setting) {
+      const DAY_MS = 24 * HOUR;
+      const x = (time: number) => box.padding + ((time - dayStart) / (dayEnd - dayStart)) * (box.width - box.padding * 2);
+      // Dark runs from one day's sunset to the next day's sunrise; two of them can touch a 24 h window.
+      for (const back of [0, 1, 2]) {
+        const from = Math.max(dayStart, times.setting.getTime() - back * DAY_MS);
+        const to = Math.min(dayEnd, times.rising.getTime() - (back - 1) * DAY_MS);
+        if (to > from) nights.push([x(from), x(to)]);
+      }
+    }
+    const midnightX =
+      sliding && dayStart !== undefined && dayEnd !== undefined && midnight > dayStart && midnight < dayEnd
+        ? box.padding + ((midnight - dayStart) / (dayEnd - dayStart)) * (box.width - box.padding * 2)
+        : undefined;
 
     const nowX = geometry?.nowX ?? barGeometry?.nowX;
     const nowLabel =
       nowX !== undefined && nowX > box.padding + 40 && nowX < box.width - box.padding - 44
         ? nowX
         : undefined;
-    const produced = energyKwh(stateOf(hass, config.entities.solar_today));
-    const used = energyKwh(stateOf(hass, config.entities.house_today));
+    // The day's counters count from midnight; a window's figures are the window's own.
+    const inWindow = (values: number[] | undefined) =>
+      series && values && inDay.length > 1
+        ? integrate(inDay.map((point) => point.timestamp), inDay.map((point) => values[point.index]))
+        : undefined;
+    const produced = sliding ? inWindow(series?.solar) : energyKwh(stateOf(hass, config.entities.solar_today));
+    const used = sliding ? inWindow(series?.house) : energyKwh(stateOf(hass, config.entities.house_today));
+    const carried = sliding && win && win.shares.length ? windowEnergy(win.shares, win.from, win.to) : undefined;
     // After sunset "0.0 expected" states the obvious and costs a line.
     const forecastValue = config.chart.show_forecast
       ? this._kwhOf(config.entities.forecast)
@@ -3186,22 +3261,31 @@ export class PowerOriginCard extends LitElement {
     const note = [
       produced !== undefined
         ? html`<span class="key-solar">${formatEnergy(produced, locale)}
-            ${localize("chart.produced", locale)}</span>`
+            ${localize(sliding ? "chart.window_solar" : "chart.produced", locale)}</span>`
         : nothing,
       used !== undefined
         ? html` · <span class="key-house">${formatEnergy(used, locale)}
             ${localize("chart.consumed", locale)}</span>`
         : nothing,
-      forecast !== undefined
+      // What the window's house took from the battery and from the grid: the night's own question.
+      carried && carried.battery >= 0.05
+        ? html` · <span class="key-battery">${formatEnergy(carried.battery, locale)}
+            ${localize("chart.from_battery", locale)}</span>`
+        : nothing,
+      carried && carried.grid >= 0.05
+        ? html` · <span class="key-grid">${formatEnergy(carried.grid, locale)}
+            ${localize("chart.from_grid", locale)}</span>`
+        : nothing,
+      forecast !== undefined && !sliding
         ? html` · ${formatEnergy(forecast, locale)}
             <span class="dim">${localize("chart.forecast", locale)}</span>`
         : nothing,
-      behind
+      behind && !sliding
         ? html` · <span class="dim">${localize(snowSeason(new Date()) ? "chart.snow" : "chart.shortfall", locale)}</span>`
         : nothing,
       // After sunset the day is done; tomorrow’s expectation is the one figure
       // that still looks ahead, and it stands beside today, not instead of it.
-      tomorrow !== undefined && sunDown
+      tomorrow !== undefined && sunDown && !sliding
         ? html` · <span class="dim">${localize("chart.tomorrow", locale)}</span> ${formatEnergy(tomorrow, locale)}
             <span class="dim">${localize("chart.forecast", locale)}</span>`
         : nothing,
@@ -3214,7 +3298,7 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="row">
         <div class="row-head">
-          <span class="row-title">${localize("chart.title", locale)}</span>
+          <span class="row-title">${localize(sliding ? `chart.title_${config.chart.span}` : "chart.title", locale)}</span>
           ${solarNow === undefined || this._roofInColumn()
             ? nothing
             : this._linked(
@@ -3254,18 +3338,18 @@ export class PowerOriginCard extends LitElement {
                   <stop offset="100%" stop-color="var(--sst-sun)" stop-opacity="0.02"></stop>
                 </linearGradient>
               </defs>
+              ${nights.map(
+                ([from, to]) => svg`<rect class="night-band" x="${from.toFixed(1)}" y="0"
+                                         width="${(to - from).toFixed(1)}" height="${box.height}"></rect>`
+              )}
               ${
                 geometry?.area
                   ? svg`<path class="prod-area graded" fill="url(#${this._fillId})"
                               d="${geometry.area}"></path>`
                   : nothing
               }
-              ${(geometry?.layerGrid ?? barGeometry?.layerGrid)
-                ? svg`<path class="layer-grid" d="${geometry?.layerGrid ?? barGeometry?.layerGrid}"></path>`
-                : nothing}
-              ${(geometry?.layerBattery ?? barGeometry?.layerBattery)
-                ? svg`<path class="layer-battery" d="${geometry?.layerBattery ?? barGeometry?.layerBattery}"></path>`
-                : nothing}
+              ${geometry?.layerGrid ? svg`<path class="layer-grid" d="${geometry.layerGrid}"></path>` : nothing}
+              ${geometry?.layerBattery ? svg`<path class="layer-battery" d="${geometry.layerBattery}"></path>` : nothing}
               ${(geometry?.best ?? barGeometry?.best)
                 ? svg`<path class="best-line" d="${geometry?.best ?? barGeometry?.best}"></path>`
                 : nothing}
@@ -3290,6 +3374,16 @@ export class PowerOriginCard extends LitElement {
                     )
                   : nothing
               }
+              ${barGeometry
+                ? [
+                    ...barGeometry.originGrid.map((bar) => ["carried-grid", bar] as const),
+                    ...barGeometry.originBattery.map((bar) => ["carried-battery", bar] as const)
+                  ].map(
+                    ([tone, bar]) => svg`<rect class="carried-bar ${tone}" x="${bar.x.toFixed(1)}"
+                                              y="${bar.y.toFixed(1)}" width="${bar.width.toFixed(1)}"
+                                              height="${bar.height.toFixed(1)}"></rect>`
+                  )
+                : nothing}
               ${
                 (geometry?.house ?? barGeometry?.house)
                   ? svg`<path class="cons-line" d="${geometry?.house ?? barGeometry?.house}"></path>`
@@ -3315,7 +3409,17 @@ export class PowerOriginCard extends LitElement {
                   : nothing
               }
               ${
-                nowLabel !== undefined
+                midnightX !== undefined
+                  ? svg`<line class="nowline" x1="${midnightX.toFixed(1)}" y1="4"
+                              x2="${midnightX.toFixed(1)}" y2="${box.height}"></line>
+                        ${midnightX > box.padding + 44 && midnightX < box.width - box.padding - 44
+                          ? svg`<text class="axis" x="${midnightX.toFixed(1)}" y="${box.height + 16}"
+                                      text-anchor="middle">${formatClock(new Date(midnight), locale)}</text>`
+                          : nothing}`
+                  : nothing
+              }
+              ${
+                nowLabel !== undefined && !sliding
                   ? svg`<text class="axis" x="${nowLabel.toFixed(1)}" y="${box.height + 16}"
                               text-anchor="middle">${localize("chart.now", locale)}</text>`
                   : nothing
@@ -3323,7 +3427,7 @@ export class PowerOriginCard extends LitElement {
               ${
                 dayEnd !== undefined
                   ? svg`<text class="axis" x="${box.width}" y="${box.height + 16}"
-                              text-anchor="end">${formatClock(new Date(dayEnd), locale)}</text>`
+                              text-anchor="end">${sliding ? localize("chart.now", locale) : formatClock(new Date(dayEnd), locale)}</text>`
                   : nothing
               }
             </svg>`

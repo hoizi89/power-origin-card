@@ -1,6 +1,5 @@
 import {
   bestPath,
-  layerPaths,
   niceTick,
   type ChartBox,
   type ChartDomain,
@@ -24,8 +23,13 @@ export interface BarGeometry {
   /** The same day a week ago, on the same scale. */
   earlier?: string;
   best?: string;
-  layerGrid?: string;
-  layerBattery?: string;
+  /**
+   * What the grid and the battery carried of each hour, as bars of the hour's own width:
+   * the grid at the foot, the battery standing on it. Among hourly bars a stepped area
+   * would be the one thing drawn in another hand.
+   */
+  originGrid: Bar[];
+  originBattery: Bar[];
   nowX?: number;
   tick?: ChartTick;
 }
@@ -69,11 +73,12 @@ export function chartBars(
   earlier: number[] = [],
   extras: ChartExtras = {}
 ): BarGeometry {
-  if (timestamps.length < 2) return { bars: [], ghosts: [], house: "" };
+  const nothing = { bars: [], ghosts: [], originGrid: [], originBattery: [], house: "" };
+  if (timestamps.length < 2) return nothing;
 
   const span = box.width - box.padding * 2;
   const width = domain.end - domain.start;
-  if (width <= 0) return { bars: [], ghosts: [], house: "" };
+  if (width <= 0) return nothing;
 
 
   const scaleX = (time: number) =>
@@ -111,6 +116,9 @@ export function chartBars(
 
   const bars: Bar[] = [];
   const ghosts: Bar[] = [];
+  const originGrid: Bar[] = [];
+  const originBattery: Bar[] = [];
+  const layerAt = new Map(layers.map((l) => [l.start, l]));
   const points: Array<[number, number]> = [];
 
   hours.forEach((hour, index) => {
@@ -131,13 +139,20 @@ export function chartBars(
       ghosts.push({ x: left, y, width: barWidth, height: Math.max(0, box.height - y) });
     }
 
+    const layer = layerAt.get(hour);
+    if (layer) {
+      const gridTop = scaleY(layer.grid);
+      const batteryTop = scaleY(layer.grid + layer.battery);
+      if (layer.grid > 0.005) originGrid.push({ x: left, y: gridTop, width: barWidth, height: Math.max(0, box.height - gridTop) });
+      if (layer.battery > 0.005) originBattery.push({ x: left, y: batteryTop, width: barWidth, height: Math.max(0, gridTop - batteryTop) });
+    }
+
     const houseValue = houseHours[index];
     if (houseValue !== undefined) points.push([centre, scaleY(houseValue)]);
   });
 
   const midnight = new Date(domain.start);
   midnight.setHours(0, 0, 0, 0);
-  const layered = layers.length ? layerPaths(layers, scaleX, scaleY, domain, box.height) : undefined;
   const bestLine = bestPath(best, scaleX, scaleY, domain, midnight.getTime());
 
   const path =
@@ -167,7 +182,7 @@ export function chartBars(
     tick: tickValue === undefined ? undefined : { value: tickValue, y: scaleY(tickValue) },
     earlier: earlierPath,
     best: bestLine,
-    layerGrid: layered?.grid || undefined,
-    layerBattery: layered?.battery || undefined
+    originGrid,
+    originBattery
   };
 }
