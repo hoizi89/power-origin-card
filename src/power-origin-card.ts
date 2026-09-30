@@ -664,6 +664,67 @@ export class PowerOriginCard extends LitElement {
     this._moneyFetched = Date.now();
 
     const e = config.entities;
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    monthStart.setMonth(monthStart.getMonth() - 11);
+
+    // Running money meters beat everything below: a meter that never resets
+    // has a clean monthly change, and a correction booked into its
+    // statistics (a price settled after the month) is in it. Unless set by
+    // hand, they are the grid's money in the Energy dashboard, so the month
+    // here is the month there.
+    let exportMeter = e.cost_export_total;
+    let importMeter = e.cost_import_total;
+    if (!exportMeter && !importMeter) {
+      const energy = await energyMoneyMeters(hass);
+      exportMeter = energy.export;
+      importMeter = energy.import;
+    }
+    const meters = [exportMeter, importMeter].filter((id): id is string => Boolean(id));
+    if (meters.length > 0) {
+      type MonthRows = Record<string, Array<Record<string, unknown>>>;
+      const monthRows = (await cachedStatistics(
+        meters,
+        HOUR,
+        () =>
+          hass.callWS<MonthRows>({
+            type: "recorder/statistics_during_period",
+            start_time: monthStart.toISOString(),
+            end_time: new Date().toISOString(),
+            statistic_ids: meters,
+            period: "month",
+            types: ["change"]
+          }) as never,
+        "money-months"
+      )) as unknown as MonthRows;
+      const changeByMonth = (id: string | undefined): Map<number, number> => {
+        const out = new Map<number, number>();
+        if (!id) return out;
+        for (const row of monthRows?.[id] ?? []) {
+          const at = new Date(toMillis(row.start));
+          const change = Number(row.change);
+          if (!Number.isFinite(at.getTime()) || !Number.isFinite(change)) continue;
+          const month = new Date(at.getFullYear(), at.getMonth(), 1).getTime();
+          out.set(month, (out.get(month) ?? 0) + change);
+        }
+        return out;
+      };
+      const earned = changeByMonth(exportMeter);
+      const paid = changeByMonth(importMeter);
+      const months: Array<{ start: number; balance: number }> = [];
+      for (let index = 0; index < 12; index += 1) {
+        const at = new Date(monthStart);
+        at.setMonth(monthStart.getMonth() + index);
+        const month = at.getTime();
+        const out = earned.get(month);
+        const inn = paid.get(month);
+        if (out !== undefined || inn !== undefined) months.push({ start: month, balance: (inn ?? 0) - (out ?? 0) });
+      }
+      this._moneyMonths = months;
+      return;
+    }
+
     // The money is read day by day and added up into months, because the
     // daily sensors most people have reset at midnight, and a month's change
     // of such a sensor is nonsense. A signed balance cannot be read that way
@@ -4630,3 +4691,52 @@ window.customCards.push({
   preview: true,
   documentationURL: "https://github.com/hoizi89/power-origin-card"
 });
+
+/**
+ * The grid's money as the Energy dashboard keeps it: the revenue and the
+ * cost statistics of its grid source. Either the ones set there by hand, or
+ * the ones Home Assistant makes itself when a price is given (the energy
+ * sensor's id with `_compensation` or `_cost` added). Only meters that exist
+ * are returned; anything unreadable leaves both empty, and the card falls
+ * back to adding up the daily sensors.
+ */
+let energyMeters: Promise<{ export?: string; import?: string }> | undefined;
+async function energyMoneyMeters(hass: HomeAssistant): Promise<{ export?: string; import?: string }> {
+  energyMeters ??= (async () => {
+    try {
+      type GridSource = {
+        type: string;
+        stat_energy_from?: string | null;
+        stat_energy_to?: string | null;
+        stat_cost?: string | null;
+        stat_compensation?: string | null;
+        entity_energy_price?: string | null;
+        number_energy_price?: number | null;
+        entity_energy_price_export?: string | null;
+        number_energy_price_export?: number | null;
+      };
+      const prefs = await hass.callWS<{ energy_sources?: GridSource[] }>({ type: "energy/get_prefs" });
+      const grid = prefs?.energy_sources?.find((source) => source.type === "grid");
+      if (!grid) return {};
+      const priced = (entity?: string | null, number?: number | null) => Boolean(entity) || number != null;
+      const exported =
+        grid.stat_compensation ??
+        (grid.stat_energy_to && priced(grid.entity_energy_price_export, grid.number_energy_price_export)
+          ? `${grid.stat_energy_to}_compensation`
+          : undefined);
+      const imported =
+        grid.stat_cost ??
+        (grid.stat_energy_from && priced(grid.entity_energy_price, grid.number_energy_price)
+          ? `${grid.stat_energy_from}_cost`
+          : undefined);
+      const exists = (id?: string | null) => (id && hass.states[id] ? id : undefined);
+      return { export: exists(exported), import: exists(imported) };
+    } catch {
+      return {};
+    }
+  })();
+  const found = await energyMeters;
+  // A card that asked before the dashboard was set up may ask again later.
+  if (!found.export && !found.import) energyMeters = undefined;
+  return found;
+}

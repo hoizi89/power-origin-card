@@ -116,6 +116,14 @@ export interface PowerOriginEntities {
   cost_today?: string;
   cost_export_today?: string;
   cost_import_today?: string;
+  /**
+   * Running money meters that never reset, such as the Energy dashboard's
+   * `…_compensation` and `…_cost` statistics. When set, the month is read
+   * from their monthly change instead of adding up the daily sensors, so
+   * later corrections to the statistics show up in it.
+   */
+  cost_export_total?: string;
+  cost_import_total?: string;
   price_import?: string;
   price_export?: string;
   /** Energy taken out of the battery today, in kWh. Splits the day bar in three. */
