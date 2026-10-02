@@ -88,6 +88,7 @@ export const DEFAULTS = {
   chart: {
     style: "area" as const,
     span: "day" as const,
+    span_dark: "same" as "same" | "12h" | "24h",
     consumption: true,
     show_forecast: true,
     compare: false,
@@ -320,7 +321,11 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
     chart: {
       ...DEFAULTS.chart,
       ...config.chart,
-      span: config.chart?.span === "12h" || config.chart?.span === "24h" ? config.chart.span : DEFAULTS.chart.span
+      span: config.chart?.span === "12h" || config.chart?.span === "24h" ? config.chart.span : DEFAULTS.chart.span,
+      span_dark:
+        config.chart?.span_dark === "12h" || config.chart?.span_dark === "24h"
+          ? config.chart.span_dark
+          : DEFAULTS.chart.span_dark
     },
     battery: {
       ...DEFAULTS.battery,
@@ -1341,6 +1346,20 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             }
           }
         },
+        // A window is the same by day and by night; only the day has a dark to give way in.
+        ...only((resolved) => resolved.chart.span === "day", {
+          name: "span_dark",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "same", label: t("editor.same") },
+                { value: "12h", label: t("editor.span_12h") },
+                { value: "24h", label: t("editor.span_24h") }
+              ]
+            }
+          }
+        }),
         {
           type: "grid",
           schema: [
@@ -1770,6 +1789,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     forecast_bars: t("editor.forecast_bars"),
     layers: t("editor.layers"),
     span: t("editor.span"),
+    span_dark: t("editor.span_dark"),
     best_day: t("editor.best_day"),
     week: t("editor.section_week"),
     cost_today: t("editor.cost_today"),
@@ -1932,6 +1952,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     forecast_bars: t("editor.help_forecast_bars"),
     layers: t("editor.help_layers"),
     span: t("editor.help_span"),
+    span_dark: t("editor.help_span_dark"),
     best_day: t("editor.help_best_day"),
     curve: t("editor.help_curve"),
     month: t("editor.help_month"),

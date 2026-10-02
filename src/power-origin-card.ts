@@ -23,6 +23,7 @@ import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, 
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
+  ChartSpan,
   DaySeries,
   MeterStyle, MeterShows,
   HomeAssistant,
@@ -492,25 +493,38 @@ export class PowerOriginCard extends LitElement {
     }
   }
 
+  /** The chart's span right now: the one chosen, or after sunset the window the day gives way to. */
+  private _chartSpan(hass: HomeAssistant, config: ResolvedConfig): ChartSpan {
+    if (config.chart.span !== "day" || config.chart.span_dark === "same") return config.chart.span;
+    return stateOf(hass, "sun.sun")?.state === "below_horizon" ? config.chart.span_dark : "day";
+  }
+
+  /** Whether grid and battery are drawn under the house: when asked, and always in the night's own window, which has little else to say. */
+  private _chartLayers(config: ResolvedConfig, span: ChartSpan): boolean {
+    return config.chart.layers || (span !== "day" && config.chart.span === "day");
+  }
+
   /**
    * The chart's sliding window. The day's query begins at midnight, so the evening
    * before is not in it; the window asks for its own hours, and only when it is drawn.
    */
   private async _fetchWindow(hass: HomeAssistant, config: ResolvedConfig, divisor: number, signs: Signs): Promise<void> {
-    if (!config.sections.chart || config.chart.span === "day") {
+    const span = this._chartSpan(hass, config);
+    if (!config.sections.chart || span === "day") {
       this._window = undefined;
       return;
     }
     const HOUR = 60 * 60 * 1000;
-    const hours = config.chart.span === "12h" ? 12 : 24;
+    const hours = span === "12h" ? 12 : 24;
     const now = new Date();
     // Whole hours, the one in progress being the last: hourly bars then stand on the clock's hours.
     const to = now.getTime();
     const from = Math.floor(to / HOUR) * HOUR + HOUR - hours * HOUR;
     const solarId = config.entities.solar;
     const houseId = config.entities.house;
-    const gridId = config.chart.layers ? config.entities.grid_power : undefined;
-    const cellId = config.chart.layers ? config.entities.battery_power : undefined;
+    const layered = this._chartLayers(config, span);
+    const gridId = layered ? config.entities.grid_power : undefined;
+    const cellId = layered ? config.entities.battery_power : undefined;
     const ids = [solarId, houseId, gridId, cellId].filter(Boolean) as string[];
     const stats = await cachedStatistics(ids, REFRESH_MS, () => fetchStatistics(hass, ids, now, new Date(from)), `span-${hours}`);
     // The battery may report in another unit than the house.
@@ -3185,7 +3199,10 @@ export class PowerOriginCard extends LitElement {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
     // A sliding window brings its own series: the day's begins at midnight, the window's before it.
-    const sliding = config.chart.span !== "day";
+    // After sunset the day may give way to a window; until its hours have arrived the day stays.
+    const wanted = this._chartSpan(hass, config);
+    const span: ChartSpan = wanted !== "day" && config.chart.span === "day" && !this._window ? "day" : wanted;
+    const sliding = span !== "day";
     const win = sliding ? this._window : undefined;
     const series = sliding ? win?.series : this._series;
     const solarNow = powerKw(stateOf(hass, config.entities.solar));
@@ -3222,7 +3239,7 @@ export class PowerOriginCard extends LitElement {
             .map((hour) => ({ start: hour.start - DAY, kw: hour.kw }))
         : this._hoursOf(config.entities.forecast_hourly);
     const midnight = startOfToday().getTime();
-    const layers = !config.chart.layers
+    const layers = !this._chartLayers(config, span)
       ? []
       : sliding
         ? (win?.shares ?? []).map((hour) => ({ start: hour.start, grid: hour.grid, battery: hour.battery }))
@@ -3359,7 +3376,7 @@ export class PowerOriginCard extends LitElement {
     return html`
       <div class="row">
         <div class="row-head">
-          <span class="row-title">${localize(sliding ? `chart.title_${config.chart.span}` : "chart.title", locale)}</span>
+          <span class="row-title">${localize(sliding ? `chart.title_${span}` : "chart.title", locale)}</span>
           ${solarNow === undefined || this._roofInColumn()
             ? nothing
             : this._linked(

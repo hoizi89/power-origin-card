@@ -262,6 +262,8 @@ export interface ChartOptions {
    * evening and the night after it in one picture, which is where `layers` says most.
    */
   span?: ChartSpan;
+  /** Once the sun is down the day's chart gives way to this window, until sunrise; `same` leaves it alone. */
+  span_dark?: ChartSpan | "same";
   consumption?: boolean;
   show_forecast?: boolean;
   compare?: boolean;

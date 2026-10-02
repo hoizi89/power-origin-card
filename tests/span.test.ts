@@ -116,4 +116,23 @@ describe("a window that slides with the clock", () => {
     expect(root.querySelector(".cons-line")).toBeTruthy();
     expect(root.querySelector(".carried-bar")).toBeNull();
   });
+  it("gives the day way to a window once the sun is down, and only then", async () => {
+    const night = SCENARIOS.find((s) => s.name === "evening on battery")!;
+    const day = SCENARIOS.find((s) => s.name === "sunny afternoon")!;
+    const dark = await mount(config({ chart: { style: "bars", span_dark: "12h" } }), night);
+    expect(dark.querySelector(".row-title")?.textContent).toContain("Letzte 12 Stunden");
+    // The night has its own window, and says what it took from where without being asked for layers.
+    expect(dark.querySelectorAll(".prod-bar").length).toBe(12);
+    expect(dark.querySelectorAll(".carried-bar").length).toBeGreaterThan(0);
+    const light = await mount(config({ chart: { style: "bars", span_dark: "12h" } }), day);
+    expect(light.querySelector(".row-title")?.textContent).not.toContain("Letzte");
+    expect(light.querySelector(".carried-bar")).toBeNull();
+  });
+
+  it("leaves the night alone unless a window is named for it", () => {
+    const base = { type: `custom:${CARD_TYPE}`, entities: { house: "sensor.house" } };
+    expect(resolveConfig(base).chart.span_dark).toBe("same");
+    expect(resolveConfig({ ...base, chart: { span_dark: "24h" } }).chart.span_dark).toBe("24h");
+    expect(resolveConfig({ ...base, chart: { span_dark: "day" as never } }).chart.span_dark).toBe("same");
+  });
 });
