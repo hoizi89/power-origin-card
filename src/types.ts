@@ -253,7 +253,7 @@ export interface LegacyRingOptions {
 }
 
 /** What the chart spans: the solar day, or a window that slides with the clock. */
-export type ChartSpan = "day" | "12h" | "24h";
+export type ChartSpan = "day" | "12h" | "24h" | "around";
 
 export interface ChartOptions {
   style?: ChartStyle;
@@ -264,6 +264,8 @@ export interface ChartOptions {
   span?: ChartSpan;
   /** Once the sun is down the day's chart gives way to this window, until sunrise; `same` leaves it alone. */
   span_dark?: ChartSpan | "same";
+  /** How far the window around now reaches, back and ahead alike, in hours. */
+  around_hours?: 3 | 6 | 12;
   consumption?: boolean;
   show_forecast?: boolean;
   compare?: boolean;
@@ -271,6 +273,10 @@ export interface ChartOptions {
   height?: number;
   /** The hours still expected, as outlines after now; after sunset, tomorrow's. */
   forecast_bars?: boolean;
+  /** The whole day as the forecast expects it: a dashed curve behind what the roof made of it. */
+  forecast_curve?: boolean;
+  /** The figures under the chart as columns, each over its word, instead of one running line. */
+  figure_columns?: boolean;
   /** What the grid and the battery carried, as areas under the day. */
   layers?: boolean;
   /** The best day of the year, faintly behind today. */
@@ -356,6 +362,8 @@ export interface TodayOptions {
   /** A slim bar splitting the day's consumption by where it came from. */
   origin_bar?: boolean;
   origin_style?: OriginStyle;
+  /** The figures with the number first and a short word under it, so four fit a narrow card unclipped. */
+  stats_short?: boolean;
   /** The small "exported / imported" note beside the balance. */
   breakdown?: boolean;
   /** How far the system has paid for itself, in the corner beside the balance. */

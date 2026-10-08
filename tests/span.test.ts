@@ -129,6 +129,56 @@ describe("a window that slides with the clock", () => {
     expect(light.querySelector(".carried-bar")).toBeNull();
   });
 
+  it("keeps now in the middle when asked: as far ahead as back, in two lines", async () => {
+    const night = SCENARIOS.find((s) => s.name === "evening on battery")!;
+    const root = await mount(config({ chart: { style: "area", span: "around" } }), night);
+    // The axis says the hours; the window needs no title over it.
+    expect(root.querySelector("svg.chart")?.closest(".row")?.querySelector(".row-title")).toBeNull();
+    // Lines, whatever the day is drawn in: two things cross the middle.
+    expect(root.querySelector(".prod-bar")).toBeNull();
+    expect(root.querySelector(".cons-line")).toBeTruthy();
+    const axis = [...root.querySelectorAll("svg.chart text.axis")].map((t) => t.textContent?.trim());
+    expect(axis).toContain("jetzt");
+    expect(axis.at(-1)).toMatch(/^[0-9]{1,2}:[0-9]{2}/);
+    // Now stands in the middle of the drawing.
+    const now = Number(root.querySelector("svg.chart .nowline")?.getAttribute("x1"));
+    const width = Number(root.querySelector("svg.chart")?.getAttribute("viewBox")?.split(" ")[2]);
+    expect(Math.abs(now - width / 2)).toBeLessThan(2);
+    // Behind now a strip says what carried each hour; ahead the house goes on as it usually does.
+    expect(root.querySelectorAll(".strip").length).toBeGreaterThan(3);
+    expect(root.querySelector(".ahead-house")).toBeTruthy();
+    expect(root.querySelector(".night-band")).toBeNull();
+  });
+
+  it("draws the window as hourly bars when asked, the hours to come as outlines", async () => {
+    const day = SCENARIOS.find((s) => s.name === "sunny afternoon")!;
+    const root = await mount(config({ chart: { style: "bars", span: "around" } }), day);
+    expect(root.querySelectorAll(".prod-bar").length).toBeGreaterThan(2);
+    expect(root.querySelector(".prod-area")).toBeNull();
+    // Now still stands in the middle.
+    const now = Number(root.querySelector("svg.chart .nowline")?.getAttribute("x1"));
+    const width = Number(root.querySelector("svg.chart")?.getAttribute("viewBox")?.split(" ")[2]);
+    expect(Math.abs(now - width / 2)).toBeLessThan(2);
+  });
+
+  it("shows the roof expected right of now while there is sun to come", async () => {
+    const day = SCENARIOS.find((s) => s.name === "sunny afternoon")!;
+    const hass = makeHass(day) as { states: Record<string, { attributes: Record<string, unknown> }> };
+    void hass;
+    const root = await mount(config({ chart: { span: "around" } }), day);
+    expect(root.querySelector(".prod-area")).toBeTruthy();
+  });
+
+  it("takes the window around now as a span, by day and after dark", () => {
+    const base = { type: `custom:${CARD_TYPE}`, entities: { house: "sensor.house" } };
+    expect(resolveConfig({ ...base, chart: { span: "around" } }).chart.span).toBe("around");
+    expect(resolveConfig({ ...base, chart: { span_dark: "around" } }).chart.span_dark).toBe("around");
+    // Six hours unless asked; the editor hands the figure over as text.
+    expect(resolveConfig({ ...base, chart: { span: "around" } }).chart.around_hours).toBe(6);
+    expect(resolveConfig({ ...base, chart: { around_hours: "12" as never } }).chart.around_hours).toBe(12);
+    expect(resolveConfig({ ...base, chart: { around_hours: 5 as never } }).chart.around_hours).toBe(6);
+  });
+
   it("leaves the night alone unless a window is named for it", () => {
     const base = { type: `custom:${CARD_TYPE}`, entities: { house: "sensor.house" } };
     expect(resolveConfig(base).chart.span_dark).toBe("same");

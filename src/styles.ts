@@ -601,12 +601,14 @@ export const cardStyles = css`
     gap: 10px;
   }
 
+  .row-head[hidden] {
+    display: none;
+  }
+
   .row-title {
-    font-family: var(--sst-mono);
-    font-size: calc(10px * var(--sst-scale));
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--sst-muted);
+    font-size: calc(12.5px * var(--sst-scale));
+    font-weight: 600;
+    color: var(--sst-ink);
   }
 
   .row-note {
@@ -1035,6 +1037,149 @@ export const cardStyles = css`
     font-weight: 400;
     font-size: calc(10px * var(--sst-scale));
     color: var(--sst-muted);
+  }
+
+  /* Short names: the number leads in its colour, the word stands under it in full. */
+  .stat.short .stat-v {
+    font-family: var(--sst-mono);
+    font-weight: 500;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .stat.short .stat-v.sun {
+    color: var(--sst-sun);
+  }
+
+  .stat.short .stat-v.grid {
+    color: var(--sst-grid);
+  }
+
+  .stat.short .stat-v.leaf {
+    color: var(--sst-leaf);
+  }
+
+  .stat.short .stat-k {
+    font-family: inherit;
+    font-size: calc(11px * var(--sst-scale));
+    letter-spacing: 0;
+    text-transform: none;
+    overflow: visible;
+    margin-top: 1px;
+  }
+
+  /* With short figures the head keeps its words together and the bar names its colours. */
+  .today.short .money {
+    flex-wrap: wrap;
+  }
+
+  .today.short .money-v {
+    white-space: nowrap;
+  }
+
+  .today.short .money-side {
+    gap: 4px;
+  }
+
+  .today.short .money-month {
+    margin-top: 0;
+    white-space: nowrap;
+  }
+
+  .today.short .corner {
+    font-size: calc(10.5px * var(--sst-scale));
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--sst-muted);
+  }
+
+  .origin-lead {
+    font-size: calc(11px * var(--sst-scale));
+    color: var(--sst-muted);
+    margin-bottom: 6px;
+  }
+
+  .origin-lead b {
+    font-family: var(--sst-mono);
+    font-weight: 500;
+    color: var(--sst-ink);
+  }
+
+  /* With short figures the whole block speaks in the text face; only the numbers keep the tabular one. */
+  .today.short .money-v small,
+  .today.short .money-month,
+  .today.short .corner,
+  .today.short .origin-keys {
+    font-family: inherit;
+    letter-spacing: 0;
+  }
+
+  .today.short .money-month,
+  .today.short .corner,
+  .today.short .origin-keys {
+    font-size: calc(11px * var(--sst-scale));
+  }
+
+  .today.short .origin-keys {
+    justify-content: flex-start;
+    gap: 4px 14px;
+  }
+
+  @container (max-width: 339px) {
+    .today.short .origin-keys em {
+      display: inline;
+    }
+  }
+
+  /* Short figures and the chart’s columns share one cut: the word above, the number under it in the text face, a hairline between neighbours. */
+  .today.short .stats {
+    gap: 0;
+    justify-content: flex-start;
+  }
+
+  .today.short .stat.short {
+    flex: 1 1 0;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    align-items: center;
+    text-align: center;
+    padding: 0 4px;
+    border-left: 1px solid color-mix(in srgb, var(--sst-muted) 30%, transparent);
+  }
+
+  .today.short .stat.short:first-child {
+    border-left: 0;
+  }
+
+  .today.short .stat.short .stat-v,
+  .figures .figure .figure-value {
+    font-family: inherit;
+    font-size: calc(16px * var(--sst-scale));
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    margin-top: 0;
+    line-height: 1.25;
+  }
+
+  .today.short .stat.short .stat-k,
+  .figures .figure .figure-word {
+    margin-top: 0;
+    white-space: nowrap;
+  }
+
+  .figures .figure {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    align-items: center;
+    text-align: center;
+    padding: 0 4px;
+    border-left: 1px solid color-mix(in srgb, var(--sst-muted) 30%, transparent);
+  }
+
+  .figures .figure:first-child {
+    border-left: 0;
   }
 
   .warn {
@@ -1690,6 +1835,102 @@ export const cardStyles = css`
     opacity: 0.55;
   }
 
+  /* Right of now: the roof as a soft ground with a dashed edge, the house as a dashed line. */
+  .ahead-area {
+    fill: var(--sst-sun);
+    stroke: none;
+    opacity: 0.14;
+  }
+
+  .ahead-solar {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.4;
+    stroke-dasharray: 3 3;
+    opacity: 0.8;
+  }
+
+  .ahead-house {
+    fill: none;
+    stroke: var(--sst-ink);
+    stroke-width: 1.6;
+    stroke-dasharray: 3 3;
+    opacity: 0.6;
+  }
+
+  /* Under the axis, hour by hour: what carried the house. */
+  .strip.solar {
+    fill: var(--sst-sun);
+  }
+
+  .strip.battery {
+    fill: var(--sst-leaf);
+  }
+
+  .strip.grid {
+    fill: var(--sst-grid);
+  }
+
+  /* The day as it was expected: a soft ground and a dashed edge, behind what came of it. */
+  .forecast-area {
+    fill: var(--sst-sun);
+    stroke: none;
+    opacity: 0.1;
+  }
+
+  .forecast-curve {
+    fill: none;
+    stroke: var(--sst-sun);
+    stroke-width: 1.4;
+    stroke-dasharray: 3 3;
+    opacity: 0.75;
+  }
+
+  /* The figures as columns: each over its word, so no word is left alone on a line. */
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(calc(64px * var(--sst-scale)), 1fr));
+    gap: 8px 0;
+    margin-top: 2px;
+    padding-bottom: 10px;
+  }
+
+  .figure {
+    min-width: 0;
+  }
+
+  .figure-value {
+    font-family: var(--sst-mono);
+    font-size: calc(16px * var(--sst-scale));
+    font-variant-numeric: tabular-nums;
+    color: var(--sst-ink);
+  }
+
+  .figure-value small {
+    font-family: var(--sst-mono);
+    font-weight: 400;
+    font-size: calc(10px * var(--sst-scale));
+    color: var(--sst-muted);
+  }
+
+  .figure-value.key-solar {
+    color: var(--sst-sun);
+  }
+
+  .figure-value.key-battery {
+    color: var(--sst-leaf);
+  }
+
+  .figure-value.key-grid {
+    color: var(--sst-grid);
+  }
+
+  .figure-word {
+    font-size: calc(11px * var(--sst-scale));
+    color: var(--sst-muted);
+    margin-top: 1px;
+  }
+
   .ghost-line {
     fill: none;
     stroke: var(--sst-sun);
@@ -1854,9 +2095,7 @@ export const cardStyles = css`
 
   .bat-extra-k {
     fill: var(--sst-muted);
-    font-family: var(--sst-mono);
-    font-size: calc(9.5px * var(--sst-scale));
-    letter-spacing: 0.06em;
+    font-size: calc(10.5px * var(--sst-scale));
   }
 
   /* The figure, not the picture: the bar already says how full it is. */

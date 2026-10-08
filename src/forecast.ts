@@ -139,3 +139,10 @@ export function hourlyForecastAll(entities: Array<HassEntity | undefined>): Fore
     }))
     .sort((a, b) => a.start - b.start);
 }
+
+/** The best hour the forecast expects of today, in kW; 0 when it has none for today. */
+export function peakToday(hours: ForecastHour[], now: Date): number {
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  return Math.max(0, ...hours.filter((hour) => hour.start >= from && hour.start < to).map((hour) => hour.kw));
+}

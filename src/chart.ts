@@ -31,6 +31,10 @@ export interface ChartGeometry {
   nowX?: number;
   nowY?: number;
   tick?: ChartTick;
+  /** The forecast's day as a curve, and the same closed as an area. */
+  curve?: { line: string; area: string };
+  /** Right of now: the roof expected, its ground, and the house as usual. */
+  ahead?: { solar?: string; solarArea?: string; house?: string };
 }
 
 /** Series drawn behind or ahead of the day, all on the day's scale. */
@@ -43,6 +47,78 @@ export interface ChartExtras {
   layers?: Array<{ start: number; grid: number; battery: number }>;
   /** The best day of the year, one mean per hour of the day, in kW. */
   best?: number[];
+  /**
+   * What lies right of now in a window that keeps now in its middle: the roof as
+   * forecast and the house as it usually draws at that hour, by hour start, in kW.
+   */
+  ahead?: { solar: Array<{ start: number; kw: number }>; house: Array<{ start: number; kw: number }> };
+  /** The whole day as the forecast expects it, by hour start, in kW: drawn as one curve. */
+  curve?: Array<{ start: number; kw: number }>;
+}
+
+/**
+ * The forecast's hours as one soft curve from the left edge to the right:
+ * through the middle of each hour, rounded between them, and down to the floor
+ * at both ends. The area is the same path, closed.
+ */
+/** Points joined by one soft line: level at each point, rounded between them. */
+export function smoothPath(points: Array<[number, number]>): string {
+  if (points.length === 0) return "";
+  let line = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  for (let index = 1; index < points.length; index += 1) {
+    const [px, py] = points[index - 1];
+    const [cx, cy] = points[index];
+    const mid = ((px + cx) / 2).toFixed(1);
+    line += ` C${mid},${py.toFixed(1)} ${mid},${cy.toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)}`;
+  }
+  return line;
+}
+
+/**
+ * The hours right of now as one line that begins where the measured one ends:
+ * through the middle of each hour still to come, and level out to the edge.
+ */
+export function aheadPoints(
+  hours: Array<{ start: number; kw: number }>,
+  from: [number, number],
+  now: number,
+  x: (time: number) => number,
+  y: (value: number) => number,
+  domain: ChartDomain
+): Array<[number, number]> {
+  const rows = hours
+    .filter((hour) => hour.start + HOUR_MS / 2 > now && hour.start + HOUR_MS / 2 < domain.end)
+    .sort((a, b) => a.start - b.start);
+  if (rows.length === 0) return [];
+  const points: Array<[number, number]> = [from, ...rows.map((hour) => [x(hour.start + HOUR_MS / 2), y(hour.kw)] as [number, number])];
+  points.push([x(domain.end), points.at(-1)![1]]);
+  return points;
+}
+
+export function curvePaths(
+  hours: Array<{ start: number; kw: number }>,
+  x: (time: number) => number,
+  y: (value: number) => number,
+  domain: ChartDomain
+): { line: string; area: string } | undefined {
+  const inside = hours
+    .filter((hour) => hour.start + HOUR_MS > domain.start && hour.start < domain.end)
+    .sort((a, b) => a.start - b.start);
+  if (inside.length < 2 || inside.every((hour) => hour.kw < 0.01)) return undefined;
+  const clamp = (time: number) => Math.min(domain.end, Math.max(domain.start, time));
+  const points: Array<[number, number]> = [
+    [x(domain.start), y(0)],
+    ...inside.map((hour) => [x(clamp(hour.start + HOUR_MS / 2)), y(hour.kw)] as [number, number]),
+    [x(domain.end), y(0)]
+  ];
+  let line = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  for (let index = 1; index < points.length; index += 1) {
+    const [px, py] = points[index - 1];
+    const [cx, cy] = points[index];
+    const mid = ((px + cx) / 2).toFixed(1);
+    line += ` C${mid},${py.toFixed(1)} ${mid},${cy.toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)}`;
+  }
+  return { line, area: `${line} Z` };
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -157,6 +233,9 @@ export function chartGeometry(
     ...house,
     ...earlier,
     ...ghost.map((g) => g.kw),
+    ...(extras.curve ?? []).map((c) => c.kw),
+    ...(extras.ahead?.solar ?? []).map((a) => a.kw),
+    ...(extras.ahead?.house ?? []).map((a) => a.kw),
     ...layers.map((l) => l.grid + l.battery),
     ...best
   );
@@ -201,7 +280,28 @@ export function chartGeometry(
 
   const tickValue = niceTick(max);
 
+  // Right of now each line goes on from where it stands, as what is expected.
+  const nowTime = timestamps.at(-1) ?? domain.start;
+  const nowAt = xs.at(-1) ?? box.padding;
+  const aheadOf = (hours: Array<{ start: number; kw: number }> | undefined, last: number | undefined) =>
+    hours && hours.some((hour) => hour.kw >= 0.01)
+      ? aheadPoints(hours, [nowAt, y(last ?? 0)], nowTime, x, y, domain)
+      : [];
+  const solarAhead = aheadOf(extras.ahead?.solar, solar.at(-1));
+  const houseAhead = aheadOf(extras.ahead?.house, house.at(-1));
+  const ahead = extras.ahead
+    ? {
+        solar: solarAhead.length > 1 ? smoothPath(solarAhead) : undefined,
+        solarArea:
+          solarAhead.length > 1
+            ? `${smoothPath(solarAhead)} L${solarAhead.at(-1)![0].toFixed(1)},${box.height} L${nowAt.toFixed(1)},${box.height} Z`
+            : undefined,
+        house: houseAhead.length > 1 ? smoothPath(houseAhead) : undefined
+      }
+    : undefined;
+
   return {
+    ahead,
     area,
     solar: toPath(solarPoints),
     house: housePoints.length > 1 ? toPath(housePoints) : "",
@@ -212,7 +312,8 @@ export function chartGeometry(
     ghost: ghostPath,
     layerGrid: layered?.grid || undefined,
     layerBattery: layered?.battery || undefined,
-    best: bestLine
+    best: bestLine,
+    curve: curvePaths(extras.curve ?? [], x, y, domain)
   };
 }
 

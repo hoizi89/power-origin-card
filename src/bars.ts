@@ -1,5 +1,6 @@
 import {
   bestPath,
+  curvePaths,
   niceTick,
   type ChartBox,
   type ChartDomain,
@@ -32,6 +33,10 @@ export interface BarGeometry {
   originBattery: Bar[];
   nowX?: number;
   tick?: ChartTick;
+  /** The forecast's day as a curve, and the same closed as an area. */
+  curve?: { line: string; area: string };
+  /** The house as it usually draws, right of now: on from the last hour measured. */
+  houseAhead?: string;
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -108,6 +113,8 @@ export function chartBars(
     ...houseHours.filter((value): value is number => Number.isFinite(value)),
     ...earlier.filter((value) => Number.isFinite(value)),
     ...ghostHours.values(),
+    ...(extras.curve ?? []).map((c) => c.kw),
+    ...(extras.ahead?.house ?? []).map((h) => h.kw),
     ...layers.map((l) => l.grid + l.battery),
     ...best
   );
@@ -120,6 +127,8 @@ export function chartBars(
   const originBattery: Bar[] = [];
   const layerAt = new Map(layers.map((l) => [l.start, l]));
   const points: Array<[number, number]> = [];
+  const aheadAt = new Map((extras.ahead?.house ?? []).map((h) => [h.start, h.kw]));
+  const aheadPoints: Array<[number, number]> = [];
 
   hours.forEach((hour, index) => {
     const left = scaleX(Math.max(hour, domain.start));
@@ -149,7 +158,12 @@ export function chartBars(
 
     const houseValue = houseHours[index];
     if (houseValue !== undefined) points.push([centre, scaleY(houseValue)]);
+    const usual = aheadAt.get(hour);
+    if (usual !== undefined && hour >= floorHour(now) + HOUR) aheadPoints.push([centre, scaleY(usual)]);
   });
+  // The dashed line takes up where the measured one ends, so the two read as one.
+  const lastMeasured = points.at(-1);
+  const aheadLine = [...(lastMeasured ? [lastMeasured] : []), ...aheadPoints];
 
   const midnight = new Date(domain.start);
   midnight.setHours(0, 0, 0, 0);
@@ -183,6 +197,11 @@ export function chartBars(
     earlier: earlierPath,
     best: bestLine,
     originGrid,
-    originBattery
+    originBattery,
+    houseAhead:
+      aheadLine.length > 1
+        ? aheadLine.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ")
+        : undefined,
+    curve: curvePaths(extras.curve ?? [], (time) => box.padding + ((time - domain.start) / width) * span, scaleY, domain)
   };
 }

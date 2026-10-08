@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hourlyForecastAll, shortfall, snowSeason } from "../src/forecast";
+import { hourlyForecastAll, peakToday, shortfall, snowSeason } from "../src/forecast";
 import type { HassEntity } from "../src/types";
 
 const at = (hour: number, minute = 0) => new Date(2026, 5, 15, hour, minute, 0).getTime();
@@ -102,5 +102,23 @@ describe("several roof faces as one forecast", () => {
     expect(all[0].high).toBeCloseTo(4.5, 5);
     expect(all[1].low).toBeUndefined();
     expect(all[1].high).toBeUndefined();
+  });
+});
+
+describe("the best hour the forecast expects of today", () => {
+  const hours = [
+    { start: at(9), kw: 2.1 },
+    { start: at(12), kw: 6.4 },
+    { start: at(15), kw: 3.2 },
+    { start: at(36), kw: 8.8 }
+  ];
+
+  it("takes the highest hour of the day and leaves tomorrow out", () => {
+    expect(peakToday(hours, new Date(at(8)))).toBe(6.4);
+  });
+
+  it("is nothing without hours for today", () => {
+    expect(peakToday(hours, new Date(at(8) - 24 * 60 * 60 * 1000))).toBe(0);
+    expect(peakToday([], new Date(at(8)))).toBe(0);
   });
 });

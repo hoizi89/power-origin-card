@@ -196,3 +196,55 @@ describe("the week", () => {
     expect(root.querySelector(".week")).toBeNull();
   });
 });
+
+describe("the day as the forecast expects it", () => {
+  it("runs as one curve from edge to edge, behind the bars", async () => {
+    const { root } = await mount(config({ chart: { style: "bars", forecast_curve: true } }), day);
+    const curve = root.querySelector(".forecast-curve");
+    expect(curve).toBeTruthy();
+    expect(root.querySelector(".forecast-area")?.getAttribute("d")).toMatch(/Z$/);
+    expect(root.querySelectorAll(".prod-ghost").length).toBe(0);
+  });
+
+  it("raises the scale to the best hour still to come", () => {
+    const start = new Date(2026, 5, 15, 6, 0).getTime();
+    const end = new Date(2026, 5, 15, 20, 0).getTime();
+    const timestamps = [start, start + 3600000, start + 7200000];
+    const curve = Array.from({ length: 14 }, (_, i) => ({ start: start + i * 3600000, kw: i === 6 ? 8 : 2 }));
+    const box = { width: 340, height: 84, padding: 12 };
+    const plain = chartBars(timestamps, [1, 1, 1], [], { start, end }, box);
+    const expected = chartBars(timestamps, [1, 1, 1], [], { start, end }, box, [], { curve });
+    expect(plain.curve).toBeUndefined();
+    expect(expected.curve?.line.startsWith("M12.0,84.0")).toBe(true);
+    expect(expected.bars[0].height).toBeLessThan(plain.bars[0].height);
+  });
+
+  it("is not drawn without hours", async () => {
+    const { root } = await mount(config({ chart: { style: "bars" } }), day);
+    expect(root.querySelector(".forecast-curve")).toBeNull();
+  });
+});
+
+describe("the figures under the chart", () => {
+  it("stand as columns when asked, each over its word", async () => {
+    const { root } = await mount(config({ chart: { figure_columns: true } }), day);
+    expect(root.querySelectorAll(".figures .figure").length).toBeGreaterThan(1);
+    expect(root.querySelector(".figures .figure-value small")?.textContent).toContain("kWh");
+  });
+});
+
+describe("the day's figures with short names", () => {
+  it("lead with the number and put a short word under it", async () => {
+    const { root } = await mount(config({ today: { stats_short: true } }), day);
+    const stats = [...root.querySelectorAll(".stat.short")];
+    expect(stats.length).toBeGreaterThan(1);
+    for (const stat of stats) expect(stat.firstElementChild?.className ?? stat.querySelector(".stat-v")?.className).toBeDefined();
+    expect(root.querySelector(".today.short")).toBeTruthy();
+    expect(root.querySelector(".stat.short .stat-k")?.textContent?.trim().length).toBeLessThan(10);
+  });
+
+  it("stay as they were unless asked", async () => {
+    const { root } = await mount(config({}), day);
+    expect(root.querySelector(".stat.short")).toBeNull();
+  });
+});
