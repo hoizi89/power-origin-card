@@ -92,3 +92,66 @@ describe("the day's flow through the battery", () => {
     expect(text()).not.toContain("↑");
   });
 });
+
+describe("the battery's temperature", () => {
+  const TEMP = "sensor.battery_temperature";
+
+  async function withTemp(degrees: number | undefined, battery: PowerOriginCardConfig["battery"] = {}) {
+    clearStatisticsCache();
+    const element = document.createElement(CARD_TYPE) as Card;
+    element.setConfig(
+      config({
+        entities: { ...IDS, ...(degrees === undefined ? {} : { battery_temperature: TEMP }) },
+        battery
+      })
+    );
+    document.body.append(element);
+    const hass = () => {
+      const made = makeHass(evening) as unknown as { states: Record<string, unknown> };
+      if (degrees !== undefined) {
+        made.states[TEMP] = {
+          entity_id: TEMP,
+          state: String(degrees),
+          attributes: { unit_of_measurement: "°C", device_class: "temperature" }
+        };
+      }
+      return made;
+    };
+    element.hass = hass();
+    await element.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    element.hass = hass();
+    await element.updateComplete;
+    return element.shadowRoot as ShadowRoot;
+  }
+
+  it("is absent until a sensor is named", async () => {
+    const root = await withTemp(undefined);
+    expect(root.querySelector(".bat-temp")).toBeNull();
+  });
+
+  it("stands plain beside the capacity inside the limits", async () => {
+    const root = await withTemp(22.4);
+    const temp = root.querySelector(".bat-temp") as HTMLElement;
+    expect(temp.textContent?.replace(/\s+/g, " ").trim()).toBe("22 °C");
+    expect(temp.classList.contains("cold")).toBe(false);
+    expect(temp.classList.contains("hot")).toBe(false);
+    expect(temp.querySelector("svg")).toBeNull();
+    expect(temp.closest(".row-head")?.textContent).toContain("kWh");
+  });
+
+  it("turns cold with a flake below the lower limit", async () => {
+    const root = await withTemp(6);
+    const temp = root.querySelector(".bat-temp") as HTMLElement;
+    expect(temp.classList.contains("cold")).toBe(true);
+    expect(temp.querySelector("svg")).toBeTruthy();
+  });
+
+  it("turns hot above the upper limit, and the limits can be moved", async () => {
+    expect((await withTemp(41)).querySelector(".bat-temp.hot")).toBeTruthy();
+    document.body.innerHTML = "";
+    expect((await withTemp(41, { temp_hot: 45 })).querySelector(".bat-temp.hot")).toBeNull();
+    document.body.innerHTML = "";
+    expect((await withTemp(12, { temp_cold: 15 })).querySelector(".bat-temp.cold")).toBeTruthy();
+  });
+});

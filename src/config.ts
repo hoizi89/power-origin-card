@@ -112,6 +112,8 @@ export const DEFAULTS = {
     extra: "none" as const,
     sunrise_mark: false,
     sunset_mark: false,
+    temp_cold: 10,
+    temp_hot: 40,
     wide: false,
     curve: false,
     animate: false,
@@ -963,6 +965,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
           type: "grid",
           schema: [entityField("battery_out_today", "energy"), entityField("battery_in_today", "energy")]
         },
+        entityField("battery_temperature", "temperature"),
         entityField("amortisation"),
         {
           type: "grid",
@@ -1450,6 +1453,14 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
             { name: "reserve", selector: { number: { min: 0, max: 50, mode: "box" } } }
           ]
         },
+        // The limits mean nothing without a reading to hold against them.
+        ...only((resolved) => Boolean(resolved.entities.battery_temperature), {
+          type: "grid",
+          schema: [
+            { name: "temp_cold", selector: { number: { min: -40, max: 140, mode: "box" } } },
+            { name: "temp_hot", selector: { number: { min: -40, max: 140, mode: "box" } } }
+          ]
+        }),
         {
           name: "style",
           selector: {
@@ -1812,6 +1823,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     solar: t("editor.solar"),
     battery_power: t("editor.battery"),
     battery_soc: t("editor.battery_soc"),
+    battery_temperature: t("editor.battery_temperature"),
     grid_power: t("editor.grid"),
     solar_today: t("editor.solar_today"),
     house_today: t("editor.house_today"),
@@ -1908,6 +1920,8 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     segments: t("editor.segments"),
     runtime: t("editor.runtime"),
     runtime_window: t("editor.runtime_window"),
+    temp_cold: t("editor.temp_cold"),
+    temp_hot: t("editor.temp_hot"),
     reserve_line: t("editor.reserve_line"),
     percent: t("editor.percent"),
     extra: t("editor.extra"),
@@ -2019,7 +2033,10 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     segments: t("editor.help_segments"),
     origin_style: t("editor.help_origin_style"),
     stats_short: t("editor.help_stats_short"),
-    runtime_window: t("editor.help_runtime")
+    runtime_window: t("editor.help_runtime"),
+    battery_temperature: t("editor.help_battery_temperature"),
+    temp_cold: t("editor.help_temp_cold"),
+    temp_hot: t("editor.help_temp_hot")
   };
 
   for (const name of ["scale", "scale_draw", "target", "steps", "marks", "today"]) {

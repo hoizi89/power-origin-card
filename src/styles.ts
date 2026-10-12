@@ -12,6 +12,8 @@ export const cardStyles = css`
     --sst-hairline: var(--divider-color, #d6d9e4);
     --sst-inset: var(--power-origin-inset-color, rgba(127, 133, 155, 0.09));
     --sst-mono: var(--code-font-family, ui-monospace, "SFMono-Regular", "Menlo", monospace);
+    --sst-cold: var(--power-origin-cold-color, #4a90d9);
+    --sst-hot: var(--power-origin-hot-color, #e5484d);
     --sst-scale: 1;
     display: block;
   }
@@ -618,6 +620,31 @@ export const cardStyles = css`
 
   .dim {
     color: var(--sst-muted);
+  }
+
+  /* The battery's temperature: a plain figure until it leaves its comfort,
+     then the colour says which way. */
+  .bat-temp {
+    white-space: nowrap;
+  }
+
+  .bat-temp.cold {
+    color: var(--sst-cold);
+  }
+
+  .bat-temp.hot {
+    color: var(--sst-hot);
+  }
+
+  .bat-temp svg {
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    margin: 0 3px -1px 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
   }
 
   /* The words are the legend: each one wears the colour of its line. */

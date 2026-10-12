@@ -102,6 +102,8 @@ export interface PowerOriginEntities {
   solar?: string;
   battery_power?: string;
   battery_soc?: string;
+  /** The battery's own temperature, said small beside its capacity. */
+  battery_temperature?: string;
   grid_power?: string;
   solar_today?: string;
   house_today?: string;
@@ -305,6 +307,10 @@ export interface BatteryOptions {
   sunrise_mark?: boolean;
   /** A moon under the bar where the charge will stand at sunset, when the forecast cannot fill it. Unset, it follows `sunrise_mark`. */
   sunset_mark?: boolean;
+  /** Below this the temperature turns blue, in the sensor's own unit. */
+  temp_cold?: number;
+  /** Above this the temperature turns red, in the sensor's own unit. */
+  temp_hot?: number;
   /** The charge over the night, or the day, as a small curve under the bar, with where it is heading. */
   curve?: boolean;
   /** A slow wave through the cells, towards the cap while charging and away from it while discharging. */

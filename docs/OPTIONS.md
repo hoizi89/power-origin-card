@@ -99,6 +99,7 @@ today:
 | `solar` | PV power. Without it the ring has no sun segment and the column nothing to weigh. |
 | `battery_power` | Battery power, **positive while discharging**. |
 | `battery_soc` | State of charge in percent. Switches on the battery block. |
+| `battery_temperature` | Optional. The battery's own temperature, shown small in the head of the battery block beside the capacity. Blue with a flake below `battery.temp_cold`, red above `battery.temp_hot`. A tap opens the sensor. |
 | `grid_power` | Grid power, **positive while importing**. Taken as the truth when set. |
 | `solar_today`, `house_today`, `export_today`, `import_today`, `battery_out_today` | Daily energy totals for the chart note, the origin bar and the today strip. |
 | `forecast_tomorrow` | What the roof expects tomorrow, in kWh. Read after sunset, beside today: the day stays, tomorrow joins it. A list of sensors, one per roof face, is added up. |
@@ -190,6 +191,8 @@ With the hours known, the line under the chart also says *below forecast* once t
 | `battery.sunrise_mark` | `false` | At night, a sun under the bar where the charge will stand at sunrise, worked out from today's average load, while the battery carries the house. |
 | `battery.wide` | `false` | The bar across the full width of the card. The second figure moves to the end of the line under the bar, the percentage to the heading. |
 | `battery.sunset_mark` | as `sunrise_mark` | By day, a moon under the bar where the charge will stand at sunset, when the forecast cannot fill it. Needs `full_from: forecast`; offered beside it in the editor. Never drawn together with the sun. |
+| `battery.temp_cold` | `10` | Below this the temperature in the head turns blue. In the sensor's own unit. Offered once `battery_temperature` is set. |
+| `battery.temp_hot` | `40` | Above this it turns red. |
 | `battery.extra` | `none` | A second figure beside the bar, which gives up width for it: `range` (lowest and highest today), `cycles`, `saved` (not bought), `given` (given out), `sunrise` (where the charge will stand at sunrise, shown while the battery carries the house), `flow` (what went in and out today, with the cycles; needs `battery_in_today` and `battery_out_today`). |
 | `battery.animate` | `false` | A slow wave through the cells while the battery moves: towards the cap while charging, away from it while discharging, still while it rests. Off when the system asks for reduced motion. Segments and bar styles only. |
 | `battery.curve` | `false` | The charge as a small curve under the bar: at night since sunset and dashed on to where it will stand at sunrise, by day since midnight and dashed on to full while charging. The reserve is a floor line. Costs the same query as `range`. |

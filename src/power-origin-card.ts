@@ -3780,6 +3780,7 @@ export class PowerOriginCard extends LitElement {
           : "fill-leaf";
 
     const extra = this._batteryExtra(locale);
+    const temp = this._batteryTemperature(locale);
 
     return html`
       <div class="row">
@@ -3794,13 +3795,17 @@ export class PowerOriginCard extends LitElement {
                 >`
               : nothing}</span
           >
-          ${config.battery_capacity
+          ${config.battery_capacity || temp
             ? html`<span class="row-note"
-                >${soc !== undefined
-                  ? html`${formatNumber((config.battery_capacity / 1000) * (soc / 100), locale, 1)}
-                      <span class="dim">${localize("money.of", locale)}</span> `
-                  : nothing}${formatNumber(config.battery_capacity / 1000, locale, 1)}
-                <span class="dim">kWh</span></span
+                >${config.battery_capacity
+                  ? html`${soc !== undefined
+                        ? html`${formatNumber((config.battery_capacity / 1000) * (soc / 100), locale, 1)}
+                            <span class="dim">${localize("money.of", locale)}</span> `
+                        : nothing}${formatNumber(config.battery_capacity / 1000, locale, 1)}
+                      <span class="dim">kWh</span>`
+                  : nothing}${config.battery_capacity && temp
+                  ? html` <span class="dim">·</span> `
+                  : nothing}${temp ?? nothing}</span
               >`
             : nothing}
         </div>
@@ -3882,6 +3887,34 @@ export class PowerOriginCard extends LitElement {
         }</text>
       </svg>
     `;
+  }
+
+  /**
+   * The battery's own temperature, for the head of its block. A plain figure
+   * inside the two limits; past them the colour names the side, and the cold
+   * one wears a flake so it does not hang on colour alone.
+   */
+  private _batteryTemperature(locale: string) {
+    const config = this._config as ResolvedConfig;
+    const id = config.entities.battery_temperature;
+    const state = stateOf(this._hass, id);
+    const value = numberOf(state);
+    if (value === undefined) return undefined;
+    const unit = (state?.attributes?.unit_of_measurement as string | undefined) ?? "°C";
+    const side = value < config.battery.temp_cold ? "cold" : value > config.battery.temp_hot ? "hot" : "";
+    const said = `${localize("battery.temperature", locale)} ${formatNumber(value, locale, 0)} ${unit}${
+      side ? `, ${localize(`battery.${side}`, locale)}` : ""
+    }`;
+    return this._linked(
+      id,
+      html`<span class="bat-temp ${side}" title="${said}" aria-label="${said}"
+        >${side === "cold"
+          ? html`<svg viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M6,1 V11 M1.7,3.5 L10.3,8.5 M10.3,3.5 L1.7,8.5"></path>
+            </svg>`
+          : nothing}${formatNumber(value, locale, 0)} ${unit}</span
+      >`
+    );
   }
 
   /**
