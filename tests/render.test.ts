@@ -629,7 +629,7 @@ describe("what a tap does", () => {
   const tap = async (config: PowerOriginCardConfig) => {
     const { root } = await render(config, SCENARIOS[0]);
     const events: CustomEvent[] = [];
-    for (const name of ["hass-more-info", "ll-custom", "location-changed"]) {
+    for (const name of ["hass-more-info", "hass-action"]) {
       root.host.addEventListener(name, (event) => events.push(event as CustomEvent));
     }
     (root.querySelector(".ring-value") as SVGElement).dispatchEvent(
@@ -651,11 +651,21 @@ describe("what a tap does", () => {
     expect(events[0].detail.entityId).toBe(IDS.battery_soc);
   });
 
-  it("navigates when asked to", async () => {
-    const events = await tap(
-      baseConfig({ tap_action: { action: "navigate", navigation_path: "/lovelace/energy" } })
-    );
-    expect(events.map((e) => e.type)).toContain("location-changed");
+  it("hands a navigation to the frontend", async () => {
+    const action = { action: "navigate" as const, navigation_path: "/lovelace/energy" };
+    const events = await tap(baseConfig({ tap_action: action }));
+    expect(events.map((e) => e.type)).toEqual(["hass-action"]);
+    expect(events[0].detail).toEqual({
+      config: { entity: IDS.house, tap_action: action },
+      action: "tap"
+    });
+  });
+
+  it("hands a service call to the frontend", async () => {
+    const action = { action: "perform-action" as const, perform_action: "light.toggle" };
+    const events = await tap(baseConfig({ tap_action: action }));
+    expect(events.map((e) => e.type)).toEqual(["hass-action"]);
+    expect(events[0].detail.config.tap_action).toEqual(action);
   });
 
   it("does nothing at all when told to", async () => {

@@ -60,9 +60,9 @@ That is a working card. Every other entity switches on the part that needs it.
 
 ### Or let it read your Energy dashboard
 
-Home Assistant already knows most of this. The editor has a button — **Take what the Energy dashboard knows** — that reads your energy preferences and fills in the PV power, the battery power, its state of charge and capacity, the grid power and both prices. Sixteen pickers become one, plus the house sensor.
+Home Assistant already knows most of this. When you add the card to a dashboard, it reads your energy preferences once and fills in the PV power, the battery power, its state of charge and capacity, the grid power and both prices. Sixteen pickers become one, plus the house sensor.
 
-It only ever fills fields that are still empty, so a choice you made is never overwritten. The daily counters are left alone on purpose: the Energy dashboard tracks lifetime totals and this card wants today, and reading one as the other would be wrong by years.
+This happens only at that moment. The editor has no button for it, and a card you already have keeps the entities it has. The daily counters are left alone on purpose: the Energy dashboard tracks lifetime totals and this card wants today, and reading one as the other would be wrong by years.
 
 ---
 

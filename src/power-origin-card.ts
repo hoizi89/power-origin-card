@@ -2324,22 +2324,17 @@ export class PowerOriginCard extends LitElement {
       return;
     }
 
-    // Everything else is Lovelace's own vocabulary; the frontend performs it,
-    // so a navigation or a service call behaves exactly as on any other card.
-    this.dispatchEvent(new CustomEvent("ll-custom", {
-      detail: { ...action, entity: action.entity ?? entityId },
+    // Everything else is Lovelace's own vocabulary. The frontend performs it
+    // from a hass-action event, so a navigation, a service call or a
+    // confirmation behaves exactly as on any other card.
+    this.dispatchEvent(new CustomEvent("hass-action", {
+      detail: {
+        config: { entity: action.entity ?? entityId, tap_action: action },
+        action: "tap"
+      },
       bubbles: true,
       composed: true
     }));
-
-    if (action.action === "navigate" && action.navigation_path) {
-      history.pushState(null, "", action.navigation_path);
-      this.dispatchEvent(new CustomEvent("location-changed", { bubbles: true, composed: true }));
-    }
-
-    if (action.action === "url" && action.url_path) {
-      window.open(action.url_path, "_blank", "noreferrer");
-    }
   }
 
   private _tap(entityId: string) {
