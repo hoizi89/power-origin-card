@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergePick, pickFromEnergy } from "../src/energy";
+import { energyRemainders, mergePick, pickFromEnergy } from "../src/energy";
 import type { PowerOriginCardConfig } from "../src/types";
 
 /** Shaped after a real Energy dashboard: solar, battery, water and grid. */
@@ -135,5 +135,30 @@ describe("the devices the dashboard lists", () => {
     const kept = mergePick(mine, pickFromEnergy(withDevices));
     expect(kept.filled).not.toContain("devices");
     expect(kept.merged.devices?.list).toEqual(["sensor.mine"]);
+  });
+});
+
+describe("parent device remainders", () => {
+  it("subtracts direct raw children, handling missing children and cycles", () => {
+    const devices = [
+      { stat_consumption: "a", stat_rate: "pa" },
+      { stat_consumption: "b", stat_rate: "pb", included_in_stat: "a" },
+      { stat_consumption: "c", stat_rate: "pc", included_in_stat: "b" },
+      { stat_consumption: "d", stat_rate: "pd", included_in_stat: "a" }
+    ];
+    for (const factor of [1, 0.01]) {
+      const raw = new Map([["pa", 100 * factor], ["pb", 40 * factor], ["pc", 10 * factor], ["pd", 20 * factor]]);
+      const adjusted = energyRemainders({ device_consumption: devices }, raw, (d) => raw.get(d.stat_rate!));
+      expect(adjusted.get("pa")).toBeCloseTo(40 * factor);
+      expect(adjusted.get("pb")).toBeCloseTo(30 * factor);
+      expect(adjusted.get("pc")).toBeCloseTo(10 * factor);
+      raw.delete("pd");
+      expect(energyRemainders({ device_consumption: devices }, raw, (d) => raw.get(d.stat_rate!)).get("pa")).toBeUndefined();
+    }
+    const cycle = [{ ...devices[0], included_in_stat: "b" }, devices[1]];
+    const raw = new Map([["pa", 100], ["pb", 40]]);
+    const adjusted = energyRemainders({ device_consumption: cycle }, raw, (d) => raw.get(d.stat_rate!));
+    expect(adjusted.get("pa")).toBeUndefined();
+    expect(adjusted.get("pb")).toBeUndefined();
   });
 });

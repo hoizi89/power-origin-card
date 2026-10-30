@@ -13,6 +13,7 @@ interface EnergySource {
 interface EnergyDevice {
   stat_consumption?: string;
   stat_rate?: string;
+  included_in_stat?: string | null;
   name?: string;
 }
 
@@ -31,6 +32,35 @@ export interface EnergyPick {
 
 const named = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
+
+/** Subtract direct raw children, never their already-subtracted remainders. */
+export function energyRemainders(
+  prefs: EnergyPrefs,
+  readings: Map<string, number | undefined>,
+  childValue: (device: EnergyDevice) => number | undefined
+): Map<string, number | undefined> {
+  const devices = prefs.device_consumption ?? [];
+  const byMeter = new Map(devices.filter((d) => d.stat_consumption).map((d) => [d.stat_consumption, d]));
+  const result = new Map(readings);
+  for (const device of devices) {
+    if (!device.stat_rate || !device.stat_consumption || !readings.has(device.stat_rate)) continue;
+    const children = devices.filter((d) => d.included_in_stat === device.stat_consumption);
+    if (!children.length) continue;
+    // A cycle makes every remainder on that cycle unknowable.
+    const seen = new Set<string>();
+    let current: EnergyDevice | undefined = device;
+    while (current?.stat_consumption) {
+      if (seen.has(current.stat_consumption)) break;
+      seen.add(current.stat_consumption);
+      current = current.included_in_stat ? byMeter.get(current.included_in_stat) : undefined;
+    }
+    const raw = readings.get(device.stat_rate);
+    const values = children.map(childValue);
+    result.set(device.stat_rate, current || raw === undefined || !Number.isFinite(raw) || values.some((v) => v === undefined || !Number.isFinite(v))
+      ? undefined : Math.max(0, raw - values.reduce<number>((sum, v) => sum + (v ?? 0), 0)));
+  }
+  return result;
+}
 
 /**
  * What Home Assistant's own Energy dashboard already knows.
