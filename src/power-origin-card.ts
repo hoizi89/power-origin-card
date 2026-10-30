@@ -11,7 +11,7 @@ import {
   worthNaming,
   type Flow
 } from "./flow";
-import { pickFromEnergy, type EnergyPrefs } from "./energy";
+import { energyRemainders, pickFromEnergy, type EnergyPrefs } from "./energy";
 import { hourlyForecastAll, peakToday, shortfall, snowSeason, type ForecastHour } from "./forecast";
 import { byArea, byIcon, iconFor, rankDevices, type DeviceReading } from "./devices";
 import { fetchRecentMeans, fetchRecentSeries, fetchTodayChange, runMinutes } from "./stats";
@@ -149,6 +149,7 @@ export class PowerOriginCard extends LitElement {
   private _peakFetched = 0;
   /** When the Energy dashboard's device list was last taken over. */
   private _energyFetched = 0;
+  private _energyPrefs?: EnergyPrefs;
   private readonly _fillId = `po-fill-${(gradientSeq += 1)}`;
   private readonly _clipId = `po-clip-${gradientSeq}`;
 
@@ -189,6 +190,7 @@ export class PowerOriginCard extends LitElement {
     this._weekFetched = 0;
     this._moneyFetched = 0;
     this._energyFetched = 0;
+    this._energyPrefs = undefined;
     this._cycleAt = undefined;
     this._measure();
     if (this._config.ring.tap === "cycle") {
@@ -343,9 +345,12 @@ export class PowerOriginCard extends LitElement {
     this._energyFetched = Date.now();
     try {
       const prefs = await hass.callWS<EnergyPrefs>({ type: "energy/get_prefs" });
+      if (this._config !== config) return;
       const devices = pickFromEnergy(prefs).devices ?? [];
       const list = devices.map((d) => d.id);
-      if (list.join() === config.devices.list.join()) return;
+      const changed = JSON.stringify(prefs.device_consumption ?? []) !== JSON.stringify(this._energyPrefs?.device_consumption ?? []);
+      this._energyPrefs = prefs;
+      if (!changed && list.join() === config.devices.list.join()) return;
       config.devices.list = list;
       config.devices.names = Object.fromEntries(devices.map((d) => [d.id, d.name]));
       config.devices.energy = Object.fromEntries(
@@ -4227,7 +4232,10 @@ export class PowerOriginCard extends LitElement {
   private async _fetchDevices(hass: HomeAssistant, config: ResolvedConfig): Promise<void> {
     if (!this._wantsDevices()) return;
     if (config.devices.mode === "today") {
-      this._deviceToday = await fetchTodayChange(hass, Object.values(config.devices.energy));
+      const meters = config.devices.source === "energy" && this._energyPrefs
+        ? (this._energyPrefs.device_consumption ?? []).map((d) => d.stat_consumption).filter((id): id is string => !!id)
+        : Object.values(config.devices.energy);
+      this._deviceToday = await fetchTodayChange(hass, meters);
       return;
     }
     this._deviceMeans = await fetchRecentMeans(
@@ -4302,6 +4310,15 @@ export class PowerOriginCard extends LitElement {
         hass.entities?.[id]?.icon;
       return { id, name, watts, icon: own || iconFor(name, id), area: areaOf(id) };
     });
+    if (config.devices.source === "energy" && this._energyPrefs) {
+      const adjusted = energyRemainders(this._energyPrefs, new Map(readings.map((r) => [r.id, r.watts])), (child) => {
+        if (!today) return meanWatts(child.stat_rate);
+        const meter = child.stat_consumption;
+        const grown = meter ? this._deviceToday?.[meter] : undefined;
+        return grown === undefined ? undefined : unitOfId(meter) === "Wh" ? grown / 1000 : grown;
+      });
+      readings = readings.map((r) => ({ ...r, watts: adjusted.get(r.id) }));
+    }
     const rooms = config.devices.group === "area";
     if (rooms) readings = byArea(readings, localize("devices.nowhere", locale));
     // Icons carry no names, so two that look alike stand as one.
