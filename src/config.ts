@@ -1,6 +1,7 @@
 import { localize } from "./localize";
 import { idsOf } from "./values";
 import type {
+  BillView,
   BlockName,
   LegacyRingOptions,
   MeterDrawn,
@@ -147,6 +148,7 @@ export const DEFAULTS = {
     stats: ["peak", "autarky", "export", "import"] as TodayStat[],
     month: false,
     split: false,
+    bill_view: "short" as BillView,
     payoff_year: false,
     investment: 0
   }
@@ -397,6 +399,7 @@ export function resolveConfig(config: PowerOriginCardConfig): ResolvedConfig {
       stats_chosen: Boolean(config.today?.stats?.length),
       month: config.today?.month ?? DEFAULTS.today.month,
       split: config.today?.split ?? DEFAULTS.today.split,
+      bill_view: config.today?.bill_view ?? DEFAULTS.today.bill_view,
       payoff_year: config.today?.payoff_year ?? DEFAULTS.today.payoff_year,
       investment: config.today?.investment ?? DEFAULTS.today.investment
     }
@@ -1762,6 +1765,18 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
                 ),
               { name: "split", selector: { boolean: {} } }
             ),
+            ...only((resolved) => money(resolved) && resolved.today.money && resolved.today.split, {
+              name: "bill_view",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "short", label: t("editor.bill_short") },
+                    { value: "lines", label: t("editor.bill_lines") }
+                  ]
+                }
+              }
+            }),
             ...only(
               (resolved) =>
                 money(resolved) && resolved.today.money && Boolean(resolved.entities.amortisation),
@@ -1929,6 +1944,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     breakdown: t("editor.breakdown"),
     month: t("editor.month"),
     split: t("editor.split"),
+    bill_view: t("editor.bill_view"),
     payoff_year: t("editor.payoff_year"),
     investment: t("editor.investment"),
     origin_bar: t("editor.origin_bar"),
@@ -2012,6 +2028,7 @@ export function getConfigForm(locale?: string, current?: PowerOriginCardConfig) 
     curve: t("editor.help_curve"),
     month: t("editor.help_month"),
     split: t("editor.help_split"),
+    bill_view: t("editor.help_bill_view"),
     payoff_year: t("editor.help_payoff_year"),
     investment: t("editor.help_investment"),
     meter_marks: t("editor.help_meter_marks"),

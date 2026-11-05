@@ -23,6 +23,7 @@ import { buildDaySeries, cachedStatistics, dayTotal, extremes, fetchStatistics, 
 import { cardStyles } from "./styles";
 import { sunTimes } from "./sun";
 import type {
+  BillView,
   ChartSpan,
   DaySeries,
   MeterStyle, MeterShows,
@@ -80,7 +81,8 @@ export class PowerOriginCard extends LitElement {
     _cycleAt: { state: true },
     _weekPick: { state: true },
     _openArea: { state: true },
-    _wideOn: { state: true }
+    _wideOn: { state: true },
+    _billView: { state: true }
   };
 
   static styles = cardStyles;
@@ -132,6 +134,8 @@ export class PowerOriginCard extends LitElement {
   private _priceMean?: number;
   /** The last twelve months' balances, negative when a month earned, current month last. */
   private _moneyMonths?: Array<{ start: number; balance: number }>;
+  /** The bill's view after a tap, until the card is set up again. */
+  private _billView?: BillView;
   private _moneyFetched = 0;
   /** When the current grid draw began, when it was last seen, and whether the switch is thrown. */
   private _importSince?: number;
@@ -4547,7 +4551,9 @@ export class PowerOriginCard extends LitElement {
       <div class="today ${foot ? "foot" : "row"} ${place.top ? "top" : ""} ${earning ? "earning" : ""} ${config.today.stats_short ? "short" : ""}">
         ${money === nothing && place.chip ? html`<span class="today-chip">${place.chip}</span>` : nothing}
         ${money}
-        ${config.today.origin_bar ? this._renderOriginBar(locale) : nothing}
+        ${config.today.origin_bar && !(config.today.split && config.today.money && this._dayOrigin() !== undefined)
+          ? this._renderOriginBar(locale)
+          : nothing}
         ${stats.length ? html`<div class="stats">${stats}</div>` : nothing}
       </div>
     `;
@@ -4659,6 +4665,96 @@ export class PowerOriginCard extends LitElement {
     `;
   }
 
+  /**
+   * The day's bill without solar: every kWh the house used, priced as if it had
+   * come from the grid. The grid's share is what was really paid, the sun's and
+   * the battery's are what they took off it.
+   */
+  private _billData(imported: number | undefined, exported: number | undefined) {
+    const hass = this._hass as HomeAssistant;
+    const config = this._config as ResolvedConfig;
+    const day = this._dayOrigin();
+    const buy = priceOf(stateOf(hass, config.entities.price_import));
+    if (day === undefined || buy === undefined) return undefined;
+    const parts = day.parts.map((part) => {
+      const grid = part.key === "ring.source_grid";
+      return { ...part, grid, euro: grid && imported !== undefined ? imported : part.value * buy };
+    });
+    const withoutPv = parts.reduce((sum, part) => sum + part.euro, 0);
+    if (withoutPv <= 0) return undefined;
+    return {
+      used: day.used,
+      parts,
+      withoutPv,
+      sold: exported !== undefined && exported >= 0.05 ? exported : undefined,
+      soldKwh: energyKwh(stateOf(hass, config.entities.export_today))
+    };
+  }
+
+  private _renderBill(locale: string, imported: number | undefined, exported: number | undefined) {
+    const config = this._config as ResolvedConfig;
+    const bill = this._billData(imported, exported);
+    if (bill === undefined) return nothing;
+    const view = this._billView ?? config.today.bill_view;
+    const toggle = () => {
+      this._billView = view === "lines" ? "short" : "lines";
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle();
+      }
+    };
+    const kwh = (value: number) => html`${formatEnergy(value, locale)} <small>kWh</small>`;
+    const shareOf = (value: number) => ((100 * value) / bill.used).toFixed(1);
+
+    if (view === "lines") {
+      // Like a bill: the grid first, as what was paid, then what the sun and the battery took off it.
+      const rows = [...bill.parts.filter((part) => part.grid), ...bill.parts.filter((part) => !part.grid)];
+      return html`<div class="bill lines" role="button" tabindex="0" @click=${toggle} @keydown=${key}>
+        ${rows.map(
+          (part) => html`<div class="bill-row">
+              <i style="background: ${part.colour}"></i>
+              <span class="bill-name">${localize(part.key, locale)}</span>
+              <span class="bill-kwh">${kwh(part.value)}</span>
+              <span class="bill-euro ${part.grid ? "" : "saved"}">${part.grid ? "" : "−"}${formatMoney(part.euro, locale)} €</span>
+            </div>
+            <div class="bill-mini"><span style="width: ${shareOf(part.value)}%; background: ${part.colour}"></span></div>`
+        )}
+        <div class="bill-row sum">
+          <i></i>
+          <span class="bill-name">${localize("money.without_pv", locale)}</span>
+          <span class="bill-kwh">${kwh(bill.used)}</span>
+          <span class="bill-euro">${formatMoney(bill.withoutPv, locale)} €</span>
+        </div>
+        ${bill.sold !== undefined
+          ? html`<div class="bill-row sold">
+              <i></i>
+              <span class="bill-name">${localize("money.sold", locale)}</span>
+              <span class="bill-kwh">${bill.soldKwh !== undefined ? kwh(bill.soldKwh) : nothing}</span>
+              <span class="bill-euro saved">+${formatMoney(bill.sold, locale)} €</span>
+            </div>`
+          : nothing}
+      </div>`;
+    }
+
+    // The short view: only the bar's shares. The line with what was saved stands above it, beside the balance.
+    return html`<div class="bill short" role="button" tabindex="0" @click=${toggle} @keydown=${key}>
+      <div class="bill-bar">
+        ${bill.parts.map(
+          (part) => html`<span style="width: ${shareOf(part.value)}%; background: ${part.colour}"></span>`
+        )}
+      </div>
+    </div>`;
+  }
+
+  /** What the sun and the battery took off the day's bill, in money. */
+  private _billSaved(imported: number | undefined, exported: number | undefined): number | undefined {
+    const bill = this._billData(imported, exported);
+    if (bill === undefined) return undefined;
+    return bill.parts.filter((part) => !part.grid).reduce((sum, part) => sum + part.euro, 0);
+  }
+
   private _renderMoney(locale: string, chip?: unknown) {
     const hass = this._hass as HomeAssistant;
     const config = this._config as ResolvedConfig;
@@ -4702,52 +4798,10 @@ export class PowerOriginCard extends LitElement {
           >`
         : nothing;
 
-    // Not bought against sold: the house's own share of the day, priced,
-    // against what left for the grid.
-    const houseKwh = energyKwh(stateOf(hass, config.entities.house_today));
-    const importKwh = energyKwh(stateOf(hass, config.entities.import_today));
-    const buy = priceOf(stateOf(hass, config.entities.price_import));
-    const notBought =
-      houseKwh !== undefined && importKwh !== undefined && buy !== undefined
-        ? Math.max(0, houseKwh - importKwh) * buy
-        : undefined;
-    const sold = exported;
-    // The battery's share of it: sun from the morning, spent in the evening.
-    const given = energyKwh(stateOf(hass, config.entities.battery_out_today));
-    const fromBattery =
-      notBought !== undefined && given !== undefined && buy !== undefined
-        ? Math.min(notBought, given * buy)
-        : undefined;
-    const stored = fromBattery !== undefined && fromBattery >= 0.01 ? fromBattery : 0;
-    // The whole bar is the bill the day would have run up without the roof:
-    // what was paid for the grid, and what the sun and the battery took off it.
-    const paid = imported ?? (importKwh !== undefined && buy !== undefined ? importKwh * buy : undefined);
-    const withoutPv = notBought !== undefined && paid !== undefined ? paid + notBought : undefined;
-    const share = (part: number) => (withoutPv ? ((100 * part) / withoutPv).toFixed(1) : "0");
-    const split =
-      config.today.split && notBought !== undefined && paid !== undefined && withoutPv !== undefined && withoutPv > 0
-        ? html`<div class="split">
-            <div class="split-bar">
-              <span class="paid" style="width: ${share(paid)}%"></span>
-              <span class="saved" style="width: ${share(notBought - stored)}%"></span>
-              ${stored ? html`<span class="stored" style="width: ${share(stored)}%"></span>` : nothing}
-            </div>
-            <div class="split-keys">
-              <span>${localize("money.without_pv", locale)} <b>${formatMoney(withoutPv, locale)} €</b></span>
-              <span><i style="background: var(--sst-grid)"></i>${localize("money.paid", locale)}
-                <b>${formatMoney(paid, locale)}</b></span>
-              <span><i style="background: var(--sst-sun)"></i>${localize("money.sun", locale)}
-                <b>${formatMoney(notBought - stored, locale)}</b></span>
-              ${stored
-                ? html`<span><i style="background: var(--sst-leaf)"></i>${localize("money.battery", locale)}
-                    <b>${formatMoney(stored, locale)}</b></span>`
-                : nothing}
-              ${sold !== undefined && sold >= 0.01
-                ? html`<span>${localize("money.sold", locale)} <b>${formatMoney(sold, locale)} €</b></span>`
-                : nothing}
-            </div>
-          </div>`
-        : nothing;
+    // The bill without solar: one bar for where the day came from and what it cost,
+    // and above it one line with what was saved, the month and the paid-off share beside it.
+    const split = config.today.split ? this._renderBill(locale, imported, exported) : nothing;
+    const saved = config.today.split ? this._billSaved(imported, exported) : undefined;
 
     // The year it is paid off: what is left, over this year's pace.
     const months = this._moneyMonths ?? [];
@@ -4810,7 +4864,7 @@ export class PowerOriginCard extends LitElement {
               <small>${localize(earned ? "today.earned" : "today.paid", locale)}</small>
             </span>`
           )}
-          ${config.today.stats_short ? nothing : month}
+          ${config.today.stats_short || saved !== undefined ? nothing : month}
         </span>
         ${breakdown}
         ${(() => {
@@ -4828,10 +4882,25 @@ export class PowerOriginCard extends LitElement {
               );
           // The chip stands over the paid-off share, so the pair keeps the corner.
           // With short figures the month stands over the paid-off share, both to the right.
+          // With the saved line below, the month and the share move down to it.
+          if (saved !== undefined) return chip ? html`<span class="money-side">${chip}</span>` : nothing;
           if (config.today.stats_short) return html`<span class="money-side">${chip ?? nothing}${month}${corner}</span>`;
           return chip ? html`<span class="money-side">${chip}${corner}</span>` : corner;
         })()}
       </div>
+      ${saved !== undefined
+        ? html`<div class="money-line">
+            <span class="money-saved">+${formatMoney(saved, locale)} € ${localize("money.saved", locale)}</span>
+            <span class="money-meta"
+              >${thisMonth && config.today.month
+                ? html`${new Intl.DateTimeFormat(locale, { month: "short" }).format(now)}
+                    <b>${thisMonth.balance < 0 ? "+" : "−"}${formatMoney(Math.abs(thisMonth.balance), locale)} €</b>`
+                : nothing}${paidOff !== undefined && (config.today.amortisation || config.today.payoff_year)
+                ? html`${thisMonth && config.today.month ? " · " : ""}<b>${formatNumber(paidOff, locale, 0)} %</b>${payoffYear !== undefined ? html` · ${payoffYear}` : nothing}`
+                : nothing}</span
+            >
+          </div>`
+        : nothing}
       ${split}
       ${payoff}
     `;

@@ -79,14 +79,39 @@ describe("the month beside the day", () => {
 });
 
 describe("the bill without solar", () => {
-  it("splits it into paid, sun and battery", async () => {
-    const { root, text } = await mount(config({ split: true }), day);
-    expect(root.querySelector(".split-bar .paid")).toBeTruthy();
-    expect(root.querySelector(".split-bar .saved")).toBeTruthy();
-    expect(root.querySelector(".split-bar .stored")).toBeTruthy();
+  it("stands as one line and one bar by default", async () => {
+    const { root, text } = await mount(config({ split: true, month: true, amortisation: true }), day);
+    expect(root.querySelector(".bill.short .bill-bar")).toBeTruthy();
+    expect(root.querySelector(".money-saved")?.textContent).toContain("gespart");
+    expect(root.querySelector(".money-meta")?.textContent).toContain("%");
+    expect(root.querySelector(".money-side .corner")).toBeNull();
+    expect(text()).not.toContain("ohne PV");
+  });
+
+  it("stands as lines like a bill, the grid first and the sum below", async () => {
+    const { root, text } = await mount(config({ split: true, bill_view: "lines" }), day);
+    const rows = root.querySelectorAll(".bill.lines .bill-row");
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    const grid = [...rows].find((row) => row.querySelector(".bill-name")?.textContent?.trim() === "Netz");
+    if (grid) {
+      expect(rows[0]).toBe(grid);
+      expect(grid.querySelector(".bill-euro.saved")).toBeNull();
+    }
+    expect(root.querySelector(".bill-row.sum")).toBeTruthy();
     expect(text()).toContain("ohne PV");
-    expect(text()).toContain("gezahlt");
-    expect(text()).toContain("Akku");
+  });
+
+  it("switches between the two on a tap", async () => {
+    const { root } = await mount(config({ split: true }), day);
+    (root.querySelector(".bill") as HTMLElement).click();
+    await (root.host as Card).updateComplete;
+    expect(root.querySelector(".bill.lines")).toBeTruthy();
+  });
+
+  it("takes the place of the origin bar, so the day has one bar", async () => {
+    const { root } = await mount(config({ split: true, origin_bar: true }), day);
+    expect(root.querySelector(".bill")).toBeTruthy();
+    expect(root.querySelector(".origin-bar")).toBeNull();
   });
 });
 

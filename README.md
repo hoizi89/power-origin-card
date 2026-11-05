@@ -136,7 +136,7 @@ The chip in the corner can say the day's self-supplied share instead of the stat
 
 ## What the money says
 
-The balance can carry the month beside it (`today.month`), split itself into what was not bought and what was sold (`today.split`) — most systems earn by not buying, and this is the first place that shows — and, with what the system cost (`today.investment`), name the year it will have paid for itself at this year's pace (`today.payoff_year`).
+The balance can carry the month beside it (`today.month`), show the bill the day would have run up without solar (`today.split`): what was paid to the grid, and what the sun and the battery took off it — most systems earn by not buying, and this is the first place that shows. It stands as one line and one bar, or as lines like a bill (`today.bill_view`), and a tap switches — and, with what the system cost (`today.investment`), name the year it will have paid for itself at this year's pace (`today.payoff_year`).
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/money.png" alt="The month beside the day and the split into not bought and sold; the year the system is paid off" width="700">
 

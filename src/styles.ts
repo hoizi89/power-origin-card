@@ -870,61 +870,135 @@ export const cardStyles = css`
     font-weight: 500;
   }
 
-  /* The bill without solar: paid to the grid, taken off by the sun and by the battery. */
-  .split {
+  /* The bill without solar: every kWh priced as if from the grid. A tap switches the sentence and the lines. */
+  .bill {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    border-radius: 6px;
   }
 
-  .split-bar {
+  .bill:focus-visible {
+    outline: 2px solid var(--sst-hairline);
+    outline-offset: 4px;
+  }
+
+  .bill i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex: none;
+  }
+
+  .bill small {
+    font-size: 0.8em;
+    color: var(--sst-muted);
+  }
+
+  .bill-bar {
     display: flex;
-    height: 6px;
-    border-radius: 3px;
+    gap: 2px;
+    height: 8px;
+    border-radius: 4px;
     overflow: hidden;
     background: var(--sst-track);
   }
 
-  .split-bar span {
+  .bill-bar span {
     transition: width 0.6s ease;
   }
 
-  .split-bar .paid {
-    background: var(--sst-grid);
-  }
-
-  .split-bar .saved {
-    background: var(--sst-sun);
-  }
-
-  .split-bar .stored {
-    background: var(--sst-leaf);
-  }
-
-  .split-keys {
+  /* The line above the bar: what was saved, in the battery's green, and the month and the share beside it. */
+  .money-line {
     display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
     font-family: var(--sst-mono);
-    font-size: calc(10.5px * var(--sst-scale));
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+    min-width: 0;
+  }
+
+  .money-saved {
+    font-size: calc(12.5px * var(--sst-scale));
+    font-weight: 600;
+    color: var(--sst-leaf);
+    white-space: nowrap;
+  }
+
+  .money-meta {
+    font-size: calc(10px * var(--sst-scale));
+    color: var(--sst-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .money-meta b {
+    color: var(--sst-ink);
+    font-weight: 500;
+  }
+
+  .bill .saved {
+    color: var(--sst-leaf);
+  }
+
+  /* Lines: like a bill, a row per source with a thin bar under it, the sum below. */
+  .bill.lines {
+    gap: 5px;
+    font-size: calc(12.5px * var(--sst-scale));
+  }
+
+  .bill-row {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto 5.5em;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bill-row .bill-kwh {
+    font-family: var(--sst-mono);
+    font-size: calc(11px * var(--sst-scale));
+    color: var(--sst-muted);
+    text-align: right;
+  }
+
+  .bill-row .bill-euro {
+    text-align: right;
+    font-weight: 600;
+    color: var(--sst-ink);
+  }
+
+  .bill-row.sum {
+    border-top: 1px dashed var(--sst-hairline);
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+
+  .bill-row.sum .bill-name,
+  .bill-row.sold .bill-name {
     color: var(--sst-muted);
   }
 
-  .split-keys span {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .split-keys i {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-  }
-
-  .split-keys b {
-    color: var(--sst-ink);
+  .bill-row.sold .bill-euro {
     font-weight: 500;
+  }
+
+  .bill-mini {
+    height: 4px;
+    margin-left: 22px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: var(--sst-track);
+  }
+
+  .bill-mini span {
+    display: block;
+    height: 100%;
+    transition: width 0.6s ease;
   }
 
   /* How far along, and how far to go, in years as well as percent. */

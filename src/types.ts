@@ -55,6 +55,8 @@ export type ColumnCount = "none" | "one" | "two" | "scale";
 export type RingInner = "icon" | "load" | "battery" | "none";
 export type RingSize = "auto" | "s" | "m" | "l";
 export type OriginStyle = "bar" | "band";
+/** The bill without solar: one line and one bar, or lines like a bill. */
+export type BillView = "short" | "lines";
 export type MeterStyle =
   | "bar"
   | "blocks"
@@ -379,6 +381,8 @@ export interface TodayOptions {
   month?: boolean;
   /** The day's money split into what was not bought and what was sold. */
   split?: boolean;
+  /** The bill as one line and one bar, or as lines like a bill. A tap on it switches. */
+  bill_view?: BillView;
   /** The year the system will have paid for itself, at this year's pace. */
   payoff_year?: boolean;
   /** What the system cost, in euros; needed for the year. */
