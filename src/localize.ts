@@ -603,7 +603,7 @@ const de: Table = {
   "chart.from_battery": "Speicher",
   "chart.from_grid": "Netz",
   "chart.window_solar": "kWh PV",
-  "chart.around_solar": "kWh PV zuletzt",
+  "chart.around_solar": "kWh PV bisher",
   "origin.lead": "Verbrauch",
   "origin.from": "aus",
   "editor.best_day": "Bester Tag des Jahres dahinter",
