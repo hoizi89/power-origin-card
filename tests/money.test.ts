@@ -78,13 +78,15 @@ describe("the month beside the day", () => {
   });
 });
 
-describe("not bought against sold", () => {
-  it("splits the day's money in two colours", async () => {
+describe("the bill without solar", () => {
+  it("splits it into paid, sun and battery", async () => {
     const { root, text } = await mount(config({ split: true }), day);
+    expect(root.querySelector(".split-bar .paid")).toBeTruthy();
     expect(root.querySelector(".split-bar .saved")).toBeTruthy();
-    expect(root.querySelector(".split-bar .sold")).toBeTruthy();
-    expect(text()).toContain("nicht gekauft");
-    expect(text()).toContain("verkauft");
+    expect(root.querySelector(".split-bar .stored")).toBeTruthy();
+    expect(text()).toContain("ohne PV");
+    expect(text()).toContain("gezahlt");
+    expect(text()).toContain("Akku");
   });
 });
 

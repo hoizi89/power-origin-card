@@ -4712,18 +4712,39 @@ export class PowerOriginCard extends LitElement {
         ? Math.max(0, houseKwh - importKwh) * buy
         : undefined;
     const sold = exported;
+    // The battery's share of it: sun from the morning, spent in the evening.
+    const given = energyKwh(stateOf(hass, config.entities.battery_out_today));
+    const fromBattery =
+      notBought !== undefined && given !== undefined && buy !== undefined
+        ? Math.min(notBought, given * buy)
+        : undefined;
+    const stored = fromBattery !== undefined && fromBattery >= 0.01 ? fromBattery : 0;
+    // The whole bar is the bill the day would have run up without the roof:
+    // what was paid for the grid, and what the sun and the battery took off it.
+    const paid = imported ?? (importKwh !== undefined && buy !== undefined ? importKwh * buy : undefined);
+    const withoutPv = notBought !== undefined && paid !== undefined ? paid + notBought : undefined;
+    const share = (part: number) => (withoutPv ? ((100 * part) / withoutPv).toFixed(1) : "0");
     const split =
-      config.today.split && notBought !== undefined && sold !== undefined && notBought + sold > 0
+      config.today.split && notBought !== undefined && paid !== undefined && withoutPv !== undefined && withoutPv > 0
         ? html`<div class="split">
             <div class="split-bar">
-              <span class="saved" style="width: ${((100 * notBought) / (notBought + sold)).toFixed(1)}%"></span>
-              <span class="sold" style="width: ${((100 * sold) / (notBought + sold)).toFixed(1)}%"></span>
+              <span class="paid" style="width: ${share(paid)}%"></span>
+              <span class="saved" style="width: ${share(notBought - stored)}%"></span>
+              ${stored ? html`<span class="stored" style="width: ${share(stored)}%"></span>` : nothing}
             </div>
             <div class="split-keys">
-              <span><i class="saved" style="background: var(--sst-leaf)"></i>${localize("money.not_bought", locale)}
-                <b>${formatMoney(notBought, locale)} €</b></span>
-              <span><i style="background: var(--sst-sun)"></i>${localize("money.sold", locale)}
-                <b>${formatMoney(sold, locale)} €</b></span>
+              <span>${localize("money.without_pv", locale)} <b>${formatMoney(withoutPv, locale)} €</b></span>
+              <span><i style="background: var(--sst-grid)"></i>${localize("money.paid", locale)}
+                <b>${formatMoney(paid, locale)}</b></span>
+              <span><i style="background: var(--sst-sun)"></i>${localize("money.sun", locale)}
+                <b>${formatMoney(notBought - stored, locale)}</b></span>
+              ${stored
+                ? html`<span><i style="background: var(--sst-leaf)"></i>${localize("money.battery", locale)}
+                    <b>${formatMoney(stored, locale)}</b></span>`
+                : nothing}
+              ${sold !== undefined && sold >= 0.01
+                ? html`<span>${localize("money.sold", locale)} <b>${formatMoney(sold, locale)} €</b></span>`
+                : nothing}
             </div>
           </div>`
         : nothing;

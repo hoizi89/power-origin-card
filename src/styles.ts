@@ -870,7 +870,7 @@ export const cardStyles = css`
     font-weight: 500;
   }
 
-  /* Not bought against sold: two colours for two kinds of money. */
+  /* The bill without solar: paid to the grid, taken off by the sun and by the battery. */
   .split {
     display: flex;
     flex-direction: column;
@@ -889,12 +889,16 @@ export const cardStyles = css`
     transition: width 0.6s ease;
   }
 
-  .split-bar .saved {
-    background: var(--sst-leaf);
+  .split-bar .paid {
+    background: var(--sst-grid);
   }
 
-  .split-bar .sold {
+  .split-bar .saved {
     background: var(--sst-sun);
+  }
+
+  .split-bar .stored {
+    background: var(--sst-leaf);
   }
 
   .split-keys {
