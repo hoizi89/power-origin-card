@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CARD_TYPE } from "../src/config";
+import type { EnergyPrefs } from "../src/energy";
 import { clearStatisticsCache } from "../src/stats";
 import type { HomeAssistant, PowerOriginCardConfig } from "../src/types";
 import { IDS, SCENARIOS, makeHass } from "./fixtures";
@@ -94,5 +95,31 @@ describe("following the Energy dashboard's devices", () => {
     expect(asked()).toBe(0);
     expect(text()).toContain("Mein Tisch");
     expect(text()).not.toContain("NAS");
+  });
+
+  it("refreshes parent-only preference changes and ranks remainders in both modes", async () => {
+    const element = document.createElement(CARD_TYPE) as Card;
+    element.setConfig(config({ source: "energy" }));
+    const card = element as unknown as {
+      _config: any; _energyFetched: number; _energyPrefs: unknown;
+      _deviceMeans: Record<string, number>; _deviceToday: Record<string, number>;
+      _followEnergy(hass: HomeAssistant, config: unknown): Promise<void>;
+      _deviceReadings(locale: string): any;
+    };
+    const base = makeHass(day);
+    let prefs: EnergyPrefs = PREFS;
+    const hass = { ...base, callWS: async () => prefs as never };
+    element.hass = hass;
+    await card._followEnergy(hass, card._config);
+    card._deviceMeans = { "sensor.desk_power": 100, "sensor.nas_power": 40 };
+    card._deviceToday = { "sensor.desk_energy": 10, "sensor.nas_energy": 4 };
+    prefs = { ...PREFS, device_consumption: [PREFS.device_consumption[0], { ...PREFS.device_consumption[1], included_in_stat: "sensor.desk_energy" }, PREFS.device_consumption[2]] };
+    card._energyFetched = 0;
+    await card._followEnergy(hass, card._config);
+    let result = card._deviceReadings("en");
+    expect(result.ranking.named.find((r: any) => r.id === "sensor.desk_power").watts).toBe(60);
+    card._config.devices.mode = "today";
+    result = card._deviceReadings("en");
+    expect(result.ranking.named.find((r: any) => r.id === "sensor.desk_power").watts).toBe(6);
   });
 });
