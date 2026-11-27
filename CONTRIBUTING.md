@@ -64,9 +64,9 @@ gh release view vX.Y.Z --json assets -q '.assets[].name'
 
 ## The HACS default store
 
-The card is submitted as [hacs/default#10752](https://github.com/hacs/default/pull/10752). Until that is merged, users install it as a **custom repository** of type *Dashboard*.
+The card has been in the default store since 26 November 2026 ([hacs/default#10752](https://github.com/hacs/default/pull/10752)), so users find it by searching HACS.
 
-Four things keep it eligible, and all four are easy to break:
+Four things keep it there, and all four are easy to break:
 
 - **The HACS action must pass with no `ignore` key.** `.github/workflows/ci.yml` runs `hacs/action@main` with `category: plugin` and nothing else. Adding an ignore to make a check pass disqualifies the repository.
 - **`hacs.json` must keep its `name`.**

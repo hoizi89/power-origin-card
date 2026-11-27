@@ -46,7 +46,7 @@ And a system without a battery: no battery block, no green anywhere. Nothing is 
 
 ## Install
 
-**HACS** — add this repository as a custom repository of type **Dashboard**, then install *Power Origin*. (Submitted to the default store; the pull request is in the queue.)
+**HACS** — search for *Power Origin* and download it. The card is in the default store, so there is no repository to add. If you added it as a custom repository before, you can remove that entry; the card stays installed.
 
 **By hand** — copy `power-origin-card.js` from the [latest release](https://github.com/hoizi89/power-origin-card/releases/latest) into `config/www/community/power-origin-card/` and add the resource `/local/community/power-origin-card/power-origin-card.js` as a **module**.
 
@@ -186,6 +186,8 @@ A bar chart lying down: one device a row, the biggest first, with a bar for its 
 Three more ways to look at them, each off by default: `devices.top` for the biggest as a row of its own, with how long it has been drawing and what it cost today; `devices.spark` for a line per device over the last hour in place of its bar; and by room (`devices.group: area`), where a tap on a room opens the devices standing in it. An icon can be chosen per device in the editor, under *Icons*.
 
 <img src="https://raw.githubusercontent.com/hoizi89/power-origin-card/main/docs/wohin.png" alt="The devices as icons on a grid, as rows with the biggest on top and a line each, and by room" width="700">
+
+A device the Energy dashboard places under another (its *upstream device*, such as a plug behind a metered power strip) is not counted twice. The parent keeps only what its children do not account for, now and today alike, so the rows still add up to the house. If a child has an energy meter but no power sensor, the parent's share right now is unknown and the parent leaves the live ranking rather than showing a figure that is too large. A list of your own is taken as it is.
 
 Two periods, one setting: **now**, averaged over a window (fifteen minutes by default) so a kettle does not light up as a hog, or **today**, read from each device's meter since midnight. Grouping by **room** sums the devices standing in one, from the device registry. Anything under a threshold folds into the rest, and at most a handful are named — both adjustable.
 
